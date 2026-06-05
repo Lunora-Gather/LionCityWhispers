@@ -22,21 +22,27 @@ export class NPC {
 
   constructor(private scene: Phaser.Scene, readonly config: InteractableConfig) {
     this.marker = scene.add.container(config.x, config.y);
-    this.halo = scene.add.circle(0, 0, 34, config.color, 0.18).setStrokeStyle(2, 0xf8efd5, 0.5);
-    const pulse = scene.add.circle(0, 0, 54, config.color, 0.08).setStrokeStyle(1, config.color, 0.35);
-    const base = scene.add.circle(0, 0, 18, 0xf8efd5, 0.92).setStrokeStyle(3, config.color, 0.95);
-    const diamond = scene.add.rectangle(0, 0, 17, 17, config.color, 0.9).setRotation(Math.PI / 4);
-    const plaque = scene.add.rectangle(0, -70, Math.max(88, config.label.length * 20), 32, 0x101817, 0.74);
-    plaque.setStrokeStyle(1, 0xd0a84c, 0.55);
+    this.halo = scene.add.circle(0, 0, 38, config.color, 0.2).setStrokeStyle(3, 0xf8efd5, 0.62);
+    const pulse = scene.add.circle(0, 0, 58, config.color, 0.1).setStrokeStyle(1, config.color, 0.42);
+    const outer = scene.add.circle(0, 0, 26, 0x07100f, 0.45).setStrokeStyle(2, 0xf8efd5, 0.72);
+    const base = scene.add.circle(0, 0, 18, 0xf8efd5, 0.96).setStrokeStyle(3, config.color, 1);
+    const diamond = scene.add.rectangle(0, 0, 17, 17, config.color, 0.94).setRotation(Math.PI / 4);
+    const glint = scene.add.rectangle(0, -12, 18, 3, 0xffffff, 0.5).setRotation(-0.5);
+    const plaqueWidth = Math.max(104, config.label.length * 20 + 18);
+    const plaque = scene.add.rectangle(0, -72, plaqueWidth, 34, 0x07100f, 0.88);
+    plaque.setStrokeStyle(1, 0xd0a84c, 0.72);
+    const plaqueAccent = scene.add.rectangle(-plaqueWidth / 2 + 5, -72, 4, 24, config.color, 0.95);
     const text = scene.add.text(0, 36, config.label, {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "15px",
-      color: "#fff6dc"
+      color: "#fff6dc",
+      stroke: "#07100f",
+      strokeThickness: 3
     }).setOrigin(0.5);
 
     text.setPosition(0, -70);
-    this.label = scene.add.container(0, 0, [plaque, text]).setAlpha(0);
-    this.marker.add([pulse, this.halo, base, diamond, this.label]);
+    this.label = scene.add.container(0, 0, [plaque, plaqueAccent, text]).setAlpha(0.76);
+    this.marker.add([pulse, this.halo, outer, base, diamond, glint, this.label]);
     this.marker.setDepth(16);
     this.marker.setInteractive(
       new Phaser.Geom.Circle(0, 0, config.radius),
@@ -68,7 +74,7 @@ export class NPC {
     this.focused = focused;
     this.scene.tweens.add({
       targets: [this.label],
-      alpha: focused ? 1 : 0,
+      alpha: focused ? 1 : 0.76,
       duration: gameState.settings.reduceMotion ? 0 : 120,
       ease: "Sine.easeOut"
     });
