@@ -11,7 +11,7 @@ npm run dev
 
 打开 http://127.0.0.1:3000。
 
-如果最终文件夹里已经带有 `node_modules`，可以直接运行 `npm run dev`；如果依赖缺失，再执行 `npm install`。
+项目文件夹只保留源码、必要资产和配置，不保留也不上传 `node_modules`、构建产物或测试报告。首次运行或清理依赖后先执行 `npm install`。
 
 ## 网页访问
 

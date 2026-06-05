@@ -4,18 +4,21 @@
 
 ## 先确认本地可运行
 
+这个文件夹保持源码、必要资产和配置，不保留 `node_modules`。如果刚下载或刚清理过依赖，先运行：
+
+```powershell
+cd D:\Wonderful\Games\LionCityWhispers
+npm install
+```
+
+然后启动：
+
 ```powershell
 cd D:\Wonderful\Games\LionCityWhispers
 npm run dev
 ```
 
 打开 http://127.0.0.1:3000。
-
-如果依赖缺失或 `node_modules` 被清理过，先运行：
-
-```powershell
-npm install
-```
 
 ## 每次改动后的验收
 
