@@ -1,0 +1,33 @@
+{
+  "name": "lion-city-whispers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "assets:audio": "node scripts/generate-audio.mjs",
+    "audit:game": "node scripts/audit-game.mjs",
+    "audit:security": "npm audit --audit-level=moderate",
+    "check": "npm run build && npm run test && npm run audit:game && npm run audit:security",
+    "dev": "next dev -H 127.0.0.1 -p 3000",
+    "build": "next build",
+    "build:pages": "next build",
+    "start": "next start -H 127.0.0.1 -p 3000",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "lucide-react": "1.17.0",
+    "next": "16.2.7",
+    "phaser": "4.1.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0",
+    "@types/node": "25.9.1",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
+  }
+}
