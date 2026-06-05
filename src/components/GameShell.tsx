@@ -109,6 +109,8 @@ const initialHud: HudState = {
   }
 };
 
+const minimumLoadingProgress = 0.08;
+
 const defaultBindings: HudState["settings"]["bindings"] = {
   moveUp: "KeyW",
   moveDown: "KeyS",
@@ -282,7 +284,7 @@ export function GameShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [codexOpen, setCodexOpen] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
-  const [loading, setLoading] = useState({ ready: false, progress: 0 });
+  const [loading, setLoading] = useState({ ready: false, progress: minimumLoadingProgress });
   const [listeningBinding, setListeningBinding] = useState<ControlBindingId | null>(null);
   const [bindingNotice, setBindingNotice] = useState("");
   const [updateReady, setUpdateReady] = useState(false);
@@ -306,7 +308,9 @@ export function GameShell() {
         ready: Boolean(detail.ready ?? current.ready),
         progress:
           typeof detail.progress === "number"
-            ? Math.min(1, Math.max(0, detail.progress))
+            ? detail.ready
+              ? 1
+              : Math.min(1, Math.max(minimumLoadingProgress, detail.progress))
             : current.progress
       }));
     };

@@ -19,7 +19,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    window.dispatchEvent(new CustomEvent("lcw:loading", { detail: { ready: false, progress: 0 } }));
+    window.dispatchEvent(new CustomEvent("lcw:loading", { detail: { ready: false, progress: 0.08 } }));
     this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => {
       window.dispatchEvent(
         new CustomEvent("lcw:loading", { detail: { ready: false, progress } })

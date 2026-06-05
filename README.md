@@ -2,6 +2,12 @@
 
 《狮城秘语》是一个 Web 浏览器原型：玩家扮演博物馆策展人，在现代狮城与灵界之间探索、解谜、完成节奏仪式，并把文物带回博物馆布展。
 
+## 直接游玩
+
+[立即进入网页版游戏](https://wangjiehu.github.io/LionCityWhispers/)
+
+打开上面的链接即可在浏览器里玩，不需要下载仓库或安装依赖。首次打开如果看到加载画面，等几秒进入河岸场景即可开始。
+
 ## 运行
 
 ```powershell
@@ -13,15 +19,10 @@ npm run dev
 
 项目文件夹只保留源码、必要资产和配置，不保留也不上传 `node_modules`、构建产物或测试报告。首次运行或清理依赖后先执行 `npm install`。
 
-## 网页访问
+## 网页与仓库
 
-GitHub Pages 地址：
-
-https://wangjiehu.github.io/LionCityWhispers/
-
-仓库地址：
-
-https://github.com/wangjiehu/LionCityWhispers
+- 网页版游戏：[https://wangjiehu.github.io/LionCityWhispers/](https://wangjiehu.github.io/LionCityWhispers/)
+- GitHub 仓库：[https://github.com/wangjiehu/LionCityWhispers](https://github.com/wangjiehu/LionCityWhispers)
 
 ## 验证
 

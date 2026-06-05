@@ -963,8 +963,35 @@ input:focus-visible {
     grid-template-columns: minmax(140px, 0.8fr) minmax(220px, 1fr) auto;
   }
 
+  .objective {
+    grid-column: auto;
+    order: 0;
+    padding: 7px 9px;
+  }
+
+  .objective p {
+    display: -webkit-box;
+    margin-top: 2px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .objective small {
+    display: none;
+  }
+
   .toolbar {
     order: 0;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .icon-button {
+    width: 34px;
+    height: 34px;
   }
 
   .progress-strip {
