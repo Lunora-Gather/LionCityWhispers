@@ -26,7 +26,7 @@ export class MainScene extends Phaser.Scene {
       );
     });
     this.load.image("ink-bg", assetPath("/assets/images/lion-city-ink-bg.webp"));
-    this.load.image("world-cinematic", assetPath("/assets/images/world-cinematic.webp"));
+    this.load.image("world-cinematic", assetPath("/assets/images/world-cinematic-v2.png"));
     this.load.image("museum-gallery", assetPath("/assets/images/museum-gallery.webp"));
     this.load.image("curator-lin", assetPath("/assets/images/curator-lin.webp"));
   }

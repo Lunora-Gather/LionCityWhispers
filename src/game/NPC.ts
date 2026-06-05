@@ -18,18 +18,21 @@ export class NPC {
   readonly marker: Phaser.GameObjects.Container;
   private halo: Phaser.GameObjects.Arc;
   private label: Phaser.GameObjects.Container;
+  private proximityFocused = false;
+  private hovered = false;
   private focused = false;
+  private labelVisible = false;
 
   constructor(private scene: Phaser.Scene, readonly config: InteractableConfig) {
     this.marker = scene.add.container(config.x, config.y);
-    this.halo = scene.add.circle(0, 0, 38, config.color, 0.2).setStrokeStyle(3, 0xf8efd5, 0.62);
-    const pulse = scene.add.circle(0, 0, 58, config.color, 0.1).setStrokeStyle(1, config.color, 0.42);
-    const outer = scene.add.circle(0, 0, 26, 0x07100f, 0.45).setStrokeStyle(2, 0xf8efd5, 0.72);
-    const base = scene.add.circle(0, 0, 18, 0xf8efd5, 0.96).setStrokeStyle(3, config.color, 1);
-    const diamond = scene.add.rectangle(0, 0, 17, 17, config.color, 0.94).setRotation(Math.PI / 4);
-    const glint = scene.add.rectangle(0, -12, 18, 3, 0xffffff, 0.5).setRotation(-0.5);
+    this.halo = scene.add.circle(0, 0, 32, config.color, 0.14).setStrokeStyle(2, 0xf8efd5, 0.48);
+    const pulse = scene.add.circle(0, 0, 48, config.color, 0.08).setStrokeStyle(1, config.color, 0.34);
+    const outer = scene.add.circle(0, 0, 21, 0x07100f, 0.42).setStrokeStyle(2, 0xf8efd5, 0.62);
+    const base = scene.add.circle(0, 0, 14, 0xf8efd5, 0.92).setStrokeStyle(2, config.color, 0.96);
+    const diamond = scene.add.rectangle(0, 0, 13, 13, config.color, 0.9).setRotation(Math.PI / 4);
+    const glint = scene.add.rectangle(0, -9, 14, 2, 0xffffff, 0.44).setRotation(-0.5);
     const plaqueWidth = Math.max(104, config.label.length * 20 + 18);
-    const plaque = scene.add.rectangle(0, -72, plaqueWidth, 34, 0x07100f, 0.88);
+    const plaque = scene.add.rectangle(0, -72, plaqueWidth, 34, 0x07100f, 0.9);
     plaque.setStrokeStyle(1, 0xd0a84c, 0.72);
     const plaqueAccent = scene.add.rectangle(-plaqueWidth / 2 + 5, -72, 4, 24, config.color, 0.95);
     const text = scene.add.text(0, 36, config.label, {
@@ -41,15 +44,15 @@ export class NPC {
     }).setOrigin(0.5);
 
     text.setPosition(0, -70);
-    this.label = scene.add.container(0, 0, [plaque, plaqueAccent, text]).setAlpha(0.76);
+    this.label = scene.add.container(0, 0, [plaque, plaqueAccent, text]).setAlpha(0);
     this.marker.add([pulse, this.halo, outer, base, diamond, glint, this.label]);
     this.marker.setDepth(16);
     this.marker.setInteractive(
       new Phaser.Geom.Circle(0, 0, config.radius),
       Phaser.Geom.Circle.Contains
     );
-    this.marker.on("pointerover", () => this.setFocus(true));
-    this.marker.on("pointerout", () => this.setFocus(false));
+    this.marker.on("pointerover", () => this.setHover(true));
+    this.marker.on("pointerout", () => this.setHover(false));
     if (!gameState.settings.reduceMotion) {
       scene.tweens.add({
         targets: pulse,
@@ -68,13 +71,32 @@ export class NPC {
   }
 
   setFocus(focused: boolean) {
-    if (this.focused === focused) {
+    if (this.proximityFocused === focused) {
+      return;
+    }
+    this.proximityFocused = focused;
+    this.updateFocus();
+  }
+
+  private setHover(hovered: boolean) {
+    if (this.hovered === hovered) {
+      return;
+    }
+    this.hovered = hovered;
+    this.updateFocus();
+  }
+
+  private updateFocus() {
+    const focused = this.proximityFocused || this.hovered;
+    const labelVisible = this.hovered;
+    if (this.focused === focused && this.labelVisible === labelVisible) {
       return;
     }
     this.focused = focused;
+    this.labelVisible = labelVisible;
     this.scene.tweens.add({
       targets: [this.label],
-      alpha: focused ? 1 : 0.76,
+      alpha: labelVisible ? 1 : 0,
       duration: gameState.settings.reduceMotion ? 0 : 120,
       ease: "Sine.easeOut"
     });

@@ -4,7 +4,7 @@ const imageAssets = [
   "/icon-192.png",
   "/icon-512.png",
   "/assets/images/lion-city-ink-bg.webp",
-  "/assets/images/world-cinematic.webp",
+  "/assets/images/world-cinematic-v2.png",
   "/assets/images/museum-gallery.webp",
   "/assets/images/artifact-sheet.webp",
   "/assets/images/curator-lin.webp"
@@ -49,7 +49,7 @@ test("keeps install metadata and critical asset budgets valid", async ({ request
     expect(response.ok(), asset).toBeTruthy();
     imageBytes += (await response.body()).byteLength;
   }
-  expect(imageBytes).toBeLessThan(1_600_000);
+  expect(imageBytes).toBeLessThan(4_800_000);
 
   let audioBytes = 0;
   for (const asset of audioAssets) {

@@ -170,122 +170,95 @@ export class WorldScene extends Phaser.Scene {
     bg.setScale(scale);
 
     this.add.rectangle(640, 360, 1280, 720, 0x050909, 0.03);
-    this.add.rectangle(640, 673, 1280, 150, 0x08100f, 0.2);
-    this.add.rectangle(640, 76, 1280, 152, 0x08100f, 0.12);
-    this.drawPromenadeTiles();
-    this.drawRiverDetail();
-    this.drawMuseumDetail();
-    this.drawSpiritGateDetail();
-    this.drawRouteGuide();
+    this.add.rectangle(640, 683, 1280, 96, 0x08100f, 0.18);
+    this.add.rectangle(640, 76, 1280, 152, 0x08100f, 0.08);
+    this.drawSceneAtmosphere();
   }
 
-  private drawPromenadeTiles() {
-    const tiles = this.add.graphics().setDepth(2);
-    tiles.lineStyle(1, 0xf8edd2, 0.14);
-    for (let x = 70; x <= 1210; x += 76) {
-      tiles.lineBetween(x, 505, x - 32, 704);
-    }
-    for (let y = 510; y <= 704; y += 34) {
-      tiles.lineBetween(55, y, 1228, y + Phaser.Math.Between(-8, 8));
-    }
-    tiles.lineStyle(2, 0xd1a95d, 0.18);
-    tiles.strokeRoundedRect(90, 575, 1030, 100, 6);
-    tiles.strokeRoundedRect(150, 608, 610, 48, 4);
-  }
-
-  private drawRiverDetail() {
-    const river = this.add.graphics().setDepth(3);
-    river.lineStyle(2, 0xcfe6df, 0.24);
-    for (let row = 0; row < 5; row += 1) {
-      const y = 366 + row * 22;
-      river.beginPath();
-      river.moveTo(448, y);
-      for (let x = 500; x <= 865; x += 58) {
-        river.lineTo(x, y + Math.sin((x + row * 30) / 42) * 8);
+  private drawSceneAtmosphere() {
+    const fx = this.add.graphics().setDepth(5);
+    fx.lineStyle(2, 0xcfe6df, 0.14);
+    for (let row = 0; row < 4; row += 1) {
+      const y = 334 + row * 26;
+      fx.beginPath();
+      fx.moveTo(490, y);
+      for (let x = 550; x <= 875; x += 62) {
+        fx.lineTo(x, y + Math.sin((x + row * 31) / 38) * 7);
       }
-      river.strokePath();
+      fx.strokePath();
     }
-    river.fillStyle(0xf8edd2, 0.32);
-    for (const glint of [
-      [543, 388],
-      [611, 420],
-      [706, 374],
-      [790, 411]
-    ]) {
-      river.fillEllipse(glint[0], glint[1], 34, 3);
-    }
-  }
 
-  private drawMuseumDetail() {
-    const museum = this.add.graphics().setDepth(4);
-    museum.fillStyle(0x07100f, 0.42);
-    museum.fillRoundedRect(108, 218, 154, 98, 8);
-    museum.lineStyle(2, 0xd1a95d, 0.5);
-    museum.strokeRoundedRect(108, 218, 154, 98, 8);
-    museum.lineStyle(1, 0xf8edd2, 0.28);
-    for (const x of [132, 166, 200, 234]) {
-      museum.lineBetween(x, 236, x, 302);
+    const glints = [
+      { x: 556, y: 367, w: 42, delay: 0 },
+      { x: 644, y: 390, w: 56, delay: 240 },
+      { x: 736, y: 361, w: 48, delay: 480 },
+      { x: 836, y: 384, w: 52, delay: 720 }
+    ];
+    for (const glint of glints) {
+      const shine = this.add.ellipse(glint.x, glint.y, glint.w, 4, 0xf8edd2, 0.16).setDepth(6);
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: shine,
+          alpha: { from: 0.07, to: 0.34 },
+          scaleX: { from: 0.68, to: 1.18 },
+          duration: 1500,
+          delay: glint.delay,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
     }
-    museum.fillStyle(0xd1a95d, 0.2);
-    museum.fillRect(126, 232, 118, 10);
-  }
 
-  private drawSpiritGateDetail() {
-    const gate = this.add.graphics().setDepth(4);
-    gate.fillStyle(0x20a891, 0.08);
-    gate.fillCircle(1085, 269, 124);
-    gate.fillCircle(1085, 269, 82);
-    gate.lineStyle(2, 0x5ed6c0, 0.38);
-    gate.strokeCircle(1085, 269, 122);
-    gate.lineStyle(1, 0xd1a95d, 0.36);
-    for (let index = 0; index < 24; index += 1) {
-      const angle = (Math.PI * 2 * index) / 24;
-      const inner = 100;
-      const outer = index % 3 === 0 ? 127 : 116;
-      gate.lineBetween(
-        1085 + Math.cos(angle) * inner,
-        269 + Math.sin(angle) * inner,
-        1085 + Math.cos(angle) * outer,
-        269 + Math.sin(angle) * outer
+    const gateAura = this.add.circle(1085, 269, 128, 0x2bc7ab, 0.07).setDepth(4);
+    const gateRing = this.add.circle(1085, 269, 116, 0x2bc7ab, 0).setDepth(6);
+    gateRing.setStrokeStyle(2, 0x5ed6c0, 0.36);
+    const innerRing = this.add.circle(1085, 269, 82, 0x2bc7ab, 0).setDepth(6);
+    innerRing.setStrokeStyle(1, 0xf8edd2, 0.22);
+    if (!gameState.settings.reduceMotion) {
+      this.tweens.add({
+        targets: [gateAura, gateRing, innerRing],
+        alpha: { from: 0.55, to: 1 },
+        scale: { from: 0.985, to: 1.02 },
+        duration: 2100,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+    }
+
+    fx.lineStyle(1, 0x5ed6c0, 0.22);
+    fx.strokeCircle(1085, 269, 118);
+    fx.strokeCircle(1085, 269, 82);
+    fx.lineStyle(1, 0xd1a95d, 0.2);
+    for (let index = 0; index < 18; index += 1) {
+      const angle = (Math.PI * 2 * index) / 18;
+      fx.lineBetween(
+        1085 + Math.cos(angle) * 91,
+        269 + Math.sin(angle) * 91,
+        1085 + Math.cos(angle) * 120,
+        269 + Math.sin(angle) * 120
       );
     }
-    gate.lineStyle(2, 0xf8edd2, 0.18);
-    gate.strokeRoundedRect(1008, 164, 154, 210, 72);
-  }
 
-  private drawRouteGuide() {
-    const route = this.add.graphics().setDepth(7);
-    const points = [
-      { x: 185, y: 330, label: "M" },
-      { x: 588, y: 548, label: "1" },
-      { x: 840, y: 448, label: "2" },
-      { x: 1010, y: 570, label: "3" },
-      { x: 1092, y: 282, label: "4" }
+    const lamps = [
+      { x: 173, y: 466, r: 18, alpha: 0.22 },
+      { x: 418, y: 507, r: 14, alpha: 0.17 },
+      { x: 982, y: 548, r: 16, alpha: 0.18 }
     ];
-    route.lineStyle(7, 0x07100f, 0.42);
-    route.beginPath();
-    route.moveTo(points[0].x, points[0].y);
-    for (const point of points.slice(1)) {
-      route.lineTo(point.x, point.y);
-    }
-    route.strokePath();
-    route.lineStyle(3, 0xd1a95d, 0.38);
-    route.beginPath();
-    route.moveTo(points[0].x, points[0].y);
-    for (const point of points.slice(1)) {
-      route.lineTo(point.x, point.y);
-    }
-    route.strokePath();
-    route.lineStyle(1, 0xf8edd2, 0.38);
-    for (const point of points) {
-      route.fillStyle(0x07100f, 0.78);
-      route.fillCircle(point.x, point.y, 19);
-      route.strokeCircle(point.x, point.y, 22);
-      this.add.text(point.x, point.y + 1, point.label, {
-        fontFamily: "Georgia, serif",
-        fontSize: "16px",
-        color: "#f8edd2"
-      }).setOrigin(0.5).setDepth(8);
+    for (const lamp of lamps) {
+      const glow = this.add.circle(lamp.x, lamp.y, lamp.r, 0xd1a95d, lamp.alpha).setDepth(6);
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: glow,
+          alpha: { from: lamp.alpha * 0.55, to: lamp.alpha },
+          scale: { from: 0.92, to: 1.14 },
+          duration: 1200 + lamp.r * 14,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
     }
   }
 

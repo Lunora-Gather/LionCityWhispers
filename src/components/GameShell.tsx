@@ -254,6 +254,21 @@ function shouldUseServiceWorker() {
   return process.env.NODE_ENV === "production" || isDevPwaOptIn();
 }
 
+async function loadGameBootstrap() {
+  try {
+    return await import("@/game/bootstrap");
+  } catch (error) {
+    const message = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+    const isChunkLoadError = /ChunkLoadError|Failed to load chunk|Loading chunk/.test(message);
+    if (isChunkLoadError && window.sessionStorage.getItem("lcw:chunk-reload") !== "1") {
+      window.sessionStorage.setItem("lcw:chunk-reload", "1");
+      window.location.reload();
+      return null;
+    }
+    throw error;
+  }
+}
+
 async function clearDevServiceWorkers() {
   if (!("serviceWorker" in navigator)) {
     return false;
@@ -332,9 +347,10 @@ export function GameShell() {
       } else {
         window.sessionStorage.removeItem("lcw:sw-dev-cleared");
       }
-      const { startGame } = await import("@/game/bootstrap");
-      if (active) {
-        gameRef.current = startGame(hostId);
+      const bootstrap = await loadGameBootstrap();
+      if (active && bootstrap) {
+        window.sessionStorage.removeItem("lcw:chunk-reload");
+        gameRef.current = bootstrap.startGame(hostId);
       }
     };
     boot();
