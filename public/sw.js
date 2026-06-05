@@ -1,4 +1,4 @@
-const CACHE_NAME = "lion-city-whispers-v5";
+const CACHE_NAME = "lion-city-whispers-v6";
 const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/, "");
 const withBase = (path) => `${BASE_PATH}${path}`;
 const BASE_ROOT = withBase("/");
@@ -9,7 +9,7 @@ const ASSETS = [
   "/icon-192.png",
   "/icon-512.png",
   "/assets/images/lion-city-ink-bg.webp",
-  "/assets/images/world-cinematic-v2.png",
+  "/assets/images/world-cinematic-v3.webp",
   "/assets/images/museum-gallery.webp",
   "/assets/images/artifact-sheet.webp",
   "/assets/images/curator-lin.webp",

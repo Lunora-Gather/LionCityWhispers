@@ -43,13 +43,21 @@ test("uses the full stage in mobile landscape", async ({ browser }) => {
     const canvas = document.querySelector("canvas")?.getBoundingClientRect();
     const objective = document.querySelector(".objective")?.getBoundingClientRect();
     const progress = document.querySelector(".progress-strip")?.getBoundingClientRect();
+    const toolbar = document.querySelector(".toolbar")?.getBoundingClientRect();
+    const inventory = document.querySelector(".inventory-dock")?.getBoundingClientRect();
+    const touchControls = document.querySelector(".touch-controls")?.getBoundingClientRect();
+    const dialogue = document.querySelector(".dialogue-bar")?.getBoundingClientRect();
     return {
       innerWidth: window.innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
       canvasRatio: canvas ? canvas.width / canvas.height : 0,
       canvasHeight: canvas?.height ?? 0,
       objectiveBottom: objective?.bottom ?? 0,
-      progressTop: progress?.top ?? 0
+      progressTop: progress?.top ?? 0,
+      toolbarBottom: toolbar?.bottom ?? 0,
+      inventoryTop: inventory?.top ?? 0,
+      touchControlsBottom: touchControls?.bottom ?? 0,
+      dialogueTop: dialogue?.top ?? 0
     };
   });
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.innerWidth + 1);
@@ -57,5 +65,7 @@ test("uses the full stage in mobile landscape", async ({ browser }) => {
   expect(metrics.canvasRatio).toBeLessThan(1.9);
   expect(metrics.canvasHeight).toBeGreaterThan(320);
   expect(metrics.objectiveBottom).toBeLessThanOrEqual(metrics.progressTop - 1);
+  expect(metrics.toolbarBottom).toBeLessThanOrEqual(metrics.inventoryTop - 1);
+  expect(metrics.touchControlsBottom).toBeLessThanOrEqual(metrics.dialogueTop - 1);
   await page.close();
 });

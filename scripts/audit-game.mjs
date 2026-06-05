@@ -4,7 +4,7 @@ import { join } from "node:path";
 const root = process.cwd();
 const requiredAssets = [
   "public/assets/images/lion-city-ink-bg.webp",
-  "public/assets/images/world-cinematic-v2.png",
+  "public/assets/images/world-cinematic-v3.webp",
   "public/assets/images/museum-gallery.webp",
   "public/assets/images/artifact-sheet.webp",
   "public/assets/images/curator-lin.webp",
@@ -65,7 +65,7 @@ for (const asset of requiredAssets) {
     audioBytes += info.size;
   }
 }
-if (imageBytes > 4_800_000) {
+if (imageBytes > 2_200_000) {
   fail(`Image budget exceeded: ${imageBytes} bytes`);
 }
 if (audioBytes > 120_000) {
