@@ -8,16 +8,16 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Lion City Whispers</title>
+        <title>狮城秘语 | Lion City Whispers</title>
         <meta
           name="description"
-          content="A playable browser prototype for Lion City Whispers."
+          content="直接在浏览器中游玩的狮城秘语修复冒险。"
         />
         <link rel="canonical" href={publicUrl} />
-        <meta property="og:title" content="Lion City Whispers" />
+        <meta property="og:title" content="狮城秘语 | Lion City Whispers" />
         <meta
           property="og:description"
-          content="Play the browser prototype directly on GitHub Pages."
+          content="直接在 GitHub Pages 游玩狮城秘语。"
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={publicUrl} />

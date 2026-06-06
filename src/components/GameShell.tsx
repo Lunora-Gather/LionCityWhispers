@@ -481,6 +481,10 @@ export function GameShell() {
     const nextTitle =
       hud.settings.locale === "zh" ? `${ui.brand} | ${ui.subtitle}` : ui.brand;
     document.title = nextTitle;
+    const titleTimer = window.setTimeout(() => {
+      document.title = nextTitle;
+    }, 0);
+    return () => window.clearTimeout(titleTimer);
   }, [hud.settings.locale, ui.brand, ui.subtitle]);
 
   const togglePause = () => {

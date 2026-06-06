@@ -51,6 +51,7 @@ test("keeps the first world screen readable on desktop", async ({ page }) => {
     const dialogue = rect(".dialogue-bar");
     const toolbar = rect(".toolbar");
     return {
+      title: document.title,
       canvas,
       canvasRatio: canvas ? canvas.width / canvas.height : 0,
       progressOverlapsDialogue: overlaps(progress, dialogue),
@@ -63,6 +64,7 @@ test("keeps the first world screen readable on desktop", async ({ page }) => {
   expect(metrics.canvas?.height ?? 0).toBeGreaterThan(560);
   expect(metrics.canvasRatio).toBeGreaterThan(1.7);
   expect(metrics.canvasRatio).toBeLessThan(1.9);
+  expect(metrics.title).toBe("狮城秘语 | Lion City Whispers");
   expect(metrics.progressOverlapsDialogue).toBe(false);
   expect(metrics.inventoryOverlapsDialogue).toBe(false);
   expect(metrics.toolbarOverlapsInventory).toBe(false);
