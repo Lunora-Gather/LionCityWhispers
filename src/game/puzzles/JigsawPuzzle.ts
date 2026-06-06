@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import puzzles from "@/data/puzzles.json";
 import { addArtifact, emitGameState, gameState, isUiLocked } from "../state";
 import { playMiss, playSnap, playSuccess, playUiClick } from "../audio";
-import { burst, showRewardBanner } from "../visuals";
+import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { puzzleCopy } from "@/data/i18n";
 
 type PieceConfig = {
@@ -16,6 +16,7 @@ type PieceConfig = {
 export class JigsawPuzzle extends Phaser.Scene {
   private locked = new Set<string>();
   private pieces = new Map<string, Phaser.GameObjects.Container>();
+  private targetFrames = new Map<string, Phaser.GameObjects.Rectangle>();
   private selectedPieceId = "";
   private returnTimer?: Phaser.Time.TimerEvent;
   private keyHandler?: (event: KeyboardEvent) => void;
@@ -28,6 +29,7 @@ export class JigsawPuzzle extends Phaser.Scene {
     const copy = puzzleCopy[gameState.settings.locale];
     this.locked.clear();
     this.pieces.clear();
+    this.targetFrames.clear();
     this.selectedPieceId = "";
     this.returnTimer?.remove(false);
     this.returnTimer = undefined;
@@ -47,34 +49,35 @@ export class JigsawPuzzle extends Phaser.Scene {
   }
 
   private drawShell(title: string, subtitle: string, clue: string) {
-    this.add.rectangle(640, 360, 1280, 720, 0x111817);
-    const bg = this.add.image(640, 360, "world-cinematic");
-    const scale = Math.max(1280 / bg.width, 720 / bg.height);
-    bg.setScale(scale).setAlpha(0.34);
-    this.add.rectangle(640, 360, 1280, 720, 0x07100f, 0.44);
-    this.add.rectangle(640, 360, 980, 560, 0xf8edd2, 0.9).setStrokeStyle(2, 0xd1a95d, 0.34);
-    this.add.text(170, 188, title, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "34px",
-      color: "#121817"
+    drawPuzzleBackdrop(this, {
+      title,
+      subtitle,
+      clue,
+      backgroundAlpha: 0.36,
+      overlayAlpha: 0.42
     });
-    this.add.text(170, 232, subtitle, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "18px",
-      color: "#394440"
-    });
-    this.add.text(170, 266, clue, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "15px",
-      color: "#6b5a3d"
-    });
-    this.add.rectangle(640, 352, 410, 178, 0x5e5546, 0.1).setStrokeStyle(2, 0xb78b45, 0.28);
+    this.add.rectangle(640, 364, 506, 228, 0x291f15, 0.12).setStrokeStyle(2, 0x8b6b39, 0.18);
+    this.add.rectangle(640, 352, 448, 186, 0xfffcf2, 0.14).setStrokeStyle(2, 0xb78b45, 0.28);
+    this.add.line(640, 430, -206, 0, 206, 0, 0x7c6240, 0.14);
+    this.add.circle(436, 264, 5, 0xd1a95d, 0.32);
+    this.add.circle(844, 438, 5, 0xd1a95d, 0.32);
     this.createBackButton();
   }
 
   private drawTarget(piece: PieceConfig) {
     const [x, y] = piece.target;
+    this.add.rectangle(x + 4, y + 8, 158, 104, 0x15100a, 0.12);
     const target = this.add.rectangle(x, y, 150, 98, 0x735f42, 0.12).setStrokeStyle(2, 0xb88735, 0.38);
+    this.targetFrames.set(piece.id, target);
+    this.add.text(x, y, piece.label, {
+      fontFamily: "Microsoft YaHei, sans-serif",
+      fontSize: "44px",
+      color: "#6b5a3d"
+    }).setOrigin(0.5).setAlpha(0.18);
+    this.add.rectangle(x, y - 56, 110, 3, 0xd1a95d, 0.18);
+    this.add.rectangle(x, y + 56, 110, 3, 0xd1a95d, 0.12);
+    this.add.circle(x - 64, y - 40, 4, 0xd1a95d, 0.32);
+    this.add.circle(x + 64, y + 40, 4, 0xd1a95d, 0.24);
     target.setInteractive();
     target.on("pointerdown", () => {
       if (!this.selectedPieceId) {
@@ -98,16 +101,22 @@ export class JigsawPuzzle extends Phaser.Scene {
 
   private createPiece(piece: PieceConfig) {
     const [x, y] = piece.start;
-    const container = this.add.container(x, y);
-    const body = this.add.polygon(0, 0, [-72, -42, 50, -48, 76, 26, -48, 46], Phaser.Display.Color.HexStringToColor(piece.color).color, 0.95);
+    const container = this.add.container(x, y).setDepth(12);
+    const points = [-72, -42, 50, -48, 76, 26, -48, 46];
+    const shadow = this.add.polygon(6, 8, points, 0x111817, 0.2);
+    const body = this.add.polygon(0, 0, points, Phaser.Display.Color.HexStringToColor(piece.color).color, 0.95);
     body.setStrokeStyle(2, 0xfff4d6, 0.38);
+    const topBevel = this.add.line(0, 0, -52, -24, 34, -30, 0xfff4d6, 0.3);
+    const bottomBevel = this.add.line(0, 0, -42, 30, 46, 14, 0x111817, 0.16);
     const text = this.add.text(0, 0, piece.label, {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "28px",
       color: "#fffcf2"
     }).setOrigin(0.5);
     const grain = this.add.line(0, 0, -46, 22, 42, -18, 0xfffcf2, 0.42);
-    container.add([body, grain, text]);
+    const chipA = this.add.circle(-42, -20, 3, 0xfffcf2, 0.32);
+    const chipB = this.add.circle(48, 20, 2, 0x111817, 0.18);
+    container.add([shadow, body, topBevel, bottomBevel, grain, chipA, chipB, text]);
     container.setData("piece", piece);
     this.pieces.set(piece.id, container);
     container.setInteractive(
@@ -168,6 +177,7 @@ export class JigsawPuzzle extends Phaser.Scene {
     }
     const [targetX, targetY] = piece.target;
     container.setPosition(targetX, targetY);
+    this.targetFrames.get(piece.id)?.setFillStyle(0x1f8f82, 0.12).setStrokeStyle(2, 0x1f8f82, 0.44);
     this.tweens.add({
       targets: container,
       scale: 1.04,
