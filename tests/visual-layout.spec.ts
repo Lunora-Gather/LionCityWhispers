@@ -11,9 +11,18 @@ type Rect = {
 };
 
 async function openScene(page: Page, scene: string, label: string) {
-  await page.evaluate((target) => {
-    window.dispatchEvent(new CustomEvent("lcw:chapter", { detail: target }));
-  }, scene);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.evaluate((target) => {
+      window.dispatchEvent(new CustomEvent("lcw:chapter", { detail: target }));
+    }, scene);
+    try {
+      await page.getByLabel("进度").getByText(label).waitFor({ state: "visible", timeout: 2500 });
+      await page.waitForTimeout(300);
+      return;
+    } catch {
+      await page.waitForTimeout(250);
+    }
+  }
   await expect(page.getByLabel("进度").getByText(label)).toBeVisible({ timeout: 5000 });
   await page.waitForTimeout(300);
 }

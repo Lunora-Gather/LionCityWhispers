@@ -58,6 +58,7 @@ export class WorldScene extends Phaser.Scene {
   private pressedCodes = new Set<string>();
   private keyDownHandler?: (event: KeyboardEvent) => void;
   private keyUpHandler?: (event: KeyboardEvent) => void;
+  private guideTargetId = "__unset";
 
   constructor() {
     super("WorldScene");
@@ -111,6 +112,7 @@ export class WorldScene extends Phaser.Scene {
     );
 
     const nearest = this.getNearest();
+    this.updateGuidedInteractable();
     for (const item of this.interactables) {
       item.setFocus(item === nearest);
     }
@@ -356,6 +358,7 @@ export class WorldScene extends Phaser.Scene {
     ];
 
     this.interactables = configs.map((config) => new NPC(this, config));
+    this.updateGuidedInteractable();
   }
 
   private createPrompt() {
@@ -450,6 +453,42 @@ export class WorldScene extends Phaser.Scene {
 
   private getNearest() {
     return this.interactables.find((item) => item.isNear(this.player.x, this.player.y));
+  }
+
+  private getGuidedInteractableId() {
+    if (gameState.museum.complete) {
+      return "";
+    }
+    if (gameState.flags.rhythm && gameState.inventory.length >= 4) {
+      return "museum";
+    }
+    if (completedPuzzleCount() >= 2 && !gameState.flags.rhythm) {
+      return "ritual";
+    }
+    if (!gameState.flags.jigsaw) {
+      return "jigsaw";
+    }
+    if (!gameState.flags.runes) {
+      return "runes";
+    }
+    if (!gameState.flags.lock) {
+      return "lock";
+    }
+    if (!gameState.flags.rhythm) {
+      return "ritual";
+    }
+    return "museum";
+  }
+
+  private updateGuidedInteractable() {
+    const targetId = this.getGuidedInteractableId();
+    if (targetId === this.guideTargetId) {
+      return;
+    }
+    this.guideTargetId = targetId;
+    for (const item of this.interactables) {
+      item.setGuided(item.config.id === targetId);
+    }
   }
 
   private interactWithNearest() {
