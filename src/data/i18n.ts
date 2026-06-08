@@ -119,6 +119,17 @@ export const shellCopy = {
       museum: "回到博物馆，把四件文物放入展柜形成展线。",
       complete: "展览已开幕，可在线索册查看完整修复成果。"
     },
+    route: {
+      aria: "修复路线",
+      jigsaw: "巨石",
+      runes: "碑文",
+      lock: "海门",
+      ritual: "清音",
+      museum: "展厅",
+      done: "已修复",
+      current: "当前",
+      waiting: "待开启"
+    },
     settingsSections: {
       experience: "体验",
       audio: "声音",
@@ -224,6 +235,17 @@ export const shellCopy = {
       ritual: "When enough clues are restored, enter the spirit gate for the chime rite.",
       museum: "Return to the museum and place all four artifacts into the cases.",
       complete: "The exhibition is open. Review the restored route in the codex."
+    },
+    route: {
+      aria: "Restoration Route",
+      jigsaw: "Stone",
+      runes: "Plaque",
+      lock: "Gate",
+      ritual: "Chime",
+      museum: "Gallery",
+      done: "Restored",
+      current: "Current",
+      waiting: "Pending"
     },
     settingsSections: {
       experience: "Experience",

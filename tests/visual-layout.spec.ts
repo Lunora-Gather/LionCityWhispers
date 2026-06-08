@@ -182,6 +182,7 @@ test("keeps the first world screen readable on desktop", async ({ page }) => {
     const canvas = rect("canvas");
     const progress = rect(".progress-strip");
     const inventory = rect(".inventory-dock");
+    const route = rect(".route-rail");
     const dialogue = rect(".dialogue-bar");
     const toolbar = rect(".toolbar");
     return {
@@ -193,6 +194,9 @@ test("keeps the first world screen readable on desktop", async ({ page }) => {
         .some((entry) => entry.name.includes("world-cinematic-v3.webp")),
       progressOverlapsDialogue: overlaps(progress, dialogue),
       inventoryOverlapsDialogue: overlaps(inventory, dialogue),
+      routeOverlapsDialogue: overlaps(route, dialogue),
+      routeOverlapsInventory: overlaps(route, inventory),
+      routeOverlapsProgress: overlaps(route, progress),
       toolbarOverlapsInventory: overlaps(toolbar, inventory)
     };
   });
@@ -202,8 +206,13 @@ test("keeps the first world screen readable on desktop", async ({ page }) => {
   expect(metrics.canvasRatio).toBeGreaterThan(1.7);
   expect(metrics.canvasRatio).toBeLessThan(1.9);
   expect(metrics.title).toBe("狮城秘语 | Lion City Whispers");
+  await expect(page.getByLabel("修复路线")).toBeVisible();
+  await expect(page.locator(".route-step[data-state='current']")).toContainText("巨石");
   expect(metrics.progressOverlapsDialogue).toBe(false);
   expect(metrics.inventoryOverlapsDialogue).toBe(false);
+  expect(metrics.routeOverlapsDialogue).toBe(false);
+  expect(metrics.routeOverlapsInventory).toBe(false);
+  expect(metrics.routeOverlapsProgress).toBe(false);
   expect(metrics.toolbarOverlapsInventory).toBe(false);
   expect(
     metrics.loadedWorldAsset || [...loadedAssets].some((url) => url.includes("world-cinematic-v3.webp"))
@@ -237,6 +246,8 @@ test("keeps polished ritual, puzzle, and museum scenes stable", async ({ page })
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 5000 });
+  await expect(page.locator(".route-step[data-state='done']")).toHaveCount(4);
+  await expect(page.locator(".route-step[data-state='current']")).toContainText("展厅");
 
   for (const [scene, label] of [
     ["JigsawPuzzle", "拼图"],

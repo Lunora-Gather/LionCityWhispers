@@ -13,15 +13,19 @@ test("keeps mobile controls usable without horizontal overflow", async ({ page }
 
   const metrics = await page.evaluate(() => {
     const canvas = document.querySelector("canvas")?.getBoundingClientRect();
+    const route = document.querySelector(".route-rail");
     return {
       innerWidth: window.innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
-      canvasRatio: canvas ? canvas.width / canvas.height : 0
+      canvasRatio: canvas ? canvas.width / canvas.height : 0,
+      routeClientWidth: route?.clientWidth ?? 0,
+      routeScrollWidth: route?.scrollWidth ?? 0
     };
   });
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.innerWidth + 1);
   expect(metrics.canvasRatio).toBeGreaterThan(1.7);
   expect(metrics.canvasRatio).toBeLessThan(1.9);
+  expect(metrics.routeScrollWidth).toBeLessThanOrEqual(metrics.routeClientWidth + 1);
 
   await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 5000 });
   await page.evaluate(() => {
@@ -45,6 +49,7 @@ test("uses the full stage in mobile landscape", async ({ browser }) => {
     const progress = document.querySelector(".progress-strip")?.getBoundingClientRect();
     const toolbar = document.querySelector(".toolbar")?.getBoundingClientRect();
     const inventory = document.querySelector(".inventory-dock")?.getBoundingClientRect();
+    const route = document.querySelector(".route-rail")?.getBoundingClientRect();
     const touchControls = document.querySelector(".touch-controls")?.getBoundingClientRect();
     const dialogue = document.querySelector(".dialogue-bar")?.getBoundingClientRect();
     return {
@@ -56,6 +61,8 @@ test("uses the full stage in mobile landscape", async ({ browser }) => {
       progressTop: progress?.top ?? 0,
       toolbarBottom: toolbar?.bottom ?? 0,
       inventoryTop: inventory?.top ?? 0,
+      routeBottom: route?.bottom ?? 0,
+      touchControlsTop: touchControls?.top ?? 0,
       touchControlsBottom: touchControls?.bottom ?? 0,
       dialogueTop: dialogue?.top ?? 0
     };
@@ -66,6 +73,7 @@ test("uses the full stage in mobile landscape", async ({ browser }) => {
   expect(metrics.canvasHeight).toBeGreaterThan(320);
   expect(metrics.objectiveBottom).toBeLessThanOrEqual(metrics.progressTop - 1);
   expect(metrics.toolbarBottom).toBeLessThanOrEqual(metrics.inventoryTop - 1);
+  expect(metrics.routeBottom).toBeLessThanOrEqual(metrics.touchControlsTop - 1);
   expect(metrics.touchControlsBottom).toBeLessThanOrEqual(metrics.dialogueTop - 1);
   await page.close();
 });

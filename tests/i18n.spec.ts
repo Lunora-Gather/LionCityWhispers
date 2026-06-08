@@ -8,6 +8,7 @@ test("switches the shell and codex to English and persists the locale", async ({
   await page.getByRole("button", { name: "English" }).click();
 
   await expect(page.getByText("Current Objective")).toBeVisible();
+  await expect(page.getByLabel("Restoration Route")).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Close Settings" })).toBeVisible();
   await page.getByRole("button", { name: "Close Settings" }).click();

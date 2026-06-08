@@ -143,6 +143,7 @@ input:focus-visible {
 .objective,
 .toolbar,
 .progress-strip,
+.route-rail,
 .inventory-dock,
 .dialogue-bar {
   border: 1px solid rgba(248, 237, 210, 0.28);
@@ -271,6 +272,97 @@ input:focus-visible {
   color: #fff4d6;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.route-rail {
+  left: clamp(12px, 2vw, 24px);
+  top: clamp(164px, 14vw, 198px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(620px, calc(100% - 48px));
+  padding: 8px 10px;
+}
+
+.route-step {
+  min-width: 54px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  color: rgba(248, 237, 210, 0.58);
+}
+
+.route-step i {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(248, 237, 210, 0.22);
+  background: rgba(248, 237, 210, 0.1);
+  color: rgba(248, 237, 210, 0.72);
+  font-style: normal;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.route-step b,
+.route-step small {
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-step b {
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+.route-step small {
+  color: rgba(248, 237, 210, 0.5);
+  font-size: 10px;
+}
+
+.route-step[data-state="done"] {
+  color: #fff4d6;
+}
+
+.route-step[data-state="done"] i {
+  border-color: rgba(31, 143, 130, 0.62);
+  background: rgba(31, 143, 130, 0.4);
+  box-shadow: 0 0 16px rgba(31, 143, 130, 0.22);
+}
+
+.route-step[data-state="done"] small {
+  color: rgba(46, 217, 185, 0.76);
+}
+
+.route-step[data-state="current"] {
+  color: #fff7de;
+}
+
+.route-step[data-state="current"] i {
+  border-color: rgba(209, 169, 93, 0.86);
+  background: rgba(209, 169, 93, 0.26);
+  color: #fff4d6;
+  box-shadow:
+    0 0 0 3px rgba(209, 169, 93, 0.1),
+    0 0 20px rgba(209, 169, 93, 0.28);
+}
+
+.route-step[data-state="current"] small {
+  color: var(--gold);
+}
+
+.route-connector {
+  width: 24px;
+  height: 2px;
+  flex: 0 0 24px;
+  background: rgba(248, 237, 210, 0.16);
+}
+
+.route-connector.active {
+  background: linear-gradient(90deg, rgba(31, 143, 130, 0.72), rgba(209, 169, 93, 0.58));
 }
 
 .inventory-dock {
@@ -899,6 +991,41 @@ input:focus-visible {
     top: 272px;
   }
 
+  .route-rail {
+    top: 320px;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    gap: 3px;
+    justify-content: space-between;
+    overflow: hidden;
+    padding: 7px 8px;
+  }
+
+  .route-step {
+    min-width: 42px;
+  }
+
+  .route-step i {
+    width: 23px;
+    height: 23px;
+    font-size: 9px;
+  }
+
+  .route-step b {
+    max-width: 46px;
+    font-size: 9px;
+  }
+
+  .route-step small {
+    display: none;
+  }
+
+  .route-connector {
+    width: 14px;
+    flex-basis: 14px;
+  }
+
   .dialogue-bar {
     min-height: 76px;
   }
@@ -1073,6 +1200,39 @@ input:focus-visible {
     min-height: 26px;
     padding: 5px 7px;
     font-size: 10px;
+  }
+
+  .route-rail {
+    top: 116px;
+    left: 8px;
+    right: auto;
+    max-width: 54%;
+    gap: 4px;
+    padding: 5px 6px;
+  }
+
+  .route-step {
+    min-width: 43px;
+  }
+
+  .route-step i {
+    width: 23px;
+    height: 23px;
+    font-size: 9px;
+  }
+
+  .route-step b {
+    max-width: 48px;
+    font-size: 9px;
+  }
+
+  .route-step small {
+    display: none;
+  }
+
+  .route-connector {
+    width: 14px;
+    flex-basis: 14px;
   }
 
   .dialogue-bar {

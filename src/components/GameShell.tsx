@@ -15,7 +15,7 @@ import {
   VolumeX,
   X
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getCodexEntries, getEndingCopy } from "@/data/codex";
 import { formatCopy, objectiveCopy, sceneName, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
@@ -529,6 +529,50 @@ export function GameShell() {
   );
   const endingCopy = useMemo(() => getEndingCopy(hud.settings.locale), [hud.settings.locale]);
   const unlockedIds = useMemo(() => new Set(hud.inventory.map((item) => item.id)), [hud.inventory]);
+  const routeNodes = useMemo(() => {
+    const hasBadangStone = unlockedIds.has("badang-stone");
+    const hasRunePlaque = unlockedIds.has("rune-plaque");
+    const hasHarborSeal = unlockedIds.has("harbor-seal");
+    const hasSpiritChime = unlockedIds.has("spirit-chime") || hud.ritualComplete;
+    const currentRouteKey = hud.museumComplete
+      ? ""
+      : !hasBadangStone
+        ? "jigsaw"
+        : hud.completedPuzzles >= 2 && !hasSpiritChime
+          ? "ritual"
+          : !hasRunePlaque
+            ? "runes"
+            : !hasHarborSeal
+              ? "lock"
+              : !hasSpiritChime
+                ? "ritual"
+                : "museum";
+    const marks =
+      hud.settings.locale === "zh"
+        ? ["石", "文", "钥", "铃", "馆"]
+        : ["ST", "RN", "GT", "CH", "MU"];
+    const nodes = [
+      { key: "jigsaw", label: ui.route.jigsaw, done: hasBadangStone, mark: marks[0] },
+      { key: "runes", label: ui.route.runes, done: hasRunePlaque, mark: marks[1] },
+      { key: "lock", label: ui.route.lock, done: hasHarborSeal, mark: marks[2] },
+      { key: "ritual", label: ui.route.ritual, done: hasSpiritChime, mark: marks[3] },
+      { key: "museum", label: ui.route.museum, done: hud.museumComplete, mark: marks[4] }
+    ];
+
+    return nodes.map((node) => {
+      const state = node.done ? "done" : node.key === currentRouteKey ? "current" : "waiting";
+      const status =
+        state === "done" ? ui.route.done : state === "current" ? ui.route.current : ui.route.waiting;
+      return { ...node, state, status };
+    });
+  }, [
+    hud.completedPuzzles,
+    hud.museumComplete,
+    hud.ritualComplete,
+    hud.settings.locale,
+    ui.route,
+    unlockedIds
+  ]);
   const achievements = [
     { label: ui.achievementLabels.repaired, active: hud.museumComplete },
     { label: ui.achievementLabels.perfect, active: hud.visitors >= 200 },
@@ -662,6 +706,33 @@ export function GameShell() {
             {hud.visitors} {ui.visitors}
           </span>
           <span>{hud.museumComplete ? ui.exhibitionComplete : hud.scene}</span>
+        </aside>
+
+        <aside className="hud route-rail" aria-label={ui.route.aria}>
+          {routeNodes.map((node, index) => (
+            <Fragment key={node.key}>
+              {index > 0 ? (
+                <span
+                  className={`route-connector ${
+                    routeNodes[index - 1].state === "done" && node.state !== "waiting"
+                      ? "active"
+                      : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span
+                className="route-step"
+                data-state={node.state}
+                aria-current={node.state === "current" ? "step" : undefined}
+                aria-label={`${node.label} ${node.status}`}
+              >
+                <i aria-hidden="true">{node.mark}</i>
+                <b>{node.label}</b>
+                <small>{node.status}</small>
+              </span>
+            </Fragment>
+          ))}
         </aside>
 
         <aside className="hud inventory-dock" aria-label={ui.inventory}>
