@@ -3,7 +3,7 @@ import chart from "@/data/rhythm.json";
 import { addArtifact, emitGameState, gameState, isUiLocked } from "../state";
 import { Note } from "./Note";
 import { playMiss, playRitualHit, playSuccess } from "../audio";
-import { burst, showRewardBanner } from "../visuals";
+import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { formatCopy, puzzleCopy } from "@/data/i18n";
 
 function formatBinding(code: string) {
@@ -40,6 +40,8 @@ function formatBinding(code: string) {
   return code;
 }
 
+const laneColors = [0xd1a95d, 0xc6523d, 0x2bc7ab, 0x6f7772];
+
 export class RhythmScene extends Phaser.Scene {
   private notes: Note[] = [];
   private startTime = -1;
@@ -48,6 +50,8 @@ export class RhythmScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private feedback!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
+  private progressFill?: Phaser.GameObjects.Rectangle;
+  private laneFlashes: Phaser.GameObjects.Rectangle[] = [];
   private finished = false;
   private domKeyHandler?: (event: KeyboardEvent) => void;
   private virtualLaneHandler?: (event: Event) => void;
@@ -80,54 +84,39 @@ export class RhythmScene extends Phaser.Scene {
     this.returnTimer = undefined;
     this.startTime = -1;
     this.currentTime = 0;
-    this.add.rectangle(640, 360, 1280, 720, 0x07100f);
-    const bg = this.add.image(640, 360, "world-cinematic");
-    const scale = Math.max(1280 / bg.width, 720 / bg.height);
-    bg.setScale(scale).setAlpha(0.24);
-    this.add.rectangle(640, 360, 1280, 720, 0x030908, 0.58);
-    this.add.rectangle(640, 368, 900, 548, 0xf8edd2, 0.9).setStrokeStyle(2, 0xd1a95d, 0.34);
-    this.add.text(205, 188, copy.rhythmTitle, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "34px",
-      color: "#111817"
-    });
-    this.add.text(205, 232, copy.rhythmSubtitle, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "18px",
-      color: "#394440"
-    });
+    this.laneFlashes = [];
+    this.progressFill = undefined;
+    const laneXs = this.drawRitualStage(copy);
 
-    const laneXs = [435, 570, 705, 840];
-    laneXs.forEach((x, lane) => {
-      this.add.rectangle(x, 360, 92, 410, 0x0b1514, 0.08).setStrokeStyle(1, 0x1c211f, 0.12);
-      this.add.line(x, 360, 0, -184, 0, 184, 0xd1a95d, 0.16);
-      this.add.text(x, 586, formatBinding(gameState.settings.bindings.rhythm[lane]), {
-        fontFamily: "Georgia, serif",
-        fontSize: "30px",
-        color: "#b9402f"
-      }).setOrigin(0.5);
-    });
-    this.add.rectangle(640, 535, 620, 5, 0xb9402f, 0.92);
-
-    this.scoreText = this.add.text(1010, 188, "0", {
+    this.scoreText = this.add.text(1010, 198, "0", {
       fontFamily: "Georgia, serif",
       fontSize: "38px",
       color: "#1d7f73"
-    }).setOrigin(0.5);
-    this.feedback = this.add.text(640, 280, "", {
+    }).setOrigin(0.5).setDepth(25);
+    this.feedback = this.add.text(640, 282, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "20px",
+      fontSize: "22px",
       color: "#1c211f"
-    }).setOrigin(0.5);
-    this.comboText = this.add.text(1010, 228, "COMBO 0", {
+    }).setOrigin(0.5).setDepth(45);
+    this.comboText = this.add.text(1010, 240, "COMBO 0", {
       fontFamily: "Georgia, serif",
       fontSize: "16px",
       color: "#6b5a3d"
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(25);
 
     const travel = gameState.easyMode ? 3300 : 2500;
     this.notes = chart.notes.map(
-      (note) => new Note(this, note.lane, note.time, laneXs[note.lane], 535, travel)
+      (note) =>
+        new Note(
+          this,
+          note.lane,
+          note.time,
+          laneXs[note.lane],
+          535,
+          travel,
+          formatBinding(gameState.settings.bindings.rhythm[note.lane]),
+          laneColors[note.lane]
+        )
     );
 
     this.domKeyHandler = (event: KeyboardEvent) => {
@@ -174,6 +163,7 @@ export class RhythmScene extends Phaser.Scene {
       this.startTime = time + 600;
     }
     const elapsed = time - this.startTime;
+    this.updateProgress(elapsed);
     for (const note of this.notes) {
       note.update(elapsed);
     }
@@ -184,6 +174,7 @@ export class RhythmScene extends Phaser.Scene {
       this.combo = 0;
       this.comboText.setText("COMBO 0");
       this.feedback.setText("MISS");
+      this.feedback.setColor("#b9402f");
       playMiss();
     }
     this.previousMissed = missed;
@@ -209,6 +200,8 @@ export class RhythmScene extends Phaser.Scene {
       this.combo = 0;
       this.comboText.setText("COMBO 0");
       this.feedback.setText(puzzleCopy[gameState.settings.locale].rhythmEmpty);
+      this.feedback.setColor("#b9402f");
+      this.flashLane(lane, 0xb9402f);
       playMiss();
       return;
     }
@@ -222,6 +215,9 @@ export class RhythmScene extends Phaser.Scene {
       this.perfectHits += 1;
       this.maxCombo = Math.max(this.maxCombo, this.combo);
       playRitualHit(true);
+      this.feedback.setColor("#1d7f73");
+      this.flashLane(lane, 0x2bc7ab);
+      this.pulseFeedback(0x2bc7ab);
       burst(this, candidate.marker.x, candidate.marker.y, 0x2bc7ab);
     } else if (diff <= 340) {
       this.score += 70;
@@ -231,6 +227,9 @@ export class RhythmScene extends Phaser.Scene {
       this.goodHits += 1;
       this.maxCombo = Math.max(this.maxCombo, this.combo);
       playRitualHit(false);
+      this.feedback.setColor("#8b6f37");
+      this.flashLane(lane, 0xd1a95d);
+      this.pulseFeedback(0xd1a95d);
       burst(this, candidate.marker.x, candidate.marker.y, 0xd1a95d);
     } else if (gameState.easyMode && diff <= 480) {
       this.score += 25;
@@ -239,10 +238,14 @@ export class RhythmScene extends Phaser.Scene {
       this.assistHits += 1;
       this.combo = 0;
       playRitualHit(false);
+      this.feedback.setColor("#6b5a3d");
+      this.flashLane(lane, 0xd1a95d);
     } else {
       this.feedback.setText("MISS");
+      this.feedback.setColor("#b9402f");
       this.combo = 0;
       this.misses += 1;
+      this.flashLane(lane, 0xb9402f);
       playMiss();
     }
     this.scoreText.setText(String(this.score));
@@ -260,26 +263,111 @@ export class RhythmScene extends Phaser.Scene {
       gameState.dialogue = formatCopy(copy.rhythmComplete, { grade });
       emitGameState("rhythm");
       playSuccess();
+      this.updateProgress(chart.duration);
       burst(this, 640, 320, 0x2bc7ab);
       showRewardBanner(this, formatCopy(copy.rhythmReward, { grade }), 0x1f8f82);
       this.returnTimer = this.time.delayedCall(1400, () => this.scene.start("WorldScene"));
     } else {
       gameState.dialogue = copy.rhythmFail;
       emitGameState("rhythm");
-      this.add.rectangle(640, 320, 560, 92, 0xb9402f, 0.92);
+      this.add.rectangle(640, 320, 584, 106, 0xb9402f, 0.92).setDepth(80).setStrokeStyle(2, 0xfff4d6, 0.34);
       this.add.text(640, 306, copy.rhythmUnstable, {
         fontFamily: "Microsoft YaHei, sans-serif",
         fontSize: "24px",
         color: "#fffcf2"
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(81);
       const retry = this.add.text(640, 350, copy.rhythmRetry, {
         fontFamily: "Microsoft YaHei, sans-serif",
         fontSize: "18px",
         color: "#fffcf2"
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(81);
       retry.setInteractive();
       retry.on("pointerdown", () => this.scene.restart());
     }
+  }
+
+  private drawRitualStage(copy: (typeof puzzleCopy)[keyof typeof puzzleCopy]) {
+    drawPuzzleBackdrop(this, {
+      title: copy.rhythmTitle,
+      subtitle: copy.rhythmSubtitle,
+      clue: copy.rhythmHint,
+      accent: 0x2bc7ab,
+      backgroundAlpha: 0.28,
+      overlayAlpha: 0.54
+    });
+    this.add.circle(640, 370, 246, 0x2bc7ab, 0.07).setStrokeStyle(2, 0x2bc7ab, 0.18);
+    this.add.circle(640, 370, 184, 0x111817, 0.06).setStrokeStyle(1, 0xd1a95d, 0.16);
+    this.add.rectangle(640, 380, 688, 438, 0x07100f, 0.08).setStrokeStyle(1, 0x2bc7ab, 0.14);
+    this.add.rectangle(640, 282, 340, 54, 0xfffcf2, 0.26).setStrokeStyle(1, 0x2bc7ab, 0.18);
+    this.add.rectangle(1010, 218, 150, 112, 0xfffcf2, 0.24).setStrokeStyle(1, 0xd1a95d, 0.24);
+
+    const laneXs = [435, 570, 705, 840];
+    laneXs.forEach((x, lane) => {
+      const color = laneColors[lane];
+      this.add.rectangle(x + 5, 366, 104, 424, 0x020504, 0.1);
+      this.add.rectangle(x, 360, 98, 416, 0x0b1514, 0.1).setStrokeStyle(1, color, 0.22);
+      this.add.rectangle(x, 535, 110, 72, 0x111817, 0.12).setStrokeStyle(1, color, 0.28);
+      this.add.line(x, 360, 0, -184, 0, 184, color, 0.18);
+      this.add.circle(x, 535, 33, color, 0.1).setStrokeStyle(2, color, 0.28);
+      this.add.circle(x, 535, 18, 0xfff4d6, 0.16);
+      const flash = this.add.rectangle(x, 360, 98, 416, color, 0).setDepth(15);
+      this.laneFlashes.push(flash);
+      this.add.text(x, 586, formatBinding(gameState.settings.bindings.rhythm[lane]), {
+        fontFamily: "Georgia, serif",
+        fontSize: "30px",
+        color: "#b9402f"
+      }).setOrigin(0.5).setDepth(20);
+    });
+    this.add.rectangle(640, 535, 642, 8, 0xb9402f, 0.92).setDepth(18);
+    this.add.rectangle(640, 535, 642, 20, 0xb9402f, 0.08).setDepth(17);
+    this.add.rectangle(640, 154, 620, 6, 0x111817, 0.1).setStrokeStyle(1, 0x2bc7ab, 0.16);
+    this.progressFill = this.add.rectangle(330, 154, 1, 6, 0x2bc7ab, 0.78).setOrigin(0, 0.5);
+    return laneXs;
+  }
+
+  private updateProgress(elapsed: number) {
+    const progress = Phaser.Math.Clamp(elapsed / chart.duration, 0, 1);
+    this.progressFill?.setDisplaySize(Math.max(1, 620 * progress), 6);
+  }
+
+  private flashLane(lane: number, color: number) {
+    const flash = this.laneFlashes[lane];
+    if (!flash) {
+      return;
+    }
+    flash.setAlpha(1);
+    flash.setFillStyle(color, gameState.settings.reduceMotion ? 0.16 : 0.24);
+    if (gameState.settings.reduceMotion) {
+      this.time.delayedCall(120, () => flash.setAlpha(0));
+      return;
+    }
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 180,
+      ease: "Sine.easeOut"
+    });
+  }
+
+  private pulseFeedback(color: number) {
+    if (gameState.settings.reduceMotion) {
+      return;
+    }
+    const pulse = this.add.circle(640, 282, 24, color, 0.18).setDepth(40);
+    this.tweens.add({
+      targets: pulse,
+      alpha: 0,
+      scale: 2.4,
+      duration: 260,
+      ease: "Sine.easeOut",
+      onComplete: () => pulse.destroy()
+    });
+    this.tweens.add({
+      targets: this.feedback,
+      scale: 1.08,
+      duration: 90,
+      yoyo: true
+    });
   }
 
   private gradeRun() {

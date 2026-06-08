@@ -79,7 +79,7 @@ test("keeps the first world screen readable on desktop", async ({ page }) => {
   expect([...loadedAssets].some((url) => url.includes("world-cinematic-v3.webp"))).toBe(true);
 });
 
-test("keeps polished puzzle and museum scenes stable", async ({ page }) => {
+test("keeps polished ritual, puzzle, and museum scenes stable", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -111,6 +111,7 @@ test("keeps polished puzzle and museum scenes stable", async ({ page }) => {
     ["JigsawPuzzle", "拼图"],
     ["RunesPuzzle", "符文"],
     ["LockPuzzle", "机关"],
+    ["RhythmScene", "仪式"],
     ["MuseumScene", "博物馆"]
   ] as const) {
     await openScene(page, scene, label);
