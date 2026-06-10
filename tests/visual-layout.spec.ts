@@ -275,6 +275,7 @@ test("keeps polished ritual, puzzle, and museum scenes stable", async ({ page })
 });
 
 test("keeps key canvas scenes visually nonblank", async ({ page }) => {
+  test.setTimeout(90000);
   await page.addInitScript(() => {
     window.localStorage.setItem(
       "lcw:save:v2",

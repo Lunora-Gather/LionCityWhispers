@@ -1,81 +1,105 @@
-# 狮城秘语
+# 狮城秘语 / Lion City Whispers
 
-《狮城秘语》是一个 Web 浏览器原型：玩家扮演博物馆策展人，在现代狮城与灵界之间探索、解谜、完成节奏仪式，并把文物带回博物馆布展。
+**1.0.0 release** · A playable browser game about restoring Lion City legends through puzzles, rhythm, and museum curation.
 
-## 直接游玩
+[立即进入网页版游戏](https://wangjiehu.github.io/LionCityWhispers/) · [Play on GitHub Pages](https://wangjiehu.github.io/LionCityWhispers/) · [Repository](https://github.com/wangjiehu/LionCityWhispers)
 
-[立即进入网页版游戏](https://wangjiehu.github.io/LionCityWhispers/)
+![Lion City Whispers world scene](public/assets/images/world-cinematic-v3.webp)
 
-打开上面的链接即可在浏览器里玩，不需要下载仓库或安装依赖。首次打开如果看到加载画面，等几秒进入河岸场景即可开始。
+## What You Play
 
-## 运行
+《狮城秘语》是一款可直接在浏览器中游玩的叙事解谜游戏。玩家在河岸、灵界入口和博物馆展厅之间修复文物线索，完成仪式，再把传说整理成一条可被游客读懂的展线。
+
+The 1.0.0 build is designed as a complete public web release: no install is required, the game runs from GitHub Pages, and the repository keeps only source, assets, tests, and deployment configuration.
+
+## Release Highlights
+
+- Exploration scene with curator dialogue and persistent current-objective guidance.
+- Three artifact puzzles: stone shard restoration, rune ordering, and harbor seal unlocking.
+- Four-lane rhythm ritual with relaxed and standard tempo modes.
+- Museum curation finale with artifact placement, visitor score, and completion state.
+- Chinese and English UI, codex entries, objectives, scene names, and puzzle copy.
+- Keyboard, mouse, and touch support, including remappable movement and rhythm keys.
+- Saved progress, settings persistence, reset flow, PWA metadata, and offline cache fallback.
+- Automated regression coverage for full flow, mobile layout, PWA cache, persistence, i18n, visual health, and input locking.
+
+## Play
+
+Open the public page:
+
+```text
+https://wangjiehu.github.io/LionCityWhispers/
+```
+
+The game starts at the riverbank. Follow the highlighted route and the in-world target marker to restore artifacts and open the final museum exhibition.
+
+## Local Development
 
 ```powershell
 npm install
 npm run dev
 ```
 
-打开 http://127.0.0.1:3000。
+Then open:
 
-项目文件夹只保留源码、必要资产和配置，不保留也不上传 `node_modules`、构建产物或测试报告。首次运行或清理依赖后先执行 `npm install`。
+```text
+http://127.0.0.1:3000
+```
 
-## 网页与仓库
+Development mode does not register the Service Worker by default, which avoids stale Next.js chunks during iteration. To test the local PWA path, open:
 
-- 网页版游戏：[https://wangjiehu.github.io/LionCityWhispers/](https://wangjiehu.github.io/LionCityWhispers/)
-- GitHub 仓库：[https://github.com/wangjiehu/LionCityWhispers](https://github.com/wangjiehu/LionCityWhispers)
+```text
+http://127.0.0.1:3000/?pwa=1
+```
 
-## 验证
+## Quality Gate
+
+Run the full local gate before changing a release:
 
 ```powershell
 npm run check
 ```
 
-`check` 会依次执行生产构建、Playwright 回归和本地资产/发布面审计。
+This runs:
 
-## 资产
+- `next build`
+- Playwright regression tests
+- local game asset and release-surface audit
+- `npm audit --audit-level=moderate`
+
+For the GitHub Pages export path:
 
 ```powershell
-npm run assets:audio
+$env:GITHUB_PAGES="1"
+$env:GITHUB_PAGES_REPO="LionCityWhispers"
+npm run build:pages
 ```
 
-该命令会重新生成 `public/assets/audio` 下的短音效 WAV。图片实际运行使用 WebP。
+## Deployment
 
-## 当前可玩内容
+GitHub Pages is deployed by `.github/workflows/pages.yml` on every push to `main`.
 
-- 探索地图与 NPC 对话
-- 巴当巨石碎片拼合
-- 古文字符文排序
-- 海门机关顺序解锁
-- 四轨节奏仪式
-- 文物拖放布展与通关结算
-- 中英文界面、图鉴、目标、场景文案切换
-- 存档、设置、章节回访、低动效、音量和 PWA 缓存
+The workflow installs dependencies with `npm ci`, builds the static site with the repository subpath, preserves `_next` assets with `.nojekyll`, and uploads the `out` directory to Pages.
 
-## 体验与可访问性
+## Release And Rollback
 
-- 支持键盘、鼠标和移动端触控。
-- 世界移动、交互键和四轨节奏键都可以在设置中重绑定；同组重复键会自动交换，避免操作丢失。
-- 打开设置、图鉴或重置确认时，游戏输入会被锁定；节奏和倒计时不会在面板打开时继续惩罚玩家。
-- 设置包含声音、辅助、性能、控制和章节回访分组。
-- 本地性能面板显示 FPS、长帧、本地响应和最差响应；这些是开发侧近似指标，不等同于线上真实 INP。
+The stable public release is tagged as `v1.0.0`.
 
-## PWA 与离线
+If a future deployment breaks the public page, roll back by restoring the last known stable commit or by moving `main` back to the `v1.0.0` tag and re-running the Pages workflow.
 
-- `public/manifest.webmanifest` 提供 standalone 安装信息和 192/512 图标。
-- `public/sw.js` 预缓存核心图片、音频、图标和首页；离线时会回退到缓存首页。
-- Service Worker 缓存名带版本号，更新后页面会显示新版本刷新提示。
-- 开发环境默认不注册 Service Worker，避免缓存污染 Next.js 开发 chunk；本地需要验 PWA 时打开 `http://127.0.0.1:3000/?pwa=1`。
-- GitHub Pages 部署使用 `.github/workflows/pages.yml`，会以 `/LionCityWhispers/` 子路径导出静态站点。
+## Assets And Rights
 
-## 验收口径
+Game code, artwork, generated audio, and release configuration are kept in this repository for this project release. No third-party analytics, accounts, payment flow, or private user-data collection is required to play the public web build.
 
-`npm run check` 必须通过，包含：
+Unless a separate license is added later, reuse of the game assets or source outside this project should be treated as not granted by default.
 
-- `next build` 生产构建与类型检查
-- Playwright 全流程、移动端、PWA、键位、持久化和 UI 锁回归
-- 本地资产预算、直接依赖固定版本、Service Worker 缓存清单审计
-- `npm audit --audit-level=moderate` 安全审计
+## Project Structure
 
-## 下一步
-
-后续推进项见 `NEXT_STEPS.md`。
+```text
+src/                  React shell, Phaser scenes, state, i18n, and game logic
+public/assets/        WebP artwork and generated WAV sound effects
+public/sw.js          Offline cache and update support
+tests/                Playwright regression and visual health coverage
+scripts/              Asset and release-surface audit scripts
+.github/workflows/    GitHub Pages deployment
+```
