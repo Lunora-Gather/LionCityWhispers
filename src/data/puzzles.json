@@ -1,0 +1,53 @@
+{
+  "jigsaw": {
+    "pieces": [
+      {
+        "id": "left",
+        "label": "力",
+        "start": [260, 500],
+        "target": [520, 345],
+        "color": "#1d7f73"
+      },
+      {
+        "id": "center",
+        "label": "石",
+        "start": [640, 514],
+        "target": [640, 335],
+        "color": "#b88735"
+      },
+      {
+        "id": "right",
+        "label": "潮",
+        "start": [980, 500],
+        "target": [760, 345],
+        "color": "#b9402f"
+      }
+    ]
+  },
+  "runes": {
+    "order": ["海", "狮", "门", "月"],
+    "choices": ["门", "海", "月", "狮"]
+  },
+  "lock": {
+    "order": ["朱", "金", "青", "墨"],
+    "seconds": 30,
+    "seals": [
+      {
+        "label": "朱",
+        "color": "#b9402f"
+      },
+      {
+        "label": "青",
+        "color": "#1d7f73"
+      },
+      {
+        "label": "墨",
+        "color": "#1c211f"
+      },
+      {
+        "label": "金",
+        "color": "#b88735"
+      }
+    ]
+  }
+}

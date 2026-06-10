@@ -1,0 +1,21 @@
+{
+  "targetScore": 300,
+  "duration": 11200,
+  "notes": [
+    { "time": 1200, "lane": 0 },
+    { "time": 1750, "lane": 1 },
+    { "time": 2300, "lane": 2 },
+    { "time": 2850, "lane": 3 },
+    { "time": 3500, "lane": 0 },
+    { "time": 4050, "lane": 2 },
+    { "time": 4600, "lane": 1 },
+    { "time": 5200, "lane": 3 },
+    { "time": 5900, "lane": 0 },
+    { "time": 6450, "lane": 1 },
+    { "time": 7000, "lane": 2 },
+    { "time": 7550, "lane": 3 },
+    { "time": 8300, "lane": 2 },
+    { "time": 8900, "lane": 1 },
+    { "time": 9550, "lane": 0 }
+  ]
+}
