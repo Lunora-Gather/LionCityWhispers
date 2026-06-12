@@ -1,0 +1,33 @@
+{
+  "name": "狮城秘语",
+  "short_name": "狮城秘语",
+  "description": "A playable browser game about restoring Lion City legends through puzzles, ritual, and museum curation.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape-primary",
+  "background_color": "#07100f",
+  "theme_color": "#101817",
+  "lang": "zh-Hans",
+  "categories": ["games", "education", "entertainment"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

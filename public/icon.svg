@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="狮城秘语">
+  <rect width="512" height="512" fill="#101817"/>
+  <rect x="56" y="56" width="400" height="400" fill="#1f8f82" stroke="#f8edd2" stroke-width="10"/>
+  <circle cx="256" cy="256" r="142" fill="#d1a95d" opacity="0.22"/>
+  <text x="256" y="302" text-anchor="middle" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="190" font-weight="800" fill="#fff4d6">狮</text>
+</svg>
