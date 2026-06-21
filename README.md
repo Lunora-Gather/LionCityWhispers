@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://lunora-gather.github.io/LionCityWhispers/"><strong>🎮 立即试玩 / Play Now</strong></a> · 
+  <a href="https://lunora-gather.github.io/LionCityWhispers/"><strong>🎮 立即进入网页版游戏 / Play Now</strong></a> · 
   <a href="https://github.com/Lunora-Gather/LionCityWhispers"><strong>📁 仓库地址 / Repository</strong></a>
 </p>
 
