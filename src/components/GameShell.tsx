@@ -608,6 +608,15 @@ export function GameShell() {
   }, [hud.scene]);
 
   const currentGuidance = guidanceFor(hud, ui);
+  const parsedDialogue = useMemo(() => {
+    if (!hud.dialogue) return { speaker: "", message: "" };
+    const match = hud.dialogue.match(/^([^：:]+)[：:]([\s\S]+)$/);
+    if (match) {
+      return { speaker: match[1].trim(), message: match[2].trim() };
+    }
+    return { speaker: "", message: hud.dialogue };
+  }, [hud.dialogue]);
+
   const bindingLabel = (id: ControlBindingId) => {
     const movement = movementBindings.find((binding) => binding.id === id);
     if (movement) {
@@ -796,7 +805,10 @@ export function GameShell() {
           }`}
           aria-live="polite"
         >
-          <p>{hud.dialogue}</p>
+          {parsedDialogue.speaker ? (
+            <span className="dialogue-speaker">{parsedDialogue.speaker}</span>
+          ) : null}
+          <p>{parsedDialogue.message}</p>
         </section>
 
         {updateReady ? (
