@@ -103,7 +103,7 @@ for (const asset of requiredAssets) {
 const readmeText = await readFile(join(root, "README.md"), "utf8");
 if (
   !readmeText.includes("立即进入网页版游戏") ||
-  !readmeText.includes("https://wangjiehu.github.io/LionCityWhispers/")
+  !readmeText.includes("https://lunora-gather.github.io/LionCityWhispers/")
 ) {
   fail("README must keep a direct GitHub Pages play link near the top.");
 }

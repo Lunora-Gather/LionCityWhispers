@@ -2,7 +2,7 @@ import Head from "next/head";
 import { GameShell } from "@/components/GameShell";
 import { assetPath } from "@/utils/assetPath";
 
-const publicUrl = "https://wangjiehu.github.io/LionCityWhispers/";
+const publicUrl = "https://lunora-gather.github.io/LionCityWhispers/";
 const publicImageUrl = `${publicUrl}icon-512.png`;
 
 export default function Home() {
