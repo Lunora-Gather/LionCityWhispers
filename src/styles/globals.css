@@ -131,6 +131,11 @@ input:focus-visible {
   pointer-events: none;
 }
 
+.hud-hidden-in-puzzle {
+  opacity: 0.001 !important;
+  pointer-events: none !important;
+}
+
 .hud-top {
   top: clamp(12px, 2vw, 24px);
   left: clamp(12px, 2vw, 24px);

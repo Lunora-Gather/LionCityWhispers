@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getCodexEntries, getEndingCopy } from "@/data/codex";
-import { formatCopy, objectiveCopy, sceneName, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
+import { formatCopy, objectiveCopy, sceneName, sceneCopy, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
 
 type ControlBindingId =
@@ -588,6 +588,25 @@ export function GameShell() {
   ];
   const isRitualScene =
     hud.scene === shellCopy.zh.ritual || hud.scene === shellCopy.en.ritual;
+
+  const isDialogueActive = useMemo(() => {
+    return hud.scene === sceneCopy.zh.dialogue || hud.scene === sceneCopy.en.dialogue;
+  }, [hud.scene]);
+
+  const isPuzzleOrRitualActive = useMemo(() => {
+    const s = hud.scene;
+    return (
+      s === sceneCopy.zh.jigsaw ||
+      s === sceneCopy.en.jigsaw ||
+      s === sceneCopy.zh.runes ||
+      s === sceneCopy.en.runes ||
+      s === sceneCopy.zh.lock ||
+      s === sceneCopy.en.lock ||
+      s === sceneCopy.zh.rhythm ||
+      s === sceneCopy.en.rhythm
+    );
+  }, [hud.scene]);
+
   const currentGuidance = guidanceFor(hud, ui);
   const bindingLabel = (id: ControlBindingId) => {
     const movement = movementBindings.find((binding) => binding.id === id);
@@ -617,7 +636,13 @@ export function GameShell() {
 
         <header className="hud hud-top">
           <section className="brand" aria-label={ui.gameTitleAria}>
-            <span className="brand-mark">{ui.brandMark}</span>
+            <span className="brand-mark" style={{ overflow: "hidden", padding: 0 }}>
+              <img
+                src={assetPath("/icon.svg")}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </span>
             <div>
               <h1>{ui.brand}</h1>
               <small>{ui.subtitle}</small>
@@ -697,7 +722,10 @@ export function GameShell() {
           </nav>
         </header>
 
-        <aside className="hud progress-strip" aria-label={ui.progress}>
+        <aside
+          className={`hud progress-strip ${isPuzzleOrRitualActive ? "hud-hidden-in-puzzle" : ""}`}
+          aria-label={ui.progress}
+        >
           <span>
             {hud.completedPuzzles}/3 {ui.puzzles}
           </span>
@@ -708,7 +736,10 @@ export function GameShell() {
           <span>{hud.museumComplete ? ui.exhibitionComplete : hud.scene}</span>
         </aside>
 
-        <aside className="hud route-rail" aria-label={ui.route.aria}>
+        <aside
+          className={`hud route-rail ${isPuzzleOrRitualActive ? "hud-hidden-in-puzzle" : ""}`}
+          aria-label={ui.route.aria}
+        >
           {routeNodes.map((node, index) => (
             <Fragment key={node.key}>
               {index > 0 ? (
@@ -735,7 +766,10 @@ export function GameShell() {
           ))}
         </aside>
 
-        <aside className="hud inventory-dock" aria-label={ui.inventory}>
+        <aside
+          className={`hud inventory-dock ${isPuzzleOrRitualActive ? "hud-hidden-in-puzzle" : ""}`}
+          aria-label={ui.inventory}
+        >
           {hud.inventory.length === 0 ? (
             <span className="inventory-empty">{ui.inventoryEmpty}</span>
           ) : (
@@ -754,7 +788,14 @@ export function GameShell() {
           )}
         </aside>
 
-        <section className="hud dialogue-bar" aria-live="polite">
+        <section
+          className={`hud dialogue-bar ${
+            isPuzzleOrRitualActive || isDialogueActive || !hud.dialogue
+              ? "hud-hidden-in-puzzle"
+              : ""
+          }`}
+          aria-live="polite"
+        >
           <p>{hud.dialogue}</p>
         </section>
 

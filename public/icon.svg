@@ -1,6 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="狮城秘语">
-  <rect width="512" height="512" fill="#101817"/>
-  <rect x="56" y="56" width="400" height="400" fill="#1f8f82" stroke="#f8edd2" stroke-width="10"/>
-  <circle cx="256" cy="256" r="142" fill="#d1a95d" opacity="0.22"/>
-  <text x="256" y="302" text-anchor="middle" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="190" font-weight="800" fill="#fff4d6">狮</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lion City Whispers Logo">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#142c26" />
+      <stop offset="100%" stop-color="#07100e" />
+    </radialGradient>
+    
+    <!-- Gold Gradient -->
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8edd2" />
+      <stop offset="50%" stop-color="#d1a95d" />
+      <stop offset="100%" stop-color="#8a6727" />
+    </linearGradient>
+
+    <!-- Glowing Cyan/Jade Gradient -->
+    <linearGradient id="cyan-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3de0c8" />
+      <stop offset="100%" stop-color="#0b7e6e" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg-grad)" />
+  
+  <!-- Outer Rune Ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#gold-grad)" stroke-width="4" stroke-dasharray="12, 6, 4, 6" opacity="0.6" />
+  <circle cx="256" cy="256" r="206" fill="none" stroke="url(#gold-grad)" stroke-width="1.5" opacity="0.4" />
+  
+  <!-- Mystical Jade Seal Circle -->
+  <circle cx="256" cy="256" r="190" fill="#0c1d18" stroke="url(#cyan-grad)" stroke-width="6" filter="url(#glow)" />
+  <circle cx="256" cy="256" r="184" fill="none" stroke="url(#gold-grad)" stroke-width="2" opacity="0.8" />
+
+  <!-- Inner waves (Singapore River / Merlion tail representation) -->
+  <g stroke="url(#cyan-grad)" stroke-width="3" fill="none" opacity="0.75" filter="url(#glow)">
+    <path d="M 120 360 C 180 330, 220 390, 280 360 C 340 330, 380 390, 400 370" />
+    <path d="M 100 390 C 160 360, 200 420, 260 390 C 320 360, 360 420, 420 395" />
+    <path d="M 140 330 C 190 300, 230 360, 290 330 C 350 300, 370 340, 390 335" />
+  </g>
+
+  <!-- Mystical Lion Head / Merlion Silhouette -->
+  <g fill="url(#gold-grad)" filter="url(#glow)">
+    <!-- Main Mane and Head Structure -->
+    <path d="M 230 130 C 170 140, 150 200, 150 240 C 150 280, 170 310, 190 320 C 210 325, 230 310, 235 295 C 240 280, 225 270, 210 270 C 190 270, 180 250, 185 230 C 190 210, 210 190, 240 185 C 250 183, 260 190, 265 180 C 270 170, 260 160, 250 155 C 240 150, 235 135, 230 130 Z" />
+
+    <!-- Lion Crown / Top Mane Point -->
+    <path d="M 256 100 C 240 115, 235 135, 250 145 C 260 150, 275 140, 275 125 C 275 110, 265 105, 256 100 Z" />
+             
+    <!-- Face / Snout / Chin -->
+    <path d="M 270 185 C 290 185, 310 190, 320 205 C 330 220, 335 235, 325 250 C 315 265, 290 270, 280 255 C 275 245, 285 235, 295 235 C 305 235, 310 225, 305 215 C 300 205, 280 205, 270 205 C 260 205, 255 195, 270 185 Z" />
+
+    <!-- Stylized Eye (Glowing Jade) -->
+    <circle cx="265" cy="205" r="7" fill="#3de0c8" />
+  </g>
+
+  <!-- Tiny Glowing Runes/Artifact Dots -->
+  <g fill="#3de0c8" filter="url(#glow)">
+    <circle cx="256" cy="76" r="5" />
+    <circle cx="256" cy="436" r="5" />
+    <circle cx="76" cy="256" r="5" />
+    <circle cx="436" cy="256" r="5" />
+  </g>
 </svg>
