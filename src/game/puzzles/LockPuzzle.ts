@@ -47,24 +47,28 @@ export class LockPuzzle extends Phaser.Scene {
     });
     this.createBackButton();
 
-    this.add.rectangle(640, 356, 340, 230, 0x111817, 0.08).setStrokeStyle(2, 0x8b6f37, 0.22);
-    this.add.circle(640, 346, 132, 0x111817, 0.08).setStrokeStyle(3, 0x8b6f37, 0.38);
-    this.add.circle(640, 346, 96, 0xd1a95d, 0.08).setStrokeStyle(2, 0xd1a95d, 0.28);
-    this.add.circle(640, 346, 58, 0x111817, 0.08).setStrokeStyle(1, 0xfff4d6, 0.2);
-    this.add.circle(640, 332, 20, 0x1c211f, 0.14).setStrokeStyle(1, 0x8b6f37, 0.28);
-    this.add.rectangle(640, 370, 30, 70, 0x1c211f, 0.12).setStrokeStyle(1, 0x8b6f37, 0.24);
-    this.add.rectangle(640, 346, 244, 2, 0x8b6f37, 0.2);
-    this.add.rectangle(640, 346, 2, 196, 0x8b6f37, 0.16);
+    this.add.rectangle(640, 356, 340, 230, 0x091412, 0.52).setStrokeStyle(2, 0xd1a95d, 0.36);
+    this.add.circle(640, 346, 132, 0x07110f, 0.88).setStrokeStyle(3, 0x1f8f82, 0.62);
+    this.add.circle(640, 346, 96, 0x091412, 0.9).setStrokeStyle(2.5, 0xd1a95d, 0.54);
+    this.add.circle(640, 346, 58, 0x0c1b18, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.42);
+    this.add.circle(640, 332, 20, 0x050c0a, 0.8).setStrokeStyle(1.5, 0xd1a95d, 0.36);
+    this.add.rectangle(640, 370, 30, 70, 0x050c0a, 0.8).setStrokeStyle(1.5, 0xd1a95d, 0.32);
+    this.add.rectangle(640, 346, 244, 2, 0xd1a95d, 0.22);
+    this.add.rectangle(640, 346, 2, 196, 0xd1a95d, 0.18);
     config.order.forEach((_seal, index) => {
-      const slot = this.add.rectangle(547 + index * 62, 392, 42, 10, 0x111817, 0.08).setStrokeStyle(1, 0x8b6f37, 0.18);
+      const slot = this.add.rectangle(547 + index * 62, 392, 42, 10, 0x07110f, 0.88).setStrokeStyle(1, 0xd1a95d, 0.36);
       this.sequenceSlots.push(slot);
     });
     this.refreshSequenceSlots();
-    this.add.rectangle(1015, 228, 92, 46, 0xfffcf2, 0.28).setStrokeStyle(1, 0xb9402f, 0.24);
+
+    // Styled neon timer panel
+    this.add.rectangle(1015, 228, 92, 46, 0x0c1b18, 0.86).setStrokeStyle(1.5, 0xff4d4d, 0.62);
     this.timerText = this.add.text(1015, 228, `${this.secondsLeft}s`, {
       fontFamily: "Georgia, serif",
       fontSize: "28px",
-      color: "#b9402f"
+      fontStyle: "700",
+      color: "#ff4d4d",
+      shadow: { offsetX: 0, offsetY: 0, color: "#ff4d4d", blur: 6, stroke: true, fill: true }
     }).setOrigin(0.5);
 
     config.seals.forEach((seal, index) => {
@@ -72,32 +76,37 @@ export class LockPuzzle extends Phaser.Scene {
       const node = this.add.container(x, 472);
       const color = Phaser.Display.Color.HexStringToColor(seal.color).color;
       const shadow = this.add.circle(6, 9, 64, 0x111817, 0.2);
-      const aura = this.add.circle(0, 0, 72, color, 0.12);
-      const disc = this.add.circle(0, 0, 64, color, 0.92).setStrokeStyle(3, 0xfff4d6, 0.35);
-      const ring = this.add.circle(0, 0, 43, 0x111817, 0.08).setStrokeStyle(1, 0xfff4d6, 0.22);
+      const aura = this.add.circle(0, 0, 72, color, 0.15);
+      const disc = this.add.circle(0, 0, 64, 0x0c1b18, 0.92).setStrokeStyle(3, color, 0.8);
+      const ring = this.add.circle(0, 0, 43, 0x07110f, 0.6).setStrokeStyle(1.5, 0xd1a95d, 0.32);
       const shine = this.add.line(0, 0, -28, -32, 24, -38, 0xfff4d6, 0.26);
       const label = this.add.text(0, 0, seal.label, {
-        fontFamily: "Microsoft YaHei, sans-serif",
+        fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
         fontSize: "34px",
+        fontStyle: "700",
         color: "#fffcf2"
       }).setOrigin(0.5);
       node.add([shadow, aura, disc, ring, shine, label]);
       node.setInteractive(new Phaser.Geom.Circle(0, 0, 66), Phaser.Geom.Circle.Contains);
       node.on("pointerdown", () => this.choose(seal.label, config));
-      node.on("pointerover", () =>
+      node.on("pointerover", () => {
+        aura.setAlpha(0.38);
+        disc.setStrokeStyle(3.5, 0x3de0c8, 0.95);
         this.tweens.add({
           targets: node,
-          scale: 1.07,
-          duration: gameState.settings.reduceMotion ? 0 : 110
-        })
-      );
-      node.on("pointerout", () =>
+          scale: 1.1,
+          duration: gameState.settings.reduceMotion ? 0 : 120
+        });
+      });
+      node.on("pointerout", () => {
+        aura.setAlpha(0.15);
+        disc.setStrokeStyle(3, color, 0.8);
         this.tweens.add({
           targets: node,
           scale: 1,
-          duration: gameState.settings.reduceMotion ? 0 : 110
-        })
-      );
+          duration: gameState.settings.reduceMotion ? 0 : 120
+        });
+      });
     });
     this.bindKeyboard(config);
 
@@ -196,18 +205,44 @@ export class LockPuzzle extends Phaser.Scene {
   }
 
   private createBackButton() {
-    const back = this.add.text(1080, 188, puzzleCopy[gameState.settings.locale].backRiver, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "17px",
-      color: "#1d7f73",
-      backgroundColor: "rgba(255,252,242,0.8)",
-      padding: { x: 12, y: 7 }
+    const copy = puzzleCopy[gameState.settings.locale];
+    const container = this.add.container(1080, 188).setSize(140, 42);
+
+    const bg = this.add.rectangle(0, 0, 140, 42, 0x091412, 0.88).setStrokeStyle(1.5, 0xd1a95d, 0.6);
+    const label = this.add.text(0, 0, copy.backRiver, {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "15px",
+      fontStyle: "600",
+      color: "#fff4d6"
     }).setOrigin(0.5);
-    back.setInteractive();
-    back.on("pointerdown", () => {
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-70, -21, 140, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
       playUiClick();
       this.timer?.remove();
       this.scene.start("WorldScene");
+    });
+
+    container.on("pointerover", () => {
+      bg.setStrokeStyle(2, 0x3de0c8, 0.9);
+      label.setColor("#3de0c8");
+      this.tweens.add({
+        targets: container,
+        scale: 1.05,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+
+    container.on("pointerout", () => {
+      bg.setStrokeStyle(1.5, 0xd1a95d, 0.6);
+      label.setColor("#fff4d6");
+      this.tweens.add({
+        targets: container,
+        scale: 1,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
     });
   }
 }

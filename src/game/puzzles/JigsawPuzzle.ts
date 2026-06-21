@@ -56,9 +56,9 @@ export class JigsawPuzzle extends Phaser.Scene {
       backgroundAlpha: 0.36,
       overlayAlpha: 0.42
     });
-    this.add.rectangle(640, 364, 506, 228, 0x291f15, 0.12).setStrokeStyle(2, 0x8b6b39, 0.18);
-    this.add.rectangle(640, 352, 448, 186, 0xfffcf2, 0.14).setStrokeStyle(2, 0xb78b45, 0.28);
-    this.add.line(640, 430, -206, 0, 206, 0, 0x7c6240, 0.14);
+    this.add.rectangle(640, 364, 506, 228, 0x050c0a, 0.36).setStrokeStyle(2, 0x1f8f82, 0.28);
+    this.add.rectangle(640, 352, 448, 186, 0x091412, 0.78).setStrokeStyle(2, 0xd1a95d, 0.38);
+    this.add.line(640, 430, -206, 0, 206, 0, 0xd1a95d, 0.22);
     this.add.circle(436, 264, 5, 0xd1a95d, 0.32);
     this.add.circle(844, 438, 5, 0xd1a95d, 0.32);
     this.createBackButton();
@@ -66,16 +66,16 @@ export class JigsawPuzzle extends Phaser.Scene {
 
   private drawTarget(piece: PieceConfig) {
     const [x, y] = piece.target;
-    this.add.rectangle(x + 4, y + 8, 158, 104, 0x15100a, 0.12);
-    const target = this.add.rectangle(x, y, 150, 98, 0x735f42, 0.12).setStrokeStyle(2, 0xb88735, 0.38);
+    this.add.rectangle(x + 4, y + 8, 158, 104, 0x030605, 0.4);
+    const target = this.add.rectangle(x, y, 150, 98, 0x07110f, 0.88).setStrokeStyle(2, 0xd1a95d, 0.46);
     this.targetFrames.set(piece.id, target);
     this.add.text(x, y, piece.label, {
-      fontFamily: "Microsoft YaHei, sans-serif",
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
       fontSize: "44px",
-      color: "#6b5a3d"
-    }).setOrigin(0.5).setAlpha(0.18);
-    this.add.rectangle(x, y - 56, 110, 3, 0xd1a95d, 0.18);
-    this.add.rectangle(x, y + 56, 110, 3, 0xd1a95d, 0.12);
+      color: "#ffd685"
+    }).setOrigin(0.5).setAlpha(0.28);
+    this.add.rectangle(x, y - 56, 110, 3, 0xd1a95d, 0.22);
+    this.add.rectangle(x, y + 56, 110, 3, 0xd1a95d, 0.16);
     this.add.circle(x - 64, y - 40, 4, 0xd1a95d, 0.32);
     this.add.circle(x + 64, y + 40, 4, 0xd1a95d, 0.24);
     target.setInteractive();
@@ -236,17 +236,43 @@ export class JigsawPuzzle extends Phaser.Scene {
   }
 
   private createBackButton() {
-    const back = this.add.text(1080, 188, puzzleCopy[gameState.settings.locale].backRiver, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "17px",
-      color: "#1d7f73",
-      backgroundColor: "rgba(255,252,242,0.8)",
-      padding: { x: 12, y: 7 }
+    const copy = puzzleCopy[gameState.settings.locale];
+    const container = this.add.container(1080, 188).setSize(140, 42);
+
+    const bg = this.add.rectangle(0, 0, 140, 42, 0x091412, 0.88).setStrokeStyle(1.5, 0xd1a95d, 0.6);
+    const label = this.add.text(0, 0, copy.backRiver, {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "15px",
+      fontStyle: "600",
+      color: "#fff4d6"
     }).setOrigin(0.5);
-    back.setInteractive();
-    back.on("pointerdown", () => {
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-70, -21, 140, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
       playUiClick();
       this.scene.start("WorldScene");
+    });
+
+    container.on("pointerover", () => {
+      bg.setStrokeStyle(2, 0x3de0c8, 0.9);
+      label.setColor("#3de0c8");
+      this.tweens.add({
+        targets: container,
+        scale: 1.05,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+
+    container.on("pointerout", () => {
+      bg.setStrokeStyle(1.5, 0xd1a95d, 0.6);
+      label.setColor("#fff4d6");
+      this.tweens.add({
+        targets: container,
+        scale: 1,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
     });
   }
 }

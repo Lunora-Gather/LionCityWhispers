@@ -91,17 +91,21 @@ export class RhythmScene extends Phaser.Scene {
     this.scoreText = this.add.text(1010, 198, "0", {
       fontFamily: "Georgia, serif",
       fontSize: "38px",
-      color: "#1d7f73"
+      color: "#3de0c8",
+      shadow: { offsetX: 0, offsetY: 0, color: "#3de0c8", blur: 8, stroke: true, fill: true }
     }).setOrigin(0.5).setDepth(25);
     this.feedback = this.add.text(640, 282, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "22px",
-      color: "#1c211f"
+      fontSize: "24px",
+      fontStyle: "bold",
+      color: "#fff4d6",
+      shadow: { offsetX: 0, offsetY: 0, color: "#ffffff", blur: 6, fill: true }
     }).setOrigin(0.5).setDepth(45);
     this.comboText = this.add.text(1010, 240, "COMBO 0", {
       fontFamily: "Georgia, serif",
       fontSize: "16px",
-      color: "#6b5a3d"
+      color: "#ffd685",
+      shadow: { offsetX: 0, offsetY: 0, color: "#ffd685", blur: 4, stroke: true, fill: true }
     }).setOrigin(0.5).setDepth(25);
 
     const travel = gameState.easyMode ? 3300 : 2500;
@@ -174,7 +178,7 @@ export class RhythmScene extends Phaser.Scene {
       this.combo = 0;
       this.comboText.setText("COMBO 0");
       this.feedback.setText("MISS");
-      this.feedback.setColor("#b9402f");
+      this.feedback.setColor("#ff4d4d");
       playMiss();
     }
     this.previousMissed = missed;
@@ -200,8 +204,8 @@ export class RhythmScene extends Phaser.Scene {
       this.combo = 0;
       this.comboText.setText("COMBO 0");
       this.feedback.setText(puzzleCopy[gameState.settings.locale].rhythmEmpty);
-      this.feedback.setColor("#b9402f");
-      this.flashLane(lane, 0xb9402f);
+      this.feedback.setColor("#ff4d4d");
+      this.flashLane(lane, 0xff4d4d);
       playMiss();
       return;
     }
@@ -215,7 +219,7 @@ export class RhythmScene extends Phaser.Scene {
       this.perfectHits += 1;
       this.maxCombo = Math.max(this.maxCombo, this.combo);
       playRitualHit(true);
-      this.feedback.setColor("#1d7f73");
+      this.feedback.setColor("#3de0c8");
       this.flashLane(lane, 0x2bc7ab);
       this.pulseFeedback(0x2bc7ab);
       burst(this, candidate.marker.x, candidate.marker.y, 0x2bc7ab);
@@ -227,7 +231,7 @@ export class RhythmScene extends Phaser.Scene {
       this.goodHits += 1;
       this.maxCombo = Math.max(this.maxCombo, this.combo);
       playRitualHit(false);
-      this.feedback.setColor("#8b6f37");
+      this.feedback.setColor("#ffd685");
       this.flashLane(lane, 0xd1a95d);
       this.pulseFeedback(0xd1a95d);
       burst(this, candidate.marker.x, candidate.marker.y, 0xd1a95d);
@@ -238,14 +242,14 @@ export class RhythmScene extends Phaser.Scene {
       this.assistHits += 1;
       this.combo = 0;
       playRitualHit(false);
-      this.feedback.setColor("#6b5a3d");
+      this.feedback.setColor("#a8c0ba");
       this.flashLane(lane, 0xd1a95d);
     } else {
       this.feedback.setText("MISS");
-      this.feedback.setColor("#b9402f");
+      this.feedback.setColor("#ff4d4d");
       this.combo = 0;
       this.misses += 1;
-      this.flashLane(lane, 0xb9402f);
+      this.flashLane(lane, 0xff4d4d);
       playMiss();
     }
     this.scoreText.setText(String(this.score));
@@ -270,7 +274,8 @@ export class RhythmScene extends Phaser.Scene {
     } else {
       gameState.dialogue = copy.rhythmFail;
       emitGameState("rhythm");
-      this.add.rectangle(640, 320, 584, 106, 0xb9402f, 0.92).setDepth(80).setStrokeStyle(2, 0xfff4d6, 0.34);
+      this.add.rectangle(640, 320, 584, 106, 0x1f0907, 0.92).setDepth(80).setStrokeStyle(2, 0xff4d4d, 0.6);
+      this.add.rectangle(640, 320, 576, 98, 0x000000, 0).setDepth(80).setStrokeStyle(1, 0xd1a95d, 0.3);
       this.add.text(640, 306, copy.rhythmUnstable, {
         fontFamily: "Microsoft YaHei, sans-serif",
         fontSize: "24px",
@@ -298,8 +303,14 @@ export class RhythmScene extends Phaser.Scene {
     this.add.circle(640, 370, 246, 0x2bc7ab, 0.07).setStrokeStyle(2, 0x2bc7ab, 0.18);
     this.add.circle(640, 370, 184, 0x111817, 0.06).setStrokeStyle(1, 0xd1a95d, 0.16);
     this.add.rectangle(640, 380, 688, 438, 0x07100f, 0.08).setStrokeStyle(1, 0x2bc7ab, 0.14);
-    this.add.rectangle(640, 282, 340, 54, 0xfffcf2, 0.26).setStrokeStyle(1, 0x2bc7ab, 0.18);
-    this.add.rectangle(1010, 218, 150, 112, 0xfffcf2, 0.24).setStrokeStyle(1, 0xd1a95d, 0.24);
+
+    // Glassmorphic HUD feedback panel
+    this.add.rectangle(640, 282, 340, 54, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6).setDepth(20);
+    this.add.rectangle(640, 282, 334, 48, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24).setDepth(20);
+
+    // Glassmorphic HUD score/combo panel
+    this.add.rectangle(1010, 218, 150, 112, 0x091412, 0.88).setStrokeStyle(1.5, 0xd1a95d, 0.6).setDepth(20);
+    this.add.rectangle(1010, 218, 144, 106, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.24).setDepth(20);
 
     const laneXs = [435, 570, 705, 840];
     laneXs.forEach((x, lane) => {
@@ -315,11 +326,14 @@ export class RhythmScene extends Phaser.Scene {
       this.add.text(x, 586, formatBinding(gameState.settings.bindings.rhythm[lane]), {
         fontFamily: "Georgia, serif",
         fontSize: "30px",
-        color: "#b9402f"
+        color: "#fff4d6",
+        shadow: { offsetX: 0, offsetY: 0, color: "#ffd685", blur: 6, stroke: true, fill: true }
       }).setOrigin(0.5).setDepth(20);
     });
-    this.add.rectangle(640, 535, 642, 8, 0xb9402f, 0.92).setDepth(18);
-    this.add.rectangle(640, 535, 642, 20, 0xb9402f, 0.08).setDepth(17);
+    // Glowing cyan/jade hit laser line
+    this.add.rectangle(640, 535, 642, 4, 0xffffff, 0.95).setDepth(18);
+    this.add.rectangle(640, 535, 646, 8, 0x3de0c8, 0.6).setDepth(17);
+    this.add.rectangle(640, 535, 650, 18, 0x2bc7ab, 0.2).setDepth(16);
     this.add.rectangle(640, 154, 620, 6, 0x111817, 0.1).setStrokeStyle(1, 0x2bc7ab, 0.16);
     this.progressFill = this.add.rectangle(330, 154, 1, 6, 0x2bc7ab, 0.78).setOrigin(0, 0.5);
     return laneXs;

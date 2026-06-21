@@ -41,50 +41,75 @@ function drawCornerTicks(
 
 export function drawPuzzleBackdrop(scene: Phaser.Scene, config: PuzzleBackdropConfig) {
   const accent = config.accent ?? 0xd1a95d;
-  scene.add.rectangle(640, 360, 1280, 720, 0x111817);
+  scene.add.rectangle(640, 360, 1280, 720, 0x050c0a);
   const bg = scene.add.image(640, 360, "world-cinematic");
   const scale = Math.max(1280 / bg.width, 720 / bg.height);
-  bg.setScale(scale).setAlpha(config.backgroundAlpha ?? 0.3);
-  scene.add.rectangle(640, 360, 1280, 720, 0x07100f, config.overlayAlpha ?? 0.48);
-  scene.add.rectangle(640, 372, 1018, 584, 0x030605, 0.26);
-  const panel = scene.add.rectangle(640, 360, 980, 560, 0xf8edd2, 0.92);
-  panel.setStrokeStyle(2, accent, 0.34);
-  scene.add.rectangle(640, 152, 920, 2, accent, 0.2);
-  scene.add.rectangle(640, 560, 920, 2, accent, 0.16);
-  scene.add.rectangle(640, 356, 900, 370, 0xffffff, 0.05);
-  drawCornerTicks(scene, 640, 360, 980, 560, accent, 0.24);
+  bg.setScale(scale).setAlpha(0.24).setTint(0x123f36);
+  scene.add.rectangle(640, 360, 1280, 720, 0x060e0d, config.overlayAlpha ?? 0.52);
 
+  // Outer glowing panel
+  scene.add.rectangle(640, 372, 1018, 584, 0x020605, 0.4);
+  const panel = scene.add.rectangle(640, 360, 980, 560, 0x0c1b18, 0.92);
+  panel.setStrokeStyle(3, 0x1f8f82, 0.72);
+
+  // Inner golden border
+  scene.add.rectangle(640, 360, 968, 548).setStrokeStyle(1.5, 0xd1a95d, 0.36);
+
+  scene.add.rectangle(640, 152, 920, 2, accent, 0.28);
+  scene.add.rectangle(640, 560, 920, 2, accent, 0.24);
+  scene.add.rectangle(640, 356, 900, 370, 0x2bc7ab, 0.015);
+  drawCornerTicks(scene, 640, 360, 980, 560, accent, 0.36);
+
+  // Glowing guidelines
   for (let index = 0; index < 7; index += 1) {
     const y = 312 + index * 34;
-    scene.add.line(640, y, -405, 0, 405, 0, 0x8a734e, index % 2 === 0 ? 0.07 : 0.04);
+    scene.add.line(640, y, -405, 0, 405, 0, 0xd1a95d, index % 2 === 0 ? 0.06 : 0.03);
   }
 
+  // Floating animated motes
   for (const mote of [
-    [218, 172, 2],
-    [1028, 198, 3],
-    [1114, 530, 2],
-    [236, 520, 3],
-    [998, 438, 2]
+    [218, 172, 3],
+    [1028, 198, 4],
+    [1114, 530, 3],
+    [236, 520, 4],
+    [998, 438, 3]
   ]) {
-    scene.add.circle(mote[0], mote[1], mote[2], accent, 0.24);
+    const circle = scene.add.circle(mote[0], mote[1], mote[2], accent, 0.28);
+    if (!gameState.settings.reduceMotion) {
+      scene.tweens.add({
+        targets: circle,
+        scale: { from: 1, to: 1.6 },
+        alpha: { from: 0.18, to: 0.62 },
+        y: mote[1] - 16,
+        duration: 2200 + Math.random() * 1600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+    }
   }
 
-  scene.add.text(170, 188, config.title, {
-    fontFamily: "Microsoft YaHei, sans-serif",
-    fontSize: "34px",
-    color: "#121817"
+  // Premium text formatting
+  scene.add.text(170, 182, config.title, {
+    fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+    fontSize: "35px",
+    fontStyle: "800",
+    color: "#fff4d6",
+    shadow: { offsetX: 1, offsetY: 2, color: "#000000", blur: 4, fill: true }
   });
-  scene.add.text(170, 232, config.subtitle, {
-    fontFamily: "Microsoft YaHei, sans-serif",
+  scene.add.text(170, 228, config.subtitle, {
+    fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
     fontSize: "18px",
-    color: "#394440"
+    fontStyle: "600",
+    color: "#d1a95d",
+    shadow: { offsetX: 1, offsetY: 1, color: "#000000", blur: 2, fill: true }
   });
-  scene.add.text(170, 266, config.clue, {
-    fontFamily: "Microsoft YaHei, sans-serif",
+  scene.add.text(170, 258, config.clue, {
+    fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
     fontSize: "15px",
-    color: "#6b5a3d"
+    color: "#a8c0ba"
   });
-  scene.add.rectangle(288, 298, 236, 2, accent, 0.34);
+  scene.add.rectangle(288, 290, 236, 2, accent, 0.46);
 }
 
 export function drawArtifactIcon(

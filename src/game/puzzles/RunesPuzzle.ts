@@ -41,18 +41,20 @@ export class RunesPuzzle extends Phaser.Scene {
       overlayAlpha: 0.5
     });
 
-    this.add.rectangle(640, 318, 560, 128, 0x1c211f, 0.13).setStrokeStyle(2, 0xb88735, 0.22);
-    this.add.rectangle(640, 310, 488, 78, 0xfffcf2, 0.2).setStrokeStyle(1, 0xc6523d, 0.28);
+    this.add.rectangle(640, 318, 560, 128, 0x050c0a, 0.4).setStrokeStyle(2, 0x1f8f82, 0.28);
+    this.add.rectangle(640, 310, 488, 78, 0x0c1b18, 0.82).setStrokeStyle(1.5, 0xd1a95d, 0.44);
     for (let index = 0; index < 9; index += 1) {
-      this.add.line(424 + index * 54, 318, 0, -36, 0, 36, 0x6b3a31, 0.12);
+      this.add.line(424 + index * 54, 318, 0, -36, 0, 36, 0xd1a95d, 0.16);
     }
     this.readout = this.add.text(640, 310, copy.runesEmpty, {
-      fontFamily: "Microsoft YaHei, sans-serif",
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
       fontSize: "34px",
-      color: "#b9402f"
+      fontStyle: "700",
+      color: "#3de0c8",
+      shadow: { offsetX: 0, offsetY: 0, color: "#3de0c8", blur: 8, stroke: true, fill: true }
     }).setOrigin(0.5);
     config.order.forEach((_rune, index) => {
-      const slot = this.add.rectangle(550 + index * 60, 372, 40, 10, 0x111817, 0.08).setStrokeStyle(1, 0xb88735, 0.18);
+      const slot = this.add.rectangle(550 + index * 60, 372, 40, 10, 0x091412, 0.8).setStrokeStyle(1, 0xd1a95d, 0.36);
       this.progressSlots.push(slot);
     });
     this.refreshProgress();
@@ -60,33 +62,38 @@ export class RunesPuzzle extends Phaser.Scene {
     config.choices.forEach((rune, index) => {
       const x = 370 + index * 180;
       const button = this.add.container(x, 430);
-      const aura = this.add.circle(0, 0, 70, 0xc6523d, 0.12);
-      const seal = this.add.circle(0, 0, 58, 0x1c211f, 0.88).setStrokeStyle(3, 0xb88735, 0.78);
-      const inner = this.add.circle(0, 0, 42, 0xc6523d, 0.18).setStrokeStyle(1, 0xfff4d6, 0.18);
+      const aura = this.add.circle(0, 0, 70, 0x3de0c8, 0.14);
+      const seal = this.add.circle(0, 0, 58, 0x0c1b18, 0.9).setStrokeStyle(2.5, 0xd1a95d, 0.76);
+      const inner = this.add.circle(0, 0, 42, 0x1f8f82, 0.22).setStrokeStyle(1, 0x3de0c8, 0.24);
       const scratchA = this.add.line(0, 0, -34, -22, 28, -32, 0xfff4d6, 0.18);
       const scratchB = this.add.line(0, 0, -28, 32, 32, 22, 0xfff4d6, 0.12);
       const text = this.add.text(0, 0, rune, {
-        fontFamily: "Microsoft YaHei, sans-serif",
+        fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
         fontSize: "38px",
+        fontStyle: "700",
         color: "#fffcf2"
       }).setOrigin(0.5);
       button.add([aura, seal, inner, scratchA, scratchB, text]);
       button.setInteractive(new Phaser.Geom.Circle(0, 0, 62), Phaser.Geom.Circle.Contains);
       button.on("pointerdown", () => this.choose(rune, config));
-      button.on("pointerover", () =>
+      button.on("pointerover", () => {
+        aura.setAlpha(0.38);
+        seal.setStrokeStyle(3, 0x3de0c8, 0.95);
         this.tweens.add({
           targets: button,
-          scale: 1.08,
+          scale: 1.1,
           duration: gameState.settings.reduceMotion ? 0 : 120
-        })
-      );
-      button.on("pointerout", () =>
+        });
+      });
+      button.on("pointerout", () => {
+        aura.setAlpha(0.14);
+        seal.setStrokeStyle(2.5, 0xd1a95d, 0.76);
         this.tweens.add({
           targets: button,
           scale: 1,
           duration: gameState.settings.reduceMotion ? 0 : 120
-        })
-      );
+        });
+      });
     });
     this.bindKeyboard(config);
 
@@ -157,17 +164,43 @@ export class RunesPuzzle extends Phaser.Scene {
   }
 
   private createFooter() {
-    const back = this.add.text(1080, 188, puzzleCopy[gameState.settings.locale].backRiver, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "17px",
-      color: "#1d7f73",
-      backgroundColor: "rgba(255,252,242,0.8)",
-      padding: { x: 12, y: 7 }
+    const copy = puzzleCopy[gameState.settings.locale];
+    const container = this.add.container(1080, 188).setSize(140, 42);
+
+    const bg = this.add.rectangle(0, 0, 140, 42, 0x091412, 0.88).setStrokeStyle(1.5, 0xd1a95d, 0.6);
+    const label = this.add.text(0, 0, copy.backRiver, {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "15px",
+      fontStyle: "600",
+      color: "#fff4d6"
     }).setOrigin(0.5);
-    back.setInteractive();
-    back.on("pointerdown", () => {
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-70, -21, 140, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
       playUiClick();
       this.scene.start("WorldScene");
+    });
+
+    container.on("pointerover", () => {
+      bg.setStrokeStyle(2, 0x3de0c8, 0.9);
+      label.setColor("#3de0c8");
+      this.tweens.add({
+        targets: container,
+        scale: 1.05,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+
+    container.on("pointerout", () => {
+      bg.setStrokeStyle(1.5, 0xd1a95d, 0.6);
+      label.setColor("#fff4d6");
+      this.tweens.add({
+        targets: container,
+        scale: 1,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
     });
   }
 
