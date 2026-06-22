@@ -79,6 +79,14 @@ export class NPC {
         repeat: -1,
         ease: "Sine.easeInOut"
       });
+      scene.tweens.add({
+        targets: guideNeedle,
+        y: -64,
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
     }
   }
 
@@ -142,6 +150,7 @@ export class NPC {
     this.scene.tweens.add({
       targets: this.halo,
       scale: focused ? 1.22 : 1,
+      strokeAlpha: focused ? 0.85 : 0.48,
       duration: gameState.settings.reduceMotion ? 0 : 160,
       ease: "Back.easeOut"
     });

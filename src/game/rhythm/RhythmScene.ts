@@ -222,7 +222,7 @@ export class RhythmScene extends Phaser.Scene {
       this.feedback.setColor("#3de0c8");
       this.flashLane(lane, 0x2bc7ab);
       this.pulseFeedback(0x2bc7ab);
-      burst(this, candidate.marker.x, candidate.marker.y, 0x2bc7ab);
+      burst(this, candidate.marker.x, candidate.marker.y, 0x2bc7ab, 28, 6);
     } else if (diff <= 340) {
       this.score += 70;
       candidate.markHit();
@@ -234,7 +234,7 @@ export class RhythmScene extends Phaser.Scene {
       this.feedback.setColor("#ffd685");
       this.flashLane(lane, 0xd1a95d);
       this.pulseFeedback(0xd1a95d);
-      burst(this, candidate.marker.x, candidate.marker.y, 0xd1a95d);
+      burst(this, candidate.marker.x, candidate.marker.y, 0xd1a95d, 20, 4);
     } else if (gameState.easyMode && diff <= 480) {
       this.score += 25;
       candidate.markHit();

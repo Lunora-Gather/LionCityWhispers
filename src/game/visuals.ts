@@ -155,22 +155,23 @@ export function showRewardBanner(scene: Phaser.Scene, text: string, tone: number
   return banner;
 }
 
-export function burst(scene: Phaser.Scene, x: number, y: number, color = 0xd1a95d) {
+export function burst(scene: Phaser.Scene, x: number, y: number, color = 0xd1a95d, count = 18, baseSize = 4) {
   if (gameState.settings.reduceMotion) {
     const flash = scene.add.circle(x, y, 28, color, 0.28).setDepth(170);
     scene.time.delayedCall(180, () => flash.destroy());
     return;
   }
-  for (let index = 0; index < 18; index += 1) {
-    const angle = (Math.PI * 2 * index) / 18;
-    const dot = scene.add.circle(x, y, 4, color, 0.86).setDepth(170);
+  for (let index = 0; index < count; index += 1) {
+    const angle = (Math.PI * 2 * index) / count;
+    const size = Phaser.Math.Between(Math.max(1, baseSize - 2), baseSize + 2);
+    const dot = scene.add.circle(x, y, size, color, 0.86).setDepth(170);
     scene.tweens.add({
       targets: dot,
-      x: x + Math.cos(angle) * Phaser.Math.Between(48, 96),
-      y: y + Math.sin(angle) * Phaser.Math.Between(30, 72),
+      x: x + Math.cos(angle) * Phaser.Math.Between(48, 120),
+      y: y + Math.sin(angle) * Phaser.Math.Between(30, 96),
       alpha: 0,
-      scale: 0.25,
-      duration: 620,
+      scale: 0.2,
+      duration: Phaser.Math.Between(500, 750),
       ease: "Sine.easeOut",
       onComplete: () => dot.destroy()
     });

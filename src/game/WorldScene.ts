@@ -514,30 +514,63 @@ export class WorldScene extends Phaser.Scene {
 
   private createDialogueBox(text: string, hasPortrait: boolean) {
     const box = this.add.container(640, 578).setDepth(50);
-    const panel = this.add.rectangle(0, 0, 900, 118, 0x0c1212, 0.8);
-    panel.setStrokeStyle(1, 0xd1a95d, 0.46);
+    const panel = this.add.rectangle(0, 0, 900, 118, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6);
+    const innerBorder = this.add.rectangle(0, 0, 894, 112, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24);
+
+    const match = text.match(/^([^：:]+)[：:]([\s\S]+)$/);
+    let speakerText = "";
+    let messageText = text;
+    if (match) {
+      speakerText = match[1].trim();
+      messageText = match[2].trim();
+    }
+
     const lineX = hasPortrait ? -310 : -410;
     const wrapWidth = hasPortrait ? 690 : 820;
-    const line = this.add.text(lineX, -28, text, {
+    const line = this.add.text(lineX, -28, messageText, {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "21px",
       color: "#fff4d6",
       wordWrap: { width: wrapWidth }
     });
+
     const hint = this.add.text(410, 34, formatBinding(gameState.settings.bindings.action), {
       fontFamily: "Georgia, serif",
       fontSize: "15px",
       color: "#d1a95d"
     }).setOrigin(1, 0.5);
+
+    const badgeLabel = this.add.text(0, 0, "", {
+      fontFamily: "Microsoft YaHei, sans-serif",
+      fontSize: "14px",
+      fontStyle: "bold",
+      color: "#ffd685"
+    }).setOrigin(0.5);
+    const badgeBg = this.add.rectangle(0, 0, 90, 26, 0x091412, 0.95).setStrokeStyle(1.5, 0xd1a95d, 0.68);
+    const badgeContainer = this.add.container(0, 0, [badgeBg, badgeLabel]).setAlpha(0);
+
+    if (speakerText) {
+      badgeLabel.setText(speakerText);
+      const badgeWidth = Math.max(90, badgeLabel.width + 24);
+      badgeBg.setSize(badgeWidth, 26);
+      badgeContainer.setPosition(-450 + badgeWidth / 2 + 16, -59);
+      badgeContainer.setAlpha(1);
+    }
+
     if (hasPortrait) {
       const portraitFrame = this.add.rectangle(-390, 0, 86, 86, 0x111817, 0.86);
       portraitFrame.setStrokeStyle(1, 0xd1a95d, 0.48);
       const portrait = this.add.image(-390, 0, "curator-lin").setDisplaySize(78, 78);
-      box.add([panel, portraitFrame, portrait, line, hint]);
+      box.add([panel, innerBorder, portraitFrame, portrait, line, hint, badgeContainer]);
     } else {
-      box.add([panel, line, hint]);
+      box.add([panel, innerBorder, line, hint, badgeContainer]);
     }
+
     box.setData("line", line);
+    box.setData("badgeLabel", badgeLabel);
+    box.setData("badgeBg", badgeBg);
+    box.setData("badgeContainer", badgeContainer);
+
     box.setInteractive(
       new Phaser.Geom.Rectangle(-450, -59, 900, 118),
       Phaser.Geom.Rectangle.Contains
@@ -557,8 +590,35 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     const text = this.activeDialogue.lines[this.activeDialogue.index];
+
+    // Parse speaker name
+    const match = text.match(/^([^：:]+)[：:]([\s\S]+)$/);
+    let speakerText = "";
+    let messageText = text;
+    if (match) {
+      speakerText = match[1].trim();
+      messageText = match[2].trim();
+    }
+
     const line = this.activeDialogue.box.getData("line") as Phaser.GameObjects.Text;
-    line.setText(text);
+    line.setText(messageText);
+
+    const badgeLabel = this.activeDialogue.box.getData("badgeLabel") as Phaser.GameObjects.Text | undefined;
+    const badgeBg = this.activeDialogue.box.getData("badgeBg") as Phaser.GameObjects.Rectangle | undefined;
+    const badgeContainer = this.activeDialogue.box.getData("badgeContainer") as Phaser.GameObjects.Container | undefined;
+
+    if (badgeLabel && badgeBg && badgeContainer) {
+      if (speakerText) {
+        badgeLabel.setText(speakerText);
+        const badgeWidth = Math.max(90, badgeLabel.width + 24);
+        badgeBg.setSize(badgeWidth, 26);
+        badgeContainer.setPosition(-450 + badgeWidth / 2 + 16, -59);
+        badgeContainer.setAlpha(1);
+      } else {
+        badgeContainer.setAlpha(0);
+      }
+    }
+
     gameState.dialogue = text;
     emitGameState("dialogue");
   }

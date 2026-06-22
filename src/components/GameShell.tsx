@@ -632,7 +632,7 @@ export function GameShell() {
   };
 
   return (
-    <div className="shell">
+    <div className={`shell ${hud.settings.reduceMotion ? "reduced-motion" : ""}`}>
       <main className="stage" aria-label={ui.gameAria} style={stageStyle}>
         <div id={hostId} className="game-host" />
         {!loading.ready ? (

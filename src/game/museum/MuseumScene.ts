@@ -21,6 +21,8 @@ export class MuseumScene extends Phaser.Scene {
   private visitorFeedback!: Phaser.GameObjects.Text;
   private tokens = new Map<ArtifactId, Phaser.GameObjects.Container>();
   private slotFrames = new Map<number, Phaser.GameObjects.Rectangle>();
+  private slotIndicators = new Map<number, Phaser.GameObjects.Arc>();
+  private slotHalos = new Map<number, Phaser.GameObjects.Arc>();
   private selectedArtifactId?: ArtifactId;
   private completionBanner?: Phaser.GameObjects.Container;
   private keyHandler?: (event: KeyboardEvent) => void;
@@ -73,16 +75,18 @@ export class MuseumScene extends Phaser.Scene {
       fontSize: "18px",
       color: "#d8c8a3"
     });
-    this.add.rectangle(640, 516, 560, 52, 0x090f0f, 0.36).setStrokeStyle(1, 0xd1a95d, 0.18);
+    this.add.rectangle(640, 516, 560, 52, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6);
+    this.add.rectangle(640, 516, 554, 46, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24);
     this.status = this.add.text(640, 528, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "20px",
-      color: "#fff4d6"
+      color: "#fff4d6",
+      shadow: { offsetX: 0, offsetY: 0, color: "#ffffff", blur: 4, fill: true }
     }).setOrigin(0.5);
     this.visitorFeedback = this.add.text(640, 502, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "16px",
-      color: "#d8c8a3"
+      color: "#a8c0ba"
     }).setOrigin(0.5);
   }
 
@@ -100,7 +104,22 @@ export class MuseumScene extends Phaser.Scene {
       this.slotFrames.set(slot.index, glass);
       glass.setInteractive();
       glass.on("pointerdown", () => this.placeSelectedArtifact(slot));
-      this.add.circle(slot.x, slot.y - 64, 9, occupied ? 0x1f8f82 : 0xd1a95d, 0.9);
+      
+      const dotColor = occupied ? 0x2bc7ab : 0xd1a95d;
+      const indicator = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 1);
+      const halo = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 0.38);
+      this.slotIndicators.set(slot.index, indicator);
+      this.slotHalos.set(slot.index, halo);
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: halo,
+          scale: 3,
+          alpha: 0,
+          duration: 1600,
+          repeat: -1,
+          ease: "Sine.easeOut"
+        });
+      }
     }
   }
 
@@ -126,15 +145,17 @@ export class MuseumScene extends Phaser.Scene {
   private createArtifactToken(id: ArtifactId, name: string, detail: string, x: number, y: number) {
     const token = this.add.container(x, y).setDepth(24);
     const color = artifactColors[id];
-    const shadow = this.add.rectangle(6, 7, 174, 62, 0x050909, 0.28);
-    const card = this.add.rectangle(0, 0, 172, 58, 0xfff4d6, 0.95).setStrokeStyle(2, 0xd1a95d, 0.45);
-    const colorRail = this.add.rectangle(-78, 0, 8, 48, color, 0.78);
-    const sheen = this.add.rectangle(22, -22, 110, 2, 0xffffff, 0.32);
+    const shadow = this.add.rectangle(6, 7, 174, 62, 0x020504, 0.4);
+    const card = this.add.rectangle(0, 0, 172, 58, 0x0c1b18, 0.9).setStrokeStyle(1.5, 0xd1a95d, 0.76);
+    const innerBorder = this.add.rectangle(0, 0, 166, 52, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.28);
+    const colorRail = this.add.rectangle(-78, 0, 8, 48, color, 0.88);
+    const sheen = this.add.rectangle(22, -22, 110, 2, 0xffffff, 0.16);
     const icon = drawArtifactIcon(this, id, -54, 0, 42);
     const label = this.add.text(-24, -18, name, {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "15px",
-      color: "#161c1a",
+      fontStyle: "bold",
+      color: "#fff4d6",
       wordWrap: { width: 112 }
     });
     const detailLimit = gameState.settings.locale === "en" ? 42 : 18;
@@ -142,10 +163,10 @@ export class MuseumScene extends Phaser.Scene {
     const detailText = this.add.text(-24, 6, shortDetail, {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: gameState.settings.locale === "en" ? "10px" : "11px",
-      color: "#5f5749",
+      color: "#a8c0ba",
       wordWrap: { width: 114 }
     });
-    token.add([shadow, card, colorRail, sheen, icon, label, detailText]);
+    token.add([shadow, card, innerBorder, colorRail, sheen, icon, label, detailText]);
     token.setData("home", { x, y });
     this.tokens.set(id, token);
     token.setInteractive(new Phaser.Geom.Rectangle(-86, -38, 172, 86), Phaser.Geom.Rectangle.Contains);
@@ -292,6 +313,14 @@ export class MuseumScene extends Phaser.Scene {
       frame.setAlpha(1);
       frame.setFillStyle(occupied.has(index) ? 0x1f8f82 : 0xd1a95d, occupied.has(index) ? 0.08 : 0.16);
       frame.setStrokeStyle(2, occupied.has(index) ? 0x1f8f82 : 0xd1a95d, occupied.has(index) ? 0.44 : 0.48);
+      
+      const dotColor = occupied.has(index) ? 0x2bc7ab : 0xd1a95d;
+      const indicator = this.slotIndicators.get(index);
+      const halo = this.slotHalos.get(index);
+      if (indicator && halo) {
+        indicator.setFillStyle(dotColor, 1);
+        halo.setFillStyle(dotColor, 0.38);
+      }
     }
   }
 
@@ -301,7 +330,8 @@ export class MuseumScene extends Phaser.Scene {
     const rayLeft = this.add.triangle(-260, 18, -46, -74, 20, -74, 96, 92, 0xfff4d6, 0.12);
     const rayRight = this.add.triangle(260, 18, -20, -74, 46, -74, -96, 92, 0xfff4d6, 0.1);
     const shadow = this.add.rectangle(8, 10, 704, 126, 0x020504, 0.32);
-    const panel = this.add.rectangle(0, 0, 686, 116, 0x11392f, 0.95).setStrokeStyle(2, 0xfff4d6, 0.38);
+    const panel = this.add.rectangle(0, 0, 686, 116, 0x091412, 0.92).setStrokeStyle(1.5, 0x2bc7ab, 0.6);
+    const innerBorder = this.add.rectangle(0, 0, 678, 108, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.28);
     const topLine = this.add.rectangle(0, -46, 580, 2, 0xd1a95d, 0.72);
     const title = this.add.text(0, -16, copy.museumVictory, {
       fontFamily: "Microsoft YaHei, sans-serif",
@@ -315,7 +345,7 @@ export class MuseumScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: 590 }
     }).setOrigin(0.5);
-    banner.add([rayLeft, rayRight, shadow, panel, topLine, title, subtitle]);
+    banner.add([rayLeft, rayRight, shadow, panel, innerBorder, topLine, title, subtitle]);
     for (let index = 0; index < 6; index += 1) {
       const visitor = this.add.container(-230 + index * 92, 74);
       visitor.add([
@@ -338,17 +368,49 @@ export class MuseumScene extends Phaser.Scene {
   }
 
   private createBackButton() {
-    const back = this.add.text(1080, 188, puzzleCopy[gameState.settings.locale].backRiver, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "17px",
-      color: "#fff4d6",
-      backgroundColor: "rgba(10,17,17,0.62)",
-      padding: { x: 14, y: 8 }
+    const copy = puzzleCopy[gameState.settings.locale];
+    const container = this.add.container(1080, 188).setSize(140, 42);
+
+    const bg = this.add.rectangle(0, 0, 140, 42, 0x091412, 0.88).setStrokeStyle(1.5, 0xd1a95d, 0.6);
+    const label = this.add.text(0, 0, copy.backRiver, {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "15px",
+      fontStyle: "600",
+      color: "#fff4d6"
     }).setOrigin(0.5);
-    back.setInteractive();
-    back.on("pointerdown", () => {
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-70, -21, 140, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
       playUiClick();
       this.scene.start("WorldScene");
+    });
+
+    container.on("pointerover", () => {
+      bg.setStrokeStyle(2, 0x3de0c8, 0.9);
+      label.setColor("#3de0c8");
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: container,
+          scale: 1.05,
+          duration: 100,
+          ease: "Sine.easeOut"
+        });
+      }
+    });
+
+    container.on("pointerout", () => {
+      bg.setStrokeStyle(1.5, 0xd1a95d, 0.6);
+      label.setColor("#fff4d6");
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: container,
+          scale: 1,
+          duration: 100,
+          ease: "Sine.easeOut"
+        });
+      }
     });
   }
 

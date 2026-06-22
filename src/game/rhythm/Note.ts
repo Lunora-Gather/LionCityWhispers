@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { gameState } from "../state";
 
 export class Note {
   readonly marker: Phaser.GameObjects.Container;
@@ -50,7 +51,27 @@ export class Note {
 
   markHit() {
     this.hit = true;
-    this.marker.setScale(1.18);
-    this.marker.setAlpha(0.3);
+    const scene = this.marker.scene;
+    if (scene) {
+      if (gameState.settings.reduceMotion) {
+        this.marker.setScale(1.18);
+        this.marker.setAlpha(0.3);
+      } else {
+        scene.tweens.add({
+          targets: this.marker,
+          scale: 1.5,
+          angle: Phaser.Math.Between(-35, 35),
+          alpha: 0,
+          duration: 320,
+          ease: "Back.easeOut",
+          onComplete: () => {
+            this.marker.setAlpha(0);
+          }
+        });
+      }
+    } else {
+      this.marker.setScale(1.18);
+      this.marker.setAlpha(0.3);
+    }
   }
 }
