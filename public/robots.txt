@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lunora-gather.github.io/LionCityWhispers/sitemap.xml
