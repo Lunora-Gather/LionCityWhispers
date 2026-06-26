@@ -34,8 +34,9 @@
 - **博物馆策展终章**：自由放置修复文物，吸引游客并获得策展评分。
 - **完整双语体验**：中文/英文界面、线索、目标、设置与文物图鉴。
 - **PWA 与离线支持**：Service Worker 缓存关键资源，支持安装到桌面/移动端。
-- **无障碍与体验设置**：音量、静音、动作减弱、自定义按键、触控操作。
+- **无障碍与体验设置**：音量、静音、动作减弱、自定义按键、触控操作、高对比度焦点反馈。
 - **响应式布局优化**：桌面端 HUD 分区更清晰，移动端支持安全区域、横竖屏和触控按钮。
+- **发布体验增强**：提供无 JavaScript 兜底、关键图片预加载、公开 sitemap 与游戏结构化数据。
 
 ---
 
@@ -59,7 +60,7 @@
 - **Framework**: Next.js 16 + React 19 + Pages Router
 - **Game Engine**: Phaser 4
 - **Language**: TypeScript, React TSX
-- **Styling**: Vanilla CSS, glassmorphism HUD, responsive layout polish
+- **Styling**: Vanilla CSS, glassmorphism HUD, responsive layout polish, accessibility polish
 - **Testing**: Playwright E2E tests
 - **PWA**: Web App Manifest + Service Worker runtime cache
 - **Deployment**: GitHub Actions + GitHub Pages static export
@@ -177,6 +178,7 @@ GITHUB_PAGES=1 GITHUB_PAGES_REPO=LionCityWhispers npm run build:pages
 - 支持中文 / English 切换；
 - 支持静音、主音量、音效音量、环境音量调整；
 - 支持 Reduce Motion，降低动画干扰；
+- 支持高对比度模式、清晰焦点环与触控按钮按压反馈；
 - 支持移动端横屏优先的 PWA 体验；
 - HUD、背包、路线进度与设置面板已针对桌面、平板、手机布局优化。
 
