@@ -9,6 +9,23 @@ const description =
   "狮城秘语 1.0.0：直接在浏览器中游玩的双语叙事解谜游戏，融合文物修复、节奏仪式与博物馆布展冒险。";
 const englishDescription =
   "Play Lion City Whispers 1.0.0, a bilingual browser game about artifact restoration, rhythm ritual, and museum curation.";
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  name: "狮城秘语 | Lion City Whispers",
+  url: publicUrl,
+  image: publicImageUrl,
+  description: englishDescription,
+  genre: ["Narrative puzzle", "Browser game", "Educational adventure"],
+  applicationCategory: "GameApplication",
+  operatingSystem: "Web browser",
+  inLanguage: ["zh-Hans", "en"],
+  isAccessibleForFree: true,
+  publisher: {
+    "@type": "Organization",
+    name: "Lunora Gather"
+  }
+};
 
 export default function Home() {
   return (
@@ -47,6 +64,10 @@ export default function Home() {
         <meta name="twitter:description" content={englishDescription} />
         <meta name="twitter:image" content={publicImageUrl} />
         <meta name="twitter:image:alt" content="Lion City Whispers game icon" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
       </Head>
       <GameShell />
     </>
