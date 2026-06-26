@@ -70,6 +70,7 @@ export type GameState = {
 
 const SAVE_KEY = "lcw:save:v2";
 const SAVE_VERSION = 2;
+const MAX_VISITORS = 9999;
 const artifactIds: ArtifactId[] = [
   "badang-stone",
   "rune-plaque",
@@ -86,6 +87,10 @@ const defaultBindings: ControlBindings = {
   rhythm: ["KeyA", "KeyS", "KeyD", "KeyF"]
 };
 
+function cloneBindings(bindings: ControlBindings): ControlBindings {
+  return { ...bindings, rhythm: [...bindings.rhythm] as [string, string, string, string] };
+}
+
 function createDefaultSettings(): GameSettings {
   return {
     muted: false,
@@ -94,7 +99,7 @@ function createDefaultSettings(): GameSettings {
     ambientVolume: 0.62,
     reduceMotion: false,
     locale: "zh",
-    bindings: { ...defaultBindings, rhythm: [...defaultBindings.rhythm] }
+    bindings: cloneBindings(defaultBindings)
   };
 }
 
@@ -141,9 +146,19 @@ function isArtifactId(value: unknown): value is ArtifactId {
   return typeof value === "string" && artifactIds.includes(value as ArtifactId);
 }
 
+function sanitizeBoolean(value: unknown, fallback = false) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
 function sanitizeVolume(value: unknown, fallback = 0.78) {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(1, Math.max(0, value))
+    : fallback;
+}
+
+function sanitizeNonNegativeInteger(value: unknown, fallback = 0, max = Number.MAX_SAFE_INTEGER) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(max, Math.max(0, Math.round(value)))
     : fallback;
 }
 
@@ -151,22 +166,84 @@ function sanitizeBinding(value: unknown, fallback: string) {
   return typeof value === "string" && value.length > 0 && value.length < 32 ? value : fallback;
 }
 
-function sanitizeBindings(value: unknown): ControlBindings {
+function sanitizeBindings(value: unknown, fallback: ControlBindings = defaultBindings): ControlBindings {
   const source =
     value && typeof value === "object" ? (value as Partial<ControlBindings>) : {};
-  const rhythmSource = Array.isArray(source.rhythm) ? source.rhythm : defaultBindings.rhythm;
+  const rhythmSource = Array.isArray(source.rhythm) ? source.rhythm : fallback.rhythm;
   return {
-    moveUp: sanitizeBinding(source.moveUp, defaultBindings.moveUp),
-    moveDown: sanitizeBinding(source.moveDown, defaultBindings.moveDown),
-    moveLeft: sanitizeBinding(source.moveLeft, defaultBindings.moveLeft),
-    moveRight: sanitizeBinding(source.moveRight, defaultBindings.moveRight),
-    action: sanitizeBinding(source.action, defaultBindings.action),
+    moveUp: sanitizeBinding(source.moveUp, fallback.moveUp),
+    moveDown: sanitizeBinding(source.moveDown, fallback.moveDown),
+    moveLeft: sanitizeBinding(source.moveLeft, fallback.moveLeft),
+    moveRight: sanitizeBinding(source.moveRight, fallback.moveRight),
+    action: sanitizeBinding(source.action, fallback.action),
     rhythm: [
-      sanitizeBinding(rhythmSource[0], defaultBindings.rhythm[0]),
-      sanitizeBinding(rhythmSource[1], defaultBindings.rhythm[1]),
-      sanitizeBinding(rhythmSource[2], defaultBindings.rhythm[2]),
-      sanitizeBinding(rhythmSource[3], defaultBindings.rhythm[3])
+      sanitizeBinding(rhythmSource[0], fallback.rhythm[0]),
+      sanitizeBinding(rhythmSource[1], fallback.rhythm[1]),
+      sanitizeBinding(rhythmSource[2], fallback.rhythm[2]),
+      sanitizeBinding(rhythmSource[3], fallback.rhythm[3])
     ]
+  };
+}
+
+function sanitizeSettings(value: unknown, fallback: GameSettings = createDefaultSettings()): GameSettings {
+  const source = value && typeof value === "object" ? (value as Partial<GameSettings>) : {};
+  return {
+    muted: sanitizeBoolean(source.muted, fallback.muted),
+    volume: sanitizeVolume(source.volume, fallback.volume),
+    effectsVolume: sanitizeVolume(source.effectsVolume, fallback.effectsVolume),
+    ambientVolume: sanitizeVolume(source.ambientVolume, fallback.ambientVolume),
+    reduceMotion: sanitizeBoolean(source.reduceMotion, fallback.reduceMotion),
+    locale: isLocale(source.locale) ? source.locale : fallback.locale,
+    bindings: sanitizeBindings(source.bindings, fallback.bindings)
+  };
+}
+
+function sanitizeFlags(value: unknown): Flags {
+  const source = value && typeof value === "object" ? (value as Partial<Flags>) : {};
+  return {
+    jigsaw: source.jigsaw === true,
+    runes: source.runes === true,
+    lock: source.lock === true,
+    rhythm: source.rhythm === true
+  };
+}
+
+function sanitizeMuseum(value: unknown): MuseumState {
+  const source = value && typeof value === "object" ? (value as Partial<MuseumState>) : {};
+  const placements: Partial<Record<ArtifactId, number>> = {};
+  if (source.placements && typeof source.placements === "object") {
+    for (const [artifactId, slot] of Object.entries(source.placements)) {
+      if (
+        isArtifactId(artifactId) &&
+        typeof slot === "number" &&
+        Number.isInteger(slot) &&
+        slot >= 0 &&
+        slot <= 3
+      ) {
+        placements[artifactId] = slot;
+      }
+    }
+  }
+  return {
+    placements,
+    visitors: sanitizeNonNegativeInteger(source.visitors, 0, MAX_VISITORS),
+    complete: sanitizeBoolean(source.complete)
+  };
+}
+
+function sanitizePerformanceStats(stats: Partial<PerformanceStats>): PerformanceStats {
+  return {
+    fps: sanitizeNonNegativeInteger(stats.fps, gameState.performance.fps, 240),
+    longFrames: sanitizeNonNegativeInteger(stats.longFrames, gameState.performance.longFrames),
+    inputLatency: sanitizeNonNegativeInteger(stats.inputLatency, gameState.performance.inputLatency),
+    worstInputLatency: sanitizeNonNegativeInteger(
+      stats.worstInputLatency,
+      gameState.performance.worstInputLatency
+    ),
+    interactionSamples: sanitizeNonNegativeInteger(
+      stats.interactionSamples,
+      gameState.performance.interactionSamples
+    )
   };
 }
 
@@ -228,57 +305,29 @@ function loadPersistedState() {
     const parsed = JSON.parse(raw) as {
       version?: number;
       inventoryIds?: unknown[];
-      flags?: Partial<Flags>;
-      museum?: Partial<MuseumState>;
+      flags?: unknown;
+      museum?: unknown;
       dialogue?: unknown;
       easyMode?: unknown;
-      settings?: Partial<GameSettings>;
+      settings?: unknown;
     };
     if (parsed.version !== SAVE_VERSION) {
       return null;
     }
     const defaults = createDefaultState();
-    const placements: Partial<Record<ArtifactId, number>> = {};
-    if (parsed.museum?.placements && typeof parsed.museum.placements === "object") {
-      for (const [artifactId, slot] of Object.entries(parsed.museum.placements)) {
-        if (isArtifactId(artifactId) && typeof slot === "number" && slot >= 0 && slot <= 3) {
-          placements[artifactId] = slot;
-        }
-      }
-    }
     return {
       ...defaults,
       inventory: (parsed.inventoryIds ?? [])
         .filter(isArtifactId)
         .map((id) => artifacts[id]),
-      flags: {
-        jigsaw: Boolean(parsed.flags?.jigsaw),
-        runes: Boolean(parsed.flags?.runes),
-        lock: Boolean(parsed.flags?.lock),
-        rhythm: Boolean(parsed.flags?.rhythm)
-      },
-      museum: {
-        placements,
-        visitors:
-          typeof parsed.museum?.visitors === "number" && Number.isFinite(parsed.museum.visitors)
-            ? parsed.museum.visitors
-            : 0,
-        complete: Boolean(parsed.museum?.complete)
-      },
+      flags: sanitizeFlags(parsed.flags),
+      museum: sanitizeMuseum(parsed.museum),
       dialogue:
         typeof parsed.dialogue === "string" && parsed.dialogue.length > 0
           ? parsed.dialogue
           : defaults.dialogue,
       easyMode: typeof parsed.easyMode === "boolean" ? parsed.easyMode : defaults.easyMode,
-      settings: {
-        muted: Boolean(parsed.settings?.muted),
-        volume: sanitizeVolume(parsed.settings?.volume),
-        effectsVolume: sanitizeVolume(parsed.settings?.effectsVolume),
-        ambientVolume: sanitizeVolume(parsed.settings?.ambientVolume, 0.62),
-        reduceMotion: Boolean(parsed.settings?.reduceMotion),
-        locale: isLocale(parsed.settings?.locale) ? parsed.settings.locale : "zh",
-        bindings: sanitizeBindings(parsed.settings?.bindings)
-      }
+      settings: sanitizeSettings(parsed.settings, defaults.settings)
     } satisfies GameState;
   } catch {
     return null;
@@ -311,6 +360,7 @@ export function clearSavedGame() {
   if (typeof window !== "undefined") {
     try {
       window.localStorage.removeItem(SAVE_KEY);
+      lastSavedSerializedState = "";
     } catch {
       // Storage can be blocked; resetting in memory is still valid.
     }
@@ -330,29 +380,7 @@ export function toggleEasyMode() {
 
 export function updateSettings(settings: Partial<GameSettings>) {
   const previousLocale = gameState.settings.locale;
-  gameState.settings = {
-    ...gameState.settings,
-    ...settings,
-    volume: settings.volume === undefined ? gameState.settings.volume : sanitizeVolume(settings.volume),
-    effectsVolume:
-      settings.effectsVolume === undefined
-        ? gameState.settings.effectsVolume
-        : sanitizeVolume(settings.effectsVolume),
-    ambientVolume:
-      settings.ambientVolume === undefined
-        ? gameState.settings.ambientVolume
-        : sanitizeVolume(settings.ambientVolume, 0.62),
-    bindings:
-      settings.bindings === undefined
-        ? gameState.settings.bindings
-        : sanitizeBindings(settings.bindings),
-    locale:
-      settings.locale === undefined
-        ? gameState.settings.locale
-        : isLocale(settings.locale)
-          ? settings.locale
-          : gameState.settings.locale
-  };
+  gameState.settings = sanitizeSettings({ ...gameState.settings, ...settings }, gameState.settings);
   if (gameState.settings.locale !== previousLocale) {
     gameState.dialogue = text(
       gameState.settings.locale === "en" ? stateCopy.languageEn : stateCopy.languageZh,
@@ -436,5 +464,5 @@ export function emitGameState(scene?: string) {
 }
 
 export function updatePerformanceStats(stats: PerformanceStats) {
-  gameState.performance = stats;
+  gameState.performance = sanitizePerformanceStats(stats);
 }
