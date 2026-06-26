@@ -1,18 +1,24 @@
 import Phaser from "phaser";
 import { gameState } from "./state";
 
-const SPEED = 212;
+const SPEED = 224;
+const MAX_FRAME_DELTA = 34;
+const STEP_TRAIL_INTERVAL = 118;
 
 export class Player {
   readonly root: Phaser.GameObjects.Container;
   private body: Phaser.GameObjects.Container;
   private cursor: Phaser.GameObjects.Triangle;
+  private shadow: Phaser.GameObjects.Arc;
+  private lanternGlow: Phaser.GameObjects.Arc;
   private moveVector = new Phaser.Math.Vector2();
+  private trailCooldown = 0;
+  private walkTime = 0;
 
   constructor(private scene: Phaser.Scene, x: number, y: number) {
     this.root = scene.add.container(x, y);
-    const shadow = scene.add.ellipse(0, 33, 58, 18, 0x050908, 0.34);
-    const lanternGlow = scene.add.circle(31, 4, 29, 0xd9ad55, 0.18);
+    this.shadow = scene.add.ellipse(0, 33, 58, 18, 0x050908, 0.34);
+    this.lanternGlow = scene.add.circle(31, 4, 29, 0xd9ad55, 0.18);
     const backHem = scene.add.ellipse(1, 18, 42, 25, 0x0b3b37, 0.98);
     const robe = scene.add.ellipse(0, 5, 36, 58, 0x126d66, 0.98);
     const coat = scene.add.polygon(0, 6, [-17, -19, 18, -18, 24, 29, -22, 30], 0x0f5d57, 0.98);
@@ -36,7 +42,7 @@ export class Player {
     const legs2 = scene.add.rectangle(8, 37, 8, 15, 0x111817, 0.88);
     this.cursor = scene.add.triangle(0, -69, 0, 0, 14, 24, -14, 24, 0xd25b45, 0.92);
     this.body = scene.add.container(0, 0, [
-      lanternGlow,
+      this.lanternGlow,
       backHem,
       robe,
       coat,
@@ -59,11 +65,11 @@ export class Player {
       legs,
       legs2
     ]);
-    this.root.add([shadow, this.body, this.cursor]);
+    this.root.add([this.shadow, this.body, this.cursor]);
     this.root.setDepth(20);
     if (!gameState.settings.reduceMotion) {
       scene.tweens.add({
-        targets: lanternGlow,
+        targets: this.lanternGlow,
         alpha: { from: 0.14, to: 0.32 },
         scale: { from: 0.92, to: 1.12 },
         duration: 1080,
@@ -88,22 +94,62 @@ export class Player {
     up: boolean;
     down: boolean;
   }, delta: number) {
+    const safeDelta = Math.min(Math.max(delta, 0), MAX_FRAME_DELTA);
     this.moveVector.set(
       Number(keys.right) - Number(keys.left),
       Number(keys.down) - Number(keys.up)
     );
 
     if (this.moveVector.lengthSq() > 0) {
-      this.moveVector.normalize().scale((SPEED * delta) / 1000);
+      this.moveVector.normalize().scale((SPEED * safeDelta) / 1000);
       this.root.x = Phaser.Math.Clamp(this.root.x + this.moveVector.x, 80, 1200);
       this.root.y = Phaser.Math.Clamp(this.root.y + this.moveVector.y, 250, 585);
       if (this.moveVector.x !== 0) {
         this.body.scaleX = this.moveVector.x < 0 ? -1 : 1;
       }
-      this.cursor.setAlpha(0.92);
+      this.walkTime += safeDelta;
+      const bob = gameState.settings.reduceMotion ? 0 : Math.sin(this.walkTime / 82) * 2.2;
+      this.body.y = bob;
+      this.shadow.scaleX = 1.05 + Math.abs(bob) * 0.018;
+      this.shadow.scaleY = 0.96 - Math.abs(bob) * 0.008;
+      this.cursor.setAlpha(0.95);
+      this.emitStepTrail(safeDelta);
     } else {
+      this.walkTime = 0;
+      this.trailCooldown = 0;
+      this.body.y = Phaser.Math.Linear(this.body.y, 0, 0.24);
+      this.shadow.scaleX = Phaser.Math.Linear(this.shadow.scaleX, 1, 0.18);
+      this.shadow.scaleY = Phaser.Math.Linear(this.shadow.scaleY, 1, 0.18);
       this.cursor.setAlpha(0.55);
     }
+  }
+
+  private emitStepTrail(delta: number) {
+    if (gameState.settings.reduceMotion) {
+      return;
+    }
+    this.trailCooldown -= delta;
+    if (this.trailCooldown > 0) {
+      return;
+    }
+    this.trailCooldown = STEP_TRAIL_INTERVAL;
+    const trail = this.scene.add.ellipse(
+      this.root.x,
+      this.root.y + 34,
+      22,
+      8,
+      0xd1a95d,
+      0.16
+    ).setDepth(12);
+    this.scene.tweens.add({
+      targets: trail,
+      alpha: 0,
+      scaleX: 1.8,
+      scaleY: 1.25,
+      duration: 460,
+      ease: "Sine.easeOut",
+      onComplete: () => trail.destroy()
+    });
   }
 
   distanceTo(x: number, y: number) {
