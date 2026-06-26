@@ -1,0 +1,218 @@
+/*
+ * Extra experience polish: accessibility, touch feedback, loading clarity,
+ * and no-JavaScript fallback presentation. No gameplay state is changed here.
+ */
+
+:root {
+  --lcw-focus-ring: 0 0 0 3px rgba(43, 199, 171, 0.36), 0 0 0 5px rgba(209, 169, 93, 0.24);
+}
+
+button,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid #3de0c8;
+  outline-offset: 3px;
+  box-shadow: var(--lcw-focus-ring);
+}
+
+.game-host,
+.game-host canvas {
+  contain: layout paint size;
+  image-rendering: auto;
+  touch-action: none;
+}
+
+.loading-layer {
+  text-align: center;
+}
+
+.loading-layer strong::after {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  animation: lcw-loading-dots 1.35s steps(4, end) infinite;
+}
+
+@keyframes lcw-loading-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75%, 100% { content: "..."; }
+}
+
+.icon-button:active,
+.artifact-pill:active,
+.touch-pad button:active,
+.touch-action:active,
+.rhythm-controls button:active,
+.setting-row button:active,
+.binding-grid button:active {
+  transform: translateY(1px) scale(0.97);
+  filter: brightness(1.18);
+}
+
+.touch-pad button,
+.touch-action,
+.rhythm-controls button {
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border-radius: 16px;
+}
+
+.rhythm-controls button {
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.dialogue-bar p::-webkit-scrollbar,
+.progress-strip::-webkit-scrollbar,
+.inventory-dock::-webkit-scrollbar,
+.route-rail::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.dialogue-bar p::-webkit-scrollbar-thumb,
+.progress-strip::-webkit-scrollbar-thumb,
+.inventory-dock::-webkit-scrollbar-thumb,
+.route-rail::-webkit-scrollbar-thumb {
+  background: rgba(209, 169, 93, 0.36);
+  border-radius: 999px;
+}
+
+.update-banner {
+  border-radius: 999px;
+}
+
+.update-banner button {
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.confirm-panel p {
+  line-height: 1.55;
+}
+
+.noscript-fallback {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(209, 169, 93, 0.18), transparent 34%),
+    linear-gradient(180deg, #050908 0%, #101817 62%, #050808 100%);
+  color: #fff4d6;
+  font-family: Outfit, Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+}
+
+.noscript-fallback article {
+  width: min(620px, 100%);
+  border: 1px solid rgba(43, 199, 171, 0.34);
+  background: linear-gradient(180deg, rgba(10, 20, 18, 0.92), rgba(4, 8, 7, 0.96));
+  border-radius: 22px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 244, 214, 0.12);
+  padding: clamp(22px, 5vw, 42px);
+  text-align: center;
+}
+
+.noscript-fallback h1 {
+  margin: 0 0 12px;
+  color: #ffd685;
+  font-size: clamp(24px, 6vw, 40px);
+}
+
+.noscript-fallback p {
+  margin: 0;
+  color: rgba(248, 237, 210, 0.78);
+  line-height: 1.7;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .touch-controls {
+    opacity: 0.92;
+  }
+
+  .touch-controls:hover {
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse) {
+  .icon-button,
+  .artifact-pill,
+  .setting-row button,
+  .binding-grid button,
+  .settings-group-title button,
+  .panel-actions button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .touch-pad button,
+  .touch-action,
+  .rhythm-controls button {
+    border-color: rgba(255, 244, 214, 0.34);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 244, 214, 0.12);
+  }
+}
+
+@media (max-width: 860px) {
+  .settings-panel,
+  .codex-panel {
+    overscroll-behavior: contain;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    padding: 16px;
+  }
+
+  .confirm-panel {
+    width: min(420px, 100%);
+    border-radius: 20px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --lcw-card-border: rgba(255, 244, 214, 0.58);
+  }
+
+  .brand,
+  .objective,
+  .toolbar,
+  .progress-strip,
+  .inventory-dock,
+  .route-rail,
+  .dialogue-bar,
+  .settings-panel,
+  .codex-panel,
+  .confirm-panel {
+    background: rgba(4, 9, 8, 0.96) !important;
+    border-color: rgba(255, 244, 214, 0.62) !important;
+  }
+
+  .objective p,
+  .dialogue-bar p {
+    color: #fff9e8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-layer strong::after {
+    animation: none;
+    content: "...";
+  }
+}
