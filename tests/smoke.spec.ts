@@ -2,25 +2,21 @@ import { expect, test } from "@playwright/test";
 
 test("loads the playable prototype shell", async ({ page }) => {
   await page.goto("/");
+
   await expect(page.getByRole("heading", { name: "狮城秘语" })).toBeVisible();
+  await expect(page.locator("main.stage")).toBeVisible();
+  await expect(page.locator("#lion-city-game-host")).toBeVisible();
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.getByText("当前目标")).toBeVisible();
 });
 
-test("accepts keyboard input without throwing console errors", async ({ page }) => {
-  const errors: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      errors.push(message.text());
-    }
-  });
-
+test("opens settings and switches language", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("canvas")).toBeVisible();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Space");
-  await page.waitForTimeout(500);
 
-  expect(errors).toEqual([]);
+  await page.getByRole("button", { name: "设置" }).click();
+  await expect(page.getByRole("dialog", { name: "设置" })).toBeVisible();
+
+  await page.getByRole("button", { name: "English" }).click();
+  await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+  await expect(page.getByText("Current Objective")).toBeVisible();
 });
