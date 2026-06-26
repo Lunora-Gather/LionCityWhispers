@@ -1,10 +1,12 @@
-const CACHE_NAME = "lion-city-whispers-v6";
+const CACHE_NAME = "lion-city-whispers-v7";
 const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/, "");
 const withBase = (path) => `${BASE_PATH}${path}`;
 const BASE_ROOT = withBase("/");
 const ASSETS = [
   "/",
   "/manifest.webmanifest",
+  "/robots.txt",
+  "/sitemap.xml",
   "/icon.svg",
   "/icon-192.png",
   "/icon-512.png",
