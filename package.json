@@ -6,12 +6,13 @@
     "assets:audio": "node scripts/generate-audio.mjs",
     "audit:game": "node scripts/audit-game.mjs",
     "audit:security": "npm audit --audit-level=moderate",
-    "check": "npm run build && npm run test && npm run audit:game && npm run audit:security",
+    "check": "npm run typecheck && npm run build && npm run test && npm run audit:game && npm run audit:security",
     "dev": "next dev -H 127.0.0.1 -p 3000",
     "build": "next build",
     "build:pages": "next build",
     "start": "next start -H 127.0.0.1 -p 3000",
-    "test": "playwright test"
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "1.17.0",
