@@ -184,7 +184,8 @@ body {
   width: 2px;
   height: 20px;
   flex: 0 0 20px;
-  align-self: 17px;
+  margin-left: 16px;
+  align-self: flex-start;
 }
 
 .route-connector.active {
@@ -464,6 +465,7 @@ body {
     width: 13px;
     height: 2px;
     flex: 0 0 13px;
+    margin-left: 0;
     align-self: center;
   }
 
