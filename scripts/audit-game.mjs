@@ -81,6 +81,9 @@ if (manifest.display !== "standalone" || !["/", "./"].includes(manifest.scope)) 
 }
 
 const robotsText = await readFile(join(root, "public/robots.txt"), "utf8");
+if (!robotsText.includes("Allow: /LionCityWhispers/")) {
+  fail("robots.txt must allow the GitHub Pages base path.");
+}
 if (!robotsText.includes("Sitemap: https://lunora-gather.github.io/LionCityWhispers/sitemap.xml")) {
   fail("robots.txt must point to the public sitemap URL.");
 }
