@@ -14,11 +14,19 @@ export type InteractableConfig = {
   onInteract: () => void;
 };
 
+const kindGlyphs: Record<InteractableKind, string> = {
+  npc: "人",
+  puzzle: "谜",
+  ritual: "铃",
+  museum: "馆"
+};
+
 export class NPC {
   readonly marker: Phaser.GameObjects.Container;
   private guide: Phaser.GameObjects.Container;
   private halo: Phaser.GameObjects.Arc;
   private label: Phaser.GameObjects.Container;
+  private base: Phaser.GameObjects.Arc;
   private guided = false;
   private proximityFocused = false;
   private hovered = false;
@@ -28,20 +36,27 @@ export class NPC {
 
   constructor(private scene: Phaser.Scene, readonly config: InteractableConfig) {
     this.marker = scene.add.container(config.x, config.y);
-    const guideGlow = scene.add.circle(0, 0, 68, config.color, 0.14).setStrokeStyle(2, 0xd0a84c, 0.42);
-    const guideRing = scene.add.circle(0, 0, 50, config.color, 0).setStrokeStyle(2, config.color, 0.72);
-    const guideNeedle = scene.add.triangle(0, -58, -9, -13, 9, -13, 0, 10, 0xd0a84c, 0.82);
-    this.guide = scene.add.container(0, 0, [guideGlow, guideRing, guideNeedle]).setAlpha(0);
-    this.halo = scene.add.circle(0, 0, 32, config.color, 0.14).setStrokeStyle(2, 0xf8efd5, 0.48);
-    const pulse = scene.add.circle(0, 0, 48, config.color, 0.08).setStrokeStyle(1, config.color, 0.34);
-    const outer = scene.add.circle(0, 0, 21, 0x07100f, 0.42).setStrokeStyle(2, 0xf8efd5, 0.62);
-    const base = scene.add.circle(0, 0, 14, 0xf8efd5, 0.92).setStrokeStyle(2, config.color, 0.96);
+    const guideGlow = scene.add.circle(0, 0, 72, config.color, 0.13).setStrokeStyle(2, 0xd0a84c, 0.42);
+    const guideRing = scene.add.circle(0, 0, 52, config.color, 0).setStrokeStyle(2, config.color, 0.72);
+    const guideNeedle = scene.add.triangle(0, -61, -10, -13, 10, -13, 0, 10, 0xd0a84c, 0.86);
+    const guideSpark = scene.add.circle(0, -61, 5, 0xf8edd2, 0.74);
+    this.guide = scene.add.container(0, 0, [guideGlow, guideRing, guideNeedle, guideSpark]).setAlpha(0);
+    this.halo = scene.add.circle(0, 0, 34, config.color, 0.14).setStrokeStyle(2, 0xf8efd5, 0.48);
+    const pulse = scene.add.circle(0, 0, 50, config.color, 0.08).setStrokeStyle(1, config.color, 0.34);
+    const outer = scene.add.circle(0, 0, 23, 0x07100f, 0.48).setStrokeStyle(2, 0xf8efd5, 0.64);
+    this.base = scene.add.circle(0, 0, 15, 0xf8efd5, 0.94).setStrokeStyle(2, config.color, 0.96);
     const diamond = scene.add.rectangle(0, 0, 13, 13, config.color, 0.9).setRotation(Math.PI / 4);
-    const glint = scene.add.rectangle(0, -9, 14, 2, 0xffffff, 0.44).setRotation(-0.5);
-    const plaqueWidth = Math.max(104, config.label.length * 20 + 18);
-    const plaque = scene.add.rectangle(0, -72, plaqueWidth, 34, 0x07100f, 0.9);
+    const glint = scene.add.rectangle(0, -10, 15, 2, 0xffffff, 0.48).setRotation(-0.5);
+    const glyph = scene.add.text(0, -1, kindGlyphs[config.kind], {
+      fontFamily: "Microsoft YaHei, sans-serif",
+      fontSize: "13px",
+      fontStyle: "bold",
+      color: "#07100f"
+    }).setOrigin(0.5);
+    const plaqueWidth = Math.max(112, config.label.length * 20 + 22);
+    const plaque = scene.add.rectangle(0, -74, plaqueWidth, 36, 0x07100f, 0.91);
     plaque.setStrokeStyle(1, 0xd0a84c, 0.72);
-    const plaqueAccent = scene.add.rectangle(-plaqueWidth / 2 + 5, -72, 4, 24, config.color, 0.95);
+    const plaqueAccent = scene.add.rectangle(-plaqueWidth / 2 + 5, -74, 4, 25, config.color, 0.95);
     const text = scene.add.text(0, 36, config.label, {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "15px",
@@ -50,9 +65,9 @@ export class NPC {
       strokeThickness: 3
     }).setOrigin(0.5);
 
-    text.setPosition(0, -70);
+    text.setPosition(0, -72);
     this.label = scene.add.container(0, 0, [plaque, plaqueAccent, text]).setAlpha(0);
-    this.marker.add([this.guide, pulse, this.halo, outer, base, diamond, glint, this.label]);
+    this.marker.add([this.guide, pulse, this.halo, outer, this.base, diamond, glyph, glint, this.label]);
     this.marker.setDepth(16);
     this.marker.setInteractive(
       new Phaser.Geom.Circle(0, 0, config.radius),
@@ -63,7 +78,7 @@ export class NPC {
     if (!gameState.settings.reduceMotion) {
       scene.tweens.add({
         targets: pulse,
-        scale: 1.22,
+        scale: 1.25,
         alpha: 0,
         duration: 1800,
         yoyo: false,
@@ -80,8 +95,8 @@ export class NPC {
         ease: "Sine.easeInOut"
       });
       scene.tweens.add({
-        targets: guideNeedle,
-        y: -64,
+        targets: [guideNeedle, guideSpark],
+        y: "-=6",
         duration: 800,
         yoyo: true,
         repeat: -1,
@@ -120,7 +135,7 @@ export class NPC {
 
   private updateFocus() {
     const focused = this.proximityFocused || this.hovered || this.guided;
-    const labelVisible = this.hovered || this.guided;
+    const labelVisible = this.proximityFocused || this.hovered || this.guided;
     const guideVisible = this.guided;
     if (
       this.focused === focused &&
@@ -133,7 +148,7 @@ export class NPC {
     this.labelVisible = labelVisible;
     this.guideVisible = guideVisible;
 
-    this.scene.tweens.killTweensOf([this.guide, this.label, this.halo]);
+    this.scene.tweens.killTweensOf([this.guide, this.label, this.halo, this.base]);
 
     this.scene.tweens.add({
       targets: this.guide,
@@ -142,16 +157,24 @@ export class NPC {
       ease: "Sine.easeOut"
     });
     this.scene.tweens.add({
-      targets: [this.label],
+      targets: this.label,
       alpha: labelVisible ? 1 : 0,
-      duration: gameState.settings.reduceMotion ? 0 : 120,
+      y: labelVisible ? -4 : 0,
+      duration: gameState.settings.reduceMotion ? 0 : 140,
       ease: "Sine.easeOut"
     });
     this.scene.tweens.add({
       targets: this.halo,
-      scale: focused ? 1.22 : 1,
-      strokeAlpha: focused ? 0.85 : 0.48,
+      scale: focused ? 1.24 : 1,
+      strokeAlpha: focused ? 0.88 : 0.48,
       duration: gameState.settings.reduceMotion ? 0 : 160,
+      ease: "Back.easeOut"
+    });
+    this.scene.tweens.add({
+      targets: this.base,
+      scale: focused ? 1.14 : 1,
+      alpha: focused ? 1 : 0.94,
+      duration: gameState.settings.reduceMotion ? 0 : 150,
       ease: "Back.easeOut"
     });
   }
