@@ -3,6 +3,9 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const requiredAssets = [
+  "public/manifest.webmanifest",
+  "public/robots.txt",
+  "public/sitemap.xml",
   "public/assets/images/lion-city-ink-bg.webp",
   "public/assets/images/world-cinematic-v3.webp",
   "public/assets/images/museum-gallery.webp",
@@ -77,6 +80,19 @@ if (manifest.display !== "standalone" || !["/", "./"].includes(manifest.scope)) 
   fail("Manifest is missing standalone display or a valid scope.");
 }
 
+const robotsText = await readFile(join(root, "public/robots.txt"), "utf8");
+if (!robotsText.includes("Allow: /LionCityWhispers/")) {
+  fail("robots.txt must allow the GitHub Pages base path.");
+}
+if (!robotsText.includes("Sitemap: https://lunora-gather.github.io/LionCityWhispers/sitemap.xml")) {
+  fail("robots.txt must point to the public sitemap URL.");
+}
+
+const sitemapText = await readFile(join(root, "public/sitemap.xml"), "utf8");
+if (!sitemapText.includes("https://lunora-gather.github.io/LionCityWhispers/")) {
+  fail("sitemap.xml must include the public game URL.");
+}
+
 const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 for (const group of ["dependencies", "devDependencies"]) {
   for (const [name, version] of Object.entries(packageJson[group] ?? {})) {
@@ -94,7 +110,7 @@ if (!/lion-city-whispers-v\d+/.test(swText)) {
   fail("Service worker cache name must include a numeric version.");
 }
 for (const asset of requiredAssets) {
-  const publicPath = `/${asset.replace(/^public\//, "").replaceAll("\\", "/")}`;
+  const publicPath = `/${asset.replace(/^public\//, "").replaceAll("\\\\", "/")}`;
   if (!swText.includes(publicPath)) {
     fail(`Service worker cache list is missing ${publicPath}`);
   }
@@ -106,6 +122,12 @@ if (
   !readmeText.includes("https://lunora-gather.github.io/LionCityWhispers/")
 ) {
   fail("README must keep a direct GitHub Pages play link near the top.");
+}
+if (readmeText.includes("file" + "://")) {
+  fail("README must not contain local file protocol links.");
+}
+if (!readmeText.includes("Node.js 24") || !readmeText.includes("项目结构")) {
+  fail("README must document the runtime and project structure.");
 }
 
 for (const sourceRoot of sourceRoots) {
