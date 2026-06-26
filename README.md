@@ -163,6 +163,7 @@ GITHUB_PAGES=1 GITHUB_PAGES_REPO=LionCityWhispers npm run build:pages
 - 必需图片、音频、图标、manifest、robots 与 sitemap 资源必须存在；
 - 图片总体积不得超过 `2.2MB`；
 - 音频总体积不得超过 `120KB`；
+- `robots.txt` 必须允许 GitHub Pages base path，并指向公开 sitemap；
 - 直接依赖必须固定版本，不能使用 `latest`、`^` 或 `~`；
 - README 顶部必须保留网页版游戏入口，且不能出现本地 `file://` 链接；
 - Service Worker 缓存名必须带数字版本，并缓存关键资源；
