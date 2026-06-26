@@ -1,6 +1,5 @@
-const CACHE_VERSION = "v7";
+const CACHE_NAME = "lion-city-whispers-v7";
 const CACHE_PREFIX = "lion-city-whispers";
-const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/, "");
 const withBase = (path) => `${BASE_PATH}${path}`;
 const BASE_ROOT = withBase("/");
@@ -108,20 +107,16 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
+  const request = event.request;
+  if (request.method !== "GET" || !isSameOrigin(request.url)) {
     return;
   }
 
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) {
-    return;
-  }
-
-  if (event.request.mode === "navigate") {
+  if (request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request)
+      fetch(request)
         .then((response) => {
-          event.waitUntil(putInCache(BASE_ROOT, response));
+          void putInCache(BASE_ROOT, response);
           return response;
         })
         .catch(() => caches.match(BASE_ROOT))
@@ -130,15 +125,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request)
+    caches.match(request).then((cached) => {
+      const networkFetch = fetch(request)
         .then((response) => {
-          event.waitUntil(putInCache(event.request, response));
+          void putInCache(request, response);
           return response;
         })
         .catch(() => undefined);
-
-      return cached ?? networkFetch;
+      return cached || networkFetch;
     })
   );
 });
