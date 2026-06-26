@@ -10,6 +10,9 @@ const basePath = githubPages ? githubPagesBasePath : "";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
+  compress: true,
+  productionBrowserSourceMaps: false,
   ...(githubPages
     ? {
         output: "export",
