@@ -123,8 +123,8 @@ if (
 ) {
   fail("README must keep a direct GitHub Pages play link near the top.");
 }
-if (readmeText.includes("file://")) {
-  fail("README must not contain local file:// links.");
+if (readmeText.includes("file" + "://")) {
+  fail("README must not contain local file protocol links.");
 }
 if (!readmeText.includes("Node.js 24") || !readmeText.includes("项目结构")) {
   fail("README must document the runtime and project structure.");
