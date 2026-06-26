@@ -96,7 +96,7 @@ export class NPC {
       });
       scene.tweens.add({
         targets: [guideNeedle, guideSpark],
-        y: "-=6",
+        y: -67,
         duration: 800,
         yoyo: true,
         repeat: -1,
