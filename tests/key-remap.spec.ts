@@ -25,6 +25,7 @@ test("remaps the interaction key through settings and uses it in the world", asy
   });
   await page.waitForTimeout(800);
 
+  await page.locator("canvas").click();
   await page.keyboard.press("KeyE");
   await expect(page.getByLabel("进度").getByText("对话")).toBeVisible({ timeout: 5000 });
 });

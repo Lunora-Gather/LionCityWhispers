@@ -1453,10 +1453,10 @@ input:focus-visible {
     left: 12px;
     right: 12px;
     max-width: none;
-    gap: 3px;
+    gap: 2px;
     justify-content: space-between;
     overflow: hidden;
-    padding: 7px 8px;
+    padding: 7px 6px;
     border: 1px solid rgba(209, 169, 93, 0.22);
     background: linear-gradient(185deg, rgba(16, 25, 24, 0.72), rgba(6, 10, 9, 0.88));
     backdrop-filter: blur(14px) saturate(140%);
@@ -1465,7 +1465,8 @@ input:focus-visible {
   }
 
   .route-step {
-    min-width: 42px;
+    flex: 0 1 42px;
+    min-width: 0;
   }
 
   .route-step i {
@@ -1475,7 +1476,7 @@ input:focus-visible {
   }
 
   .route-step b {
-    max-width: 46px;
+    max-width: 38px;
     font-size: 9px;
   }
 
@@ -1484,8 +1485,8 @@ input:focus-visible {
   }
 
   .route-connector {
-    width: 14px;
-    flex-basis: 14px;
+    width: 10px;
+    flex: 0 1 10px;
   }
 
   .dialogue-bar {
@@ -1646,7 +1647,7 @@ input:focus-visible {
   }
 
   .progress-strip {
-    top: 58px;
+    top: 78px;
     left: 8px;
     max-width: 54%;
     gap: 5px;
@@ -1659,7 +1660,7 @@ input:focus-visible {
   }
 
   .inventory-dock {
-    top: 84px;
+    top: 78px;
     right: 8px;
     left: auto;
     max-width: 32%;
@@ -1689,7 +1690,8 @@ input:focus-visible {
   }
 
   .route-step {
-    min-width: 43px;
+    flex: 0 1 43px;
+    min-width: 0;
   }
 
   .route-step i {

@@ -164,6 +164,57 @@ a:focus-visible {
 }
 
 @media (max-width: 860px) {
+  .hud-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .brand,
+  .objective {
+    grid-column: 1 / -1;
+  }
+
+  .toolbar {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    justify-content: space-between;
+    max-width: none;
+    overflow: visible;
+  }
+
+  .icon-button {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+  }
+
+  .touch-controls {
+    bottom: 130px;
+  }
+
+  .dialogue-bar {
+    min-height: 84px;
+    padding-block: 14px;
+  }
+
+  .dialogue-bar p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .progress-strip {
+    top: 258px;
+  }
+
+  .inventory-dock {
+    top: 326px;
+  }
+
+  .route-rail {
+    top: 374px;
+  }
+
   .settings-panel,
   .codex-panel {
     overscroll-behavior: contain;
@@ -177,6 +228,77 @@ a:focus-visible {
   .confirm-panel {
     width: min(420px, 100%);
     border-radius: 20px;
+  }
+}
+
+@media (max-width: 860px) and (orientation: landscape) {
+  .hud-top {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .brand,
+  .objective,
+  .toolbar {
+    grid-column: auto;
+  }
+
+  .objective {
+    order: 0;
+  }
+
+  .toolbar {
+    justify-self: end;
+    justify-content: flex-end;
+    max-width: 190px;
+    overflow: visible;
+  }
+
+  .objective p {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-line-clamp: initial;
+  }
+
+  .icon-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .touch-controls {
+    bottom: 112px;
+  }
+
+  .progress-strip {
+    top: 78px;
+  }
+
+  .inventory-dock {
+    top: 78px;
+  }
+
+  .route-rail {
+    top: 116px;
+  }
+
+  .touch-pad {
+    grid-template-columns: repeat(3, 32px);
+    grid-template-rows: repeat(2, 32px);
+    gap: 4px;
+  }
+
+  .touch-pad button,
+  .touch-action {
+    min-width: 0;
+    min-height: 0;
+    width: 32px;
+    height: 32px;
+  }
+
+  .touch-action {
+    width: 42px;
+    height: 42px;
   }
 }
 

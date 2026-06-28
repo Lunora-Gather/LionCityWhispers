@@ -37,7 +37,7 @@ test("keeps install metadata and critical asset budgets valid", async ({ request
   expect(swResponse.ok()).toBeTruthy();
   const swText = await swResponse.text();
   expect(swText).toContain("catch(() => caches.match(BASE_ROOT)");
-  expect(swText).toContain("event.waitUntil(caches.open(CACHE_NAME)");
+  expect(swText).toMatch(/event\.waitUntil\(\s*caches\s*\.open\(CACHE_NAME\)/);
   expect(swText).toContain("CACHE_URLS");
   expect(swText).toContain("curator-lin.webp");
   expect(swText).toContain("success.wav");

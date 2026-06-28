@@ -9,7 +9,7 @@ export class Player {
   readonly root: Phaser.GameObjects.Container;
   private body: Phaser.GameObjects.Container;
   private cursor: Phaser.GameObjects.Triangle;
-  private shadow: Phaser.GameObjects.Arc;
+  private shadow: Phaser.GameObjects.Ellipse;
   private lanternGlow: Phaser.GameObjects.Arc;
   private moveVector = new Phaser.Math.Vector2();
   private trailCooldown = 0;

@@ -499,6 +499,30 @@ body::after {
     display: none;
   }
 
+  .route-rail {
+    padding: 7px 6px;
+  }
+
+  .route-step {
+    flex: 0 1 38px;
+    min-width: 0;
+  }
+
+  .route-step i {
+    width: 23px;
+    height: 23px;
+  }
+
+  .route-step b {
+    max-width: 34px;
+    font-size: 9px;
+  }
+
+  .route-connector {
+    width: 7px;
+    flex: 0 1 7px;
+  }
+
   .dialogue-bar {
     width: calc(100% - 24px);
     padding: 16px 18px;
@@ -534,5 +558,26 @@ body::after {
 
   .progress-strip span {
     min-height: 26px;
+  }
+
+  .touch-controls {
+    bottom: 112px;
+  }
+
+  .touch-pad {
+    grid-template-columns: repeat(3, 32px);
+    grid-template-rows: repeat(2, 32px);
+    gap: 4px;
+  }
+
+  .touch-pad button,
+  .touch-action {
+    width: 32px;
+    height: 32px;
+  }
+
+  .touch-action {
+    width: 42px;
+    height: 42px;
   }
 }
