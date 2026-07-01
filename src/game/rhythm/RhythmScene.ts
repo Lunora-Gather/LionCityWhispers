@@ -218,7 +218,10 @@ export class RhythmScene extends Phaser.Scene {
       this.combo += 1;
       this.perfectHits += 1;
       this.maxCombo = Math.max(this.maxCombo, this.combo);
-      playRitualHit(true);
+      playRitualHit(true, lane);
+      if (!gameState.settings.reduceMotion) {
+        this.cameras.main.shake(60, 0.001);
+      }
       this.feedback.setColor("#3de0c8");
       this.flashLane(lane, 0x2bc7ab);
       this.pulseFeedback(0x2bc7ab);
@@ -230,7 +233,7 @@ export class RhythmScene extends Phaser.Scene {
       this.combo += 1;
       this.goodHits += 1;
       this.maxCombo = Math.max(this.maxCombo, this.combo);
-      playRitualHit(false);
+      playRitualHit(false, lane);
       this.feedback.setColor("#ffd685");
       this.flashLane(lane, 0xd1a95d);
       this.pulseFeedback(0xd1a95d);
@@ -241,7 +244,7 @@ export class RhythmScene extends Phaser.Scene {
       this.feedback.setText("ASSIST");
       this.assistHits += 1;
       this.combo = 0;
-      playRitualHit(false);
+      playRitualHit(false, lane);
       this.feedback.setColor("#a8c0ba");
       this.flashLane(lane, 0xd1a95d);
     } else {
@@ -254,6 +257,15 @@ export class RhythmScene extends Phaser.Scene {
     }
     this.scoreText.setText(String(this.score));
     this.comboText.setText(`COMBO ${this.combo}`);
+    if (this.combo > 0 && !gameState.settings.reduceMotion) {
+      this.comboText.setScale(1.15);
+      this.tweens.add({
+        targets: this.comboText,
+        scale: 1,
+        duration: 160,
+        ease: "Back.easeOut"
+      });
+    }
   }
 
   private finish() {
@@ -270,7 +282,55 @@ export class RhythmScene extends Phaser.Scene {
       this.updateProgress(chart.duration);
       burst(this, 640, 320, 0x2bc7ab);
       showRewardBanner(this, formatCopy(copy.rhythmReward, { grade }), 0x1f8f82);
-      this.returnTimer = this.time.delayedCall(1400, () => this.scene.start("WorldScene"));
+
+      // Draw a premium rating badge in the center
+      const gradeColors: Record<string, number> = { S: 0x3de0c8, A: 0xffd685, B: 0xa8c0ba, C: 0xff4d4d };
+      const gradeColor = gradeColors[grade] || 0xffffff;
+      const gradeCSSColors: Record<string, string> = { S: "#3de0c8", A: "#ffd685", B: "#a8c0ba", C: "#ff4d4d" };
+      const gradeCSSColor = gradeCSSColors[grade] || "#ffffff";
+      
+      const badgeContainer = this.add.container(640, 320).setDepth(85);
+      const badgeGlow = this.add.circle(0, 0, 80, gradeColor, 0.16);
+      const badgeRing = this.add.circle(0, 0, 64, 0x0c1b18, 0.92).setStrokeStyle(3, gradeColor, 0.85);
+      const badgeText = this.add.text(0, 0, grade, {
+        fontFamily: "Georgia, serif",
+        fontSize: "72px",
+        fontStyle: "bold",
+        color: "#fffcf2"
+      }).setOrigin(0.5);
+      
+      badgeText.setShadow(0, 0, gradeCSSColor, 16, true, true);
+      badgeContainer.add([badgeGlow, badgeRing, badgeText]);
+      
+      if (!gameState.settings.reduceMotion) {
+        badgeContainer.setScale(0.2).setAlpha(0);
+        this.tweens.add({
+          targets: badgeContainer,
+          scale: 1,
+          alpha: 1,
+          duration: 450,
+          ease: "Back.easeOut"
+        });
+        
+        // Emit some nice sparks around the badge
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2;
+          const spark = this.add.circle(Math.cos(angle) * 64, Math.sin(angle) * 64, 4, gradeColor, 0.8).setDepth(86);
+          badgeContainer.add(spark);
+          this.tweens.add({
+            targets: spark,
+            x: Math.cos(angle) * 120,
+            y: Math.sin(angle) * 120,
+            alpha: 0,
+            scale: 0.2,
+            duration: 800,
+            ease: "Quad.easeOut",
+            onComplete: () => spark.destroy()
+          });
+        }
+      }
+
+      this.returnTimer = this.time.delayedCall(2500, () => this.scene.start("WorldScene"));
     } else {
       gameState.dialogue = copy.rhythmFail;
       emitGameState("rhythm");
@@ -385,13 +445,14 @@ export class RhythmScene extends Phaser.Scene {
   }
 
   private gradeRun() {
-    if (this.perfectHits >= 10 && this.misses === 0 && this.maxCombo >= 10) {
+    const totalHits = this.perfectHits + this.goodHits;
+    if (this.perfectHits >= 22 && this.misses === 0) {
       return "S";
     }
-    if (this.perfectHits + this.goodHits >= 11 && this.misses <= 2) {
+    if (totalHits >= 20 && this.misses <= 4) {
       return "A";
     }
-    if (this.score >= chart.targetScore) {
+    if (this.score >= 500) {
       return "B";
     }
     return "C";

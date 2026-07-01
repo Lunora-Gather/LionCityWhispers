@@ -328,3 +328,254 @@ a:focus-visible {
     content: "...";
   }
 }
+
+/* Toast Notification & Animations */
+.toast-notification {
+  position: absolute;
+  left: 50%;
+  top: 100px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 10px 20px;
+  background: rgba(16, 24, 23, 0.94);
+  border: 1px solid rgba(61, 224, 200, 0.5);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #cfe6df;
+  font-size: 14px;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  animation: lcw-toast-fade 2.5s forwards;
+}
+
+@keyframes lcw-toast-fade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  90% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+}
+
+/* Premium Modal Transitions & Ambient Glow */
+.settings-panel,
+.codex-panel,
+.confirm-panel {
+  animation: lcw-panel-slide 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.65), 
+    0 0 1.5px rgba(43, 199, 171, 0.38),
+    inset 0 1px 0 rgba(255, 244, 214, 0.08),
+    0 0 40px rgba(43, 199, 171, 0.06) !important;
+}
+
+/* Achievement unlocked golden toast notification */
+.toast-notification.achievement-toast {
+  border: 1.5px solid rgba(209, 169, 93, 0.85);
+  background: rgba(20, 18, 14, 0.96);
+  color: #fff4d6;
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.6), 
+    0 0 25px rgba(209, 169, 93, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  text-shadow: 0 0 4px rgba(209, 169, 93, 0.35);
+}
+
+/* Virtual Touch Joystick Styling */
+.joystick-container {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  touch-action: none;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.joystick-base {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(12, 27, 24, 0.76);
+  border: 2px solid rgba(43, 199, 171, 0.42);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.65), 0 0 15px rgba(43, 199, 171, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.joystick-handle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd685 0%, #d1a95d 100%);
+  border: 1.5px solid #0c1b18;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.45), 0 0 8px rgba(209, 169, 93, 0.25);
+  position: absolute;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.joystick-container:active .joystick-base {
+  border-color: rgba(43, 199, 171, 0.85);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.7), 0 0 24px rgba(43, 199, 171, 0.28);
+}
+
+/* Codex Database & Progress Styling */
+.codex-progress-wrapper {
+  margin-bottom: 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.codex-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #a8c0ba;
+}
+
+.codex-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(209, 169, 93, 0.24);
+  overflow: hidden;
+  position: relative;
+}
+
+.codex-progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, #1f8f82, #3de0c8);
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 8px rgba(61, 224, 200, 0.45);
+}
+
+.codex-controls {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.codex-search-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(12, 27, 24, 0.72);
+  border: 1.5px solid rgba(209, 169, 93, 0.36);
+  border-radius: 8px;
+  color: #fff4d6;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.codex-search-input:focus {
+  border-color: #3de0c8;
+  box-shadow: 0 0 8px rgba(61, 224, 200, 0.25);
+}
+
+.codex-search-input::placeholder {
+  color: rgba(248, 237, 210, 0.4);
+}
+
+.codex-filter-tabs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.codex-filter-tabs button {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(20, 36, 32, 0.5);
+  border: 1px solid rgba(209, 169, 93, 0.2);
+  border-radius: 6px;
+  color: rgba(248, 237, 210, 0.7);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.codex-filter-tabs button:hover {
+  background: rgba(20, 36, 32, 0.85);
+  color: #fff4d6;
+  border-color: rgba(209, 169, 93, 0.42);
+}
+
+.codex-filter-tabs button.active {
+  background: rgba(61, 224, 200, 0.16);
+  color: #3de0c8;
+  border-color: rgba(61, 224, 200, 0.6);
+  box-shadow: 0 0 10px rgba(61, 224, 200, 0.15);
+}
+
+.codex-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: rgba(248, 237, 210, 0.45);
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* Dialogue Bar & Speaker Polish */
+.dialogue-bar {
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.dialogue-bar:hover {
+  border-color: rgba(43, 199, 171, 0.75);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.75),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 5px rgba(209, 169, 93, 0.36);
+  transform: translateX(-50%) translateY(-1px);
+}
+
+.dialogue-speaker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  contain: content;
+}
+
+.speaker-decoration {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3de0c8;
+  box-shadow: 0 0 5px #3de0c8;
+}
+
+@keyframes lcw-pulse-arrow {
+  0%, 100% { opacity: 0.55; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+

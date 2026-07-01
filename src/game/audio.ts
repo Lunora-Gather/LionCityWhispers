@@ -37,6 +37,17 @@ function getContext() {
   return context;
 }
 
+export function resumeAudioContext() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const ctx = getContext();
+  if (ctx && ctx.state === "suspended") {
+    void ctx.resume();
+  }
+  startAmbient();
+}
+
 export function setAudioMuted(next: boolean) {
   muted = next;
   if (muted || pageSuspended || !ambientAllowed) {
@@ -143,6 +154,59 @@ function playAudioAsset(key: AudioAssetKey, fallback: () => void) {
   void audio.play().catch(fallback);
 }
 
+let generativeTimer: number | null = null;
+const pentatonicScale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+let noiseSource: AudioBufferSourceNode | null = null;
+let waveLfo: OscillatorNode | null = null;
+
+function createNoiseNode(ctx: AudioContext) {
+  const bufferSize = 2 * ctx.sampleRate;
+  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    output[i] = Math.random() * 2 - 1;
+  }
+  const source = ctx.createBufferSource();
+  source.buffer = noiseBuffer;
+  source.loop = true;
+  return source;
+}
+
+function startGenerativeMusic() {
+  if (generativeTimer || typeof window === "undefined") return;
+  const ctx = getContext();
+  if (!ctx) return;
+  
+  const scheduleNext = () => {
+    const delay = 8000 + Math.random() * 8000;
+    generativeTimer = window.setTimeout(() => {
+      if (muted || pageSuspended || !ambientAllowed) {
+        scheduleNext();
+        return;
+      }
+      const noteCount = 2 + Math.floor(Math.random() * 2);
+      let arpeggioDelay = 0;
+      for (let i = 0; i < noteCount; i++) {
+        const freqIndex = Math.floor(Math.random() * pentatonicScale.length);
+        const freq = pentatonicScale[freqIndex];
+        window.setTimeout(() => {
+          playTone(freq, 1.2, "sine", 0.008);
+        }, arpeggioDelay);
+        arpeggioDelay += 280 + Math.random() * 180;
+      }
+      scheduleNext();
+    }, delay);
+  };
+  scheduleNext();
+}
+
+function stopGenerativeMusic() {
+  if (generativeTimer) {
+    window.clearTimeout(generativeTimer);
+    generativeTimer = null;
+  }
+}
+
 export function startAmbient() {
   if (muted || pageSuspended || !ambientAllowed || ambient || typeof window === "undefined") {
     return;
@@ -157,6 +221,7 @@ export function startAmbient() {
   const gain = ctx.createGain();
   gain.gain.value = masterVolume * ambientVolume * 0.014;
   gain.connect(ctx.destination);
+  
   const low = ctx.createOscillator();
   const high = ctx.createOscillator();
   low.type = "sine";
@@ -167,18 +232,65 @@ export function startAmbient() {
   high.connect(gain);
   low.start();
   high.start();
+  
+  try {
+    noiseSource = createNoiseNode(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 320;
+    filter.Q.value = 0.8;
+
+    const waveGain = ctx.createGain();
+    waveGain.gain.value = 0.08;
+
+    waveLfo = ctx.createOscillator();
+    waveLfo.type = "sine";
+    waveLfo.frequency.value = 0.18;
+
+    const waveLfoGain = ctx.createGain();
+    waveLfoGain.gain.value = 0.05;
+
+    waveLfo.connect(waveLfoGain);
+    waveLfoGain.connect(waveGain.gain);
+    noiseSource.connect(filter);
+    filter.connect(waveGain);
+    waveGain.connect(gain);
+
+    noiseSource.start();
+    waveLfo.start();
+  } catch (err) {}
+
   ambient = { oscillators: [low, high], gain };
+  startGenerativeMusic();
 }
 
 export function stopAmbient() {
+  stopGenerativeMusic();
+  try {
+    if (noiseSource) {
+      noiseSource.stop();
+      noiseSource.disconnect();
+      noiseSource = null;
+    }
+    if (waveLfo) {
+      waveLfo.stop();
+      waveLfo.disconnect();
+      waveLfo = null;
+    }
+  } catch (err) {}
+
   if (!ambient) {
     return;
   }
   for (const oscillator of ambient.oscillators) {
-    oscillator.stop();
-    oscillator.disconnect();
+    try {
+      oscillator.stop();
+      oscillator.disconnect();
+    } catch (e) {}
   }
-  ambient.gain.disconnect();
+  try {
+    ambient.gain.disconnect();
+  } catch (e) {}
   ambient = null;
 }
 
@@ -256,8 +368,31 @@ export function playMiss() {
   playAudioAsset("miss", () => playTone(150, 0.18, "sawtooth", 0.025));
 }
 
-export function playRitualHit(perfect: boolean) {
-  playAudioAsset(perfect ? "ritualPerfect" : "ritualGood", () =>
-    playTone(perfect ? 880 : 660, perfect ? 0.09 : 0.07, "sine", perfect ? 0.042 : 0.03)
-  );
+export function playAchievementFanfare() {
+  playSequence([
+    [523.25, 0.08],
+    [659.25, 0.08],
+    [783.99, 0.08],
+    [1046.50, 0.24]
+  ], "sine");
+}
+
+export function playRitualHit(perfect: boolean, lane?: number) {
+  playAudioAsset(perfect ? "ritualPerfect" : "ritualGood", () => {
+    const vol = perfect ? 0.022 : 0.014;
+    const dur = perfect ? 0.45 : 0.32;
+    if (lane !== undefined && lane >= 0 && lane <= 3) {
+      const freqs = [
+        [261.63, 392.00, 523.25], // Lane 0: C4-G4-C5
+        [293.66, 440.00, 587.33], // Lane 1: D4-A4-D5
+        [329.63, 493.88, 659.25], // Lane 2: E4-B4-E5
+        [392.00, 587.33, 783.99]  // Lane 3: G4-D5-G5
+      ][lane];
+      for (const freq of freqs) {
+        playTone(freq, dur, "sine", vol);
+      }
+    } else {
+      playTone(perfect ? 880 : 660, perfect ? 0.09 : 0.07, "sine", perfect ? 0.042 : 0.03);
+    }
+  });
 }

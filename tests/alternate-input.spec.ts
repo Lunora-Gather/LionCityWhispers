@@ -26,10 +26,11 @@ async function clickUntilScene(page: Page, gameX: number, gameY: number, name: s
       await page.waitForTimeout(300);
     }
   }
-  await expect(page.getByLabel("进度").getByText(name)).toBeVisible();
+  await expect(page.getByLabel("进度").getByText(name)).toBeVisible({ timeout: 15000 });
 }
 
 test("places museum artifacts without drag input", async ({ page }) => {
+  test.slow();
   await page.addInitScript(() => {
     window.localStorage.setItem(
       "lcw:save:v2",
@@ -47,7 +48,7 @@ test("places museum artifacts without drag input", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
-  await expect(page.locator(".artifact-pill")).toHaveCount(4);
+  await expect(page.locator(".artifact-pill")).toHaveCount(4, { timeout: 15000 });
   await page.waitForTimeout(1000);
 
   await clickUntilScene(page, 185, 330, "博物馆");

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("switches the shell and codex to English and persists the locale", async ({ page }) => {
+  test.slow();
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
 

@@ -8,7 +8,9 @@ import { RhythmScene } from "./rhythm/RhythmScene";
 import { WorldScene } from "./WorldScene";
 import {
   applyAudioSettings,
+  playAchievementFanfare,
   preloadAudioAssets,
+  resumeAudioContext,
   setAudioPageSuspended,
   setAudioPaused
 } from "./audio";
@@ -16,6 +18,7 @@ import {
   clearSavedGame,
   emitGameState,
   gameState,
+  importSaveString,
   initializeGameState,
   resetGameState,
   setPaused,
@@ -76,7 +79,8 @@ export function startGame(parent: string) {
     render: {
       antialias: true,
       pixelArt: false
-    }
+    },
+    ...({ resolution: typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 1, 2) : 1 } as any)
   };
 
   const game = new Phaser.Game(config);
@@ -206,6 +210,20 @@ export function startGame(parent: string) {
     setUiLocked(Boolean((event as CustomEvent<boolean>).detail));
   };
 
+  const onAudioResume = () => {
+    resumeAudioContext();
+  };
+
+  const onAchievement = () => {
+    playAchievementFanfare();
+  };
+
+  const onSaveImport = (event: Event) => {
+    const saveStr = (event as CustomEvent<string>).detail;
+    const success = importSaveString(saveStr);
+    window.dispatchEvent(new CustomEvent("lcw:save-import-result", { detail: success }));
+  };
+
   const onVisibilityChange = () => {
     setAudioPageSuspended(document.hidden);
   };
@@ -220,6 +238,9 @@ export function startGame(parent: string) {
   window.addEventListener("lcw:settings", onSettings);
   window.addEventListener("lcw:chapter", onChapter);
   window.addEventListener("lcw:ui-lock", onUiLock);
+  window.addEventListener("lcw:audio-resume", onAudioResume);
+  window.addEventListener("lcw:save-import", onSaveImport);
+  window.addEventListener("lcw:audio-achievement", onAchievement);
   window.addEventListener("pointerdown", trackInteraction, { passive: true });
   window.addEventListener("keydown", trackInteraction);
   document.addEventListener("visibilitychange", onVisibilityChange);
@@ -235,6 +256,9 @@ export function startGame(parent: string) {
       window.removeEventListener("lcw:settings", onSettings);
       window.removeEventListener("lcw:chapter", onChapter);
       window.removeEventListener("lcw:ui-lock", onUiLock);
+      window.removeEventListener("lcw:audio-resume", onAudioResume);
+      window.removeEventListener("lcw:save-import", onSaveImport);
+      window.removeEventListener("lcw:audio-achievement", onAchievement);
       window.removeEventListener("pointerdown", trackInteraction);
       window.removeEventListener("keydown", trackInteraction);
       document.removeEventListener("visibilitychange", onVisibilityChange);

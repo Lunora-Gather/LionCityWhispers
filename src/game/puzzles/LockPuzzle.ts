@@ -88,7 +88,7 @@ export class LockPuzzle extends Phaser.Scene {
       }).setOrigin(0.5);
       node.add([shadow, aura, disc, ring, shine, label]);
       node.setInteractive(new Phaser.Geom.Circle(0, 0, 66), Phaser.Geom.Circle.Contains);
-      node.on("pointerdown", () => this.choose(seal.label, config));
+      node.on("pointerdown", () => this.choose(seal.label, config, x, 472, color));
       node.on("pointerover", () => {
         aura.setAlpha(0.38);
         disc.setStrokeStyle(3.5, 0x3de0c8, 0.95);
@@ -141,7 +141,9 @@ export class LockPuzzle extends Phaser.Scene {
       const index = Number(event.key) - 1;
       const seal = config.seals[index];
       if (seal) {
-        this.choose(seal.label, config);
+        const x = 355 + index * 190;
+        const color = Phaser.Display.Color.HexStringToColor(seal.color).color;
+        this.choose(seal.label, config, x, 472, color);
       }
     };
     this.input.keyboard.on("keydown", this.keyHandler);
@@ -153,11 +155,14 @@ export class LockPuzzle extends Phaser.Scene {
     });
   }
 
-  private choose(label: string, config: LockConfig) {
+  private choose(label: string, config: LockConfig, x?: number, y?: number, color?: number) {
     if (isUiLocked()) {
       return;
     }
     playUiClick();
+    if (x !== undefined && y !== undefined && color !== undefined && !gameState.settings.reduceMotion) {
+      burst(this, x, y, color, 12, 3);
+    }
     this.selected.push(label);
     this.refreshSequenceSlots();
     const expected = config.order.slice(0, this.selected.length).join("");

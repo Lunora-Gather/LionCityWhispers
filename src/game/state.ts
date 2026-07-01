@@ -466,3 +466,52 @@ export function emitGameState(scene?: string) {
 export function updatePerformanceStats(stats: PerformanceStats) {
   gameState.performance = sanitizePerformanceStats(stats);
 }
+
+export function serializeSaveString(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  const saveState = serializeGameState();
+  return window.btoa(encodeURIComponent(JSON.stringify(saveState)));
+}
+
+export function importSaveString(saveStr: string): boolean {
+  if (typeof window === "undefined" || !saveStr) {
+    return false;
+  }
+  try {
+    const raw = decodeURIComponent(window.atob(saveStr.trim()));
+    const parsed = JSON.parse(raw) as {
+      version?: number;
+      inventoryIds?: unknown[];
+      flags?: unknown;
+      museum?: unknown;
+      dialogue?: unknown;
+      easyMode?: unknown;
+      settings?: unknown;
+    };
+    if (parsed.version !== SAVE_VERSION) {
+      return false;
+    }
+    const defaults = createDefaultState();
+    const imported = {
+      ...defaults,
+      inventory: (parsed.inventoryIds ?? [])
+        .filter(isArtifactId)
+        .map((id) => artifacts[id]),
+      flags: sanitizeFlags(parsed.flags),
+      museum: sanitizeMuseum(parsed.museum),
+      dialogue:
+        typeof parsed.dialogue === "string" && parsed.dialogue.length > 0
+          ? parsed.dialogue
+          : defaults.dialogue,
+      easyMode: typeof parsed.easyMode === "boolean" ? parsed.easyMode : defaults.easyMode,
+      settings: sanitizeSettings(parsed.settings, defaults.settings)
+    } satisfies GameState;
+    applyState(imported);
+    emitGameState("world");
+    return true;
+  } catch {
+    return false;
+  }
+}

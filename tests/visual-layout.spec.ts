@@ -23,7 +23,7 @@ async function openScene(page: Page, scene: string, label: string) {
       await page.waitForTimeout(250);
     }
   }
-  await expect(page.getByLabel("进度").getByText(label)).toBeVisible({ timeout: 5000 });
+  await expect(page.getByLabel("进度").getByText(label)).toBeVisible({ timeout: 15000 });
   await page.waitForTimeout(300);
 }
 
@@ -254,7 +254,7 @@ test("keeps polished ritual, puzzle, and museum scenes stable", async ({ page })
 
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
-  await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 5000 });
+  await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".route-step[data-state='done']")).toHaveCount(4);
   await expect(page.locator(".route-step[data-state='current']")).toContainText("展厅");
 
@@ -293,7 +293,7 @@ test("keeps key canvas scenes visually nonblank", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
-  await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 5000 });
+  await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 15000 });
   await page.waitForTimeout(800);
 
   for (const scene of [

@@ -8,10 +8,10 @@
     "audit:security": "npm audit --audit-level=moderate",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run build && npm run test && npm run audit:game && npm run audit:security",
-    "dev": "next dev -H 127.0.0.1 -p 3000",
+    "dev": "next dev -H 127.0.0.1 -p 3019",
     "build": "next build",
     "build:pages": "next build",
-    "start": "next start -H 127.0.0.1 -p 3000",
+    "start": "next start -H 127.0.0.1 -p 3019",
     "test": "playwright test",
     "test:ci": "playwright test --reporter=line"
   },

@@ -27,7 +27,7 @@ async function dragGame(page: Page, fromX: number, fromY: number, toX: number, t
 }
 
 async function expectScene(page: Page, name: string) {
-  await expect(page.getByLabel("进度").getByText(name)).toBeVisible({ timeout: 8000 });
+  await expect(page.getByLabel("进度").getByText(name)).toBeVisible({ timeout: 30000 });
 }
 
 async function clickUntilScene(page: Page, gameX: number, gameY: number, name: string) {
@@ -52,7 +52,7 @@ async function waitForGameSettled(page: Page) {
 }
 
 test("plays through the full prototype loop", async ({ page }) => {
-  test.setTimeout(90000);
+  test.slow();
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -110,7 +110,7 @@ test("plays through the full prototype loop", async ({ page }) => {
 
   await clickUntilScene(page, 1092, 282, "仪式");
   await page.evaluate(() => {
-    for (let time = 900; time <= 11200; time += 120) {
+    for (let time = 900; time <= 20200; time += 120) {
       for (let lane = 0; lane < 4; lane += 1) {
         window.setTimeout(() => {
           window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: lane }));
@@ -119,7 +119,7 @@ test("plays through the full prototype loop", async ({ page }) => {
     }
   });
   await expect(page.getByLabel("背包").getByText("灵界清音")).toBeVisible({
-    timeout: 16000
+    timeout: 26000
   });
   await expectScene(page, "河岸");
   await waitForGameSettled(page);

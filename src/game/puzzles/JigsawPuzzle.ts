@@ -138,10 +138,25 @@ export class JigsawPuzzle extends Phaser.Scene {
         return;
       }
       container.setPosition(dragX, dragY);
+      
+      const [targetX, targetY] = piece.target;
+      const targetFrame = this.targetFrames.get(piece.id);
+      if (targetFrame) {
+        const isNear = Phaser.Math.Distance.Between(dragX, dragY, targetX, targetY) < 62;
+        if (isNear) {
+          targetFrame.setStrokeStyle(3.5, 0x3de0c8, 0.95);
+        } else {
+          targetFrame.setStrokeStyle(2, 0xd1a95d, 0.46);
+        }
+      }
     });
 
     container.on("dragend", () => {
       const [targetX, targetY] = piece.target;
+      const targetFrame = this.targetFrames.get(piece.id);
+      if (targetFrame) {
+        targetFrame.setStrokeStyle(2, 0xd1a95d, 0.46);
+      }
       if (Phaser.Math.Distance.Between(container.x, container.y, targetX, targetY) < 62) {
         this.placePiece(piece, container);
       } else {

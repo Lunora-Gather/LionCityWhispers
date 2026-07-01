@@ -26,6 +26,7 @@ export class MuseumScene extends Phaser.Scene {
   private selectedArtifactId?: ArtifactId;
   private completionBanner?: Phaser.GameObjects.Container;
   private keyHandler?: (event: KeyboardEvent) => void;
+  private lanternTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
     super("MuseumScene");
@@ -43,7 +44,48 @@ export class MuseumScene extends Phaser.Scene {
     this.createBackButton();
     this.bindKeyboard();
     this.updateStatus();
+    this.spawnWalkers();
   }
+
+  private spawnWalkers() {
+    if (gameState.settings.reduceMotion) return;
+
+    const spawnWalker = () => {
+      if (!this.sys.isActive()) return;
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      const startX = direction === 1 ? -50 : 1330;
+      const endX = direction === 1 ? 1330 : -50;
+      const walkerY = 600 + Math.random() * 45;
+
+      const walker = this.add.container(startX, walkerY).setDepth(20);
+      const head = this.add.circle(0, -18, 9, 0x050909, 0.4);
+      const body = this.add.rectangle(0, 10, 18, 38, 0x050909, 0.35);
+      walker.add([head, body]);
+
+      this.tweens.add({
+        targets: walker,
+        y: walkerY - 4,
+        duration: 250,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+
+      this.tweens.add({
+        targets: walker,
+        x: endX,
+        duration: 15000 + Math.random() * 8000,
+        onComplete: () => {
+          walker.destroy();
+          this.time.delayedCall(4000 + Math.random() * 4000, spawnWalker);
+        }
+      });
+    };
+
+    this.time.delayedCall(2000, spawnWalker);
+    this.time.delayedCall(7000, spawnWalker);
+  }
+
 
   private drawGallery(copy: (typeof puzzleCopy)[keyof typeof puzzleCopy]) {
     this.add.rectangle(640, 360, 1280, 720, 0x101817);
@@ -353,6 +395,41 @@ export class MuseumScene extends Phaser.Scene {
         this.add.rectangle(0, 6, 14, 26, 0x050909, 0.36)
       ]);
       banner.add(visitor);
+
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: visitor,
+          y: 74 + Math.random() * 4 - 2,
+          duration: 600 + Math.random() * 400,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay: index * 100
+        });
+
+        this.time.addEvent({
+          delay: 2000 + Math.random() * 4000,
+          callback: () => {
+            if (!this.sys.isActive() || !banner.active) return;
+            const emojis = ["😊", "😮", "👏", "👍", "📝", "💖", "✨"];
+            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+            const bubble = this.add.text(visitor.x, visitor.y - 32, emoji, {
+              fontSize: "16px"
+            }).setOrigin(0.5).setDepth(99);
+            banner.add(bubble);
+
+            this.tweens.add({
+              targets: bubble,
+              y: visitor.y - 64,
+              alpha: 0,
+              scale: 1.2,
+              duration: 1500,
+              onComplete: () => bubble.destroy()
+            });
+          },
+          loop: true
+        });
+      }
     }
     this.completionBanner = banner;
     if (animated && !gameState.settings.reduceMotion) {
@@ -362,9 +439,10 @@ export class MuseumScene extends Phaser.Scene {
         alpha: 1,
         scale: 1,
         duration: 260,
-        ease: "Sine.easeOut"
+        ease: "Back.easeOut"
       });
     }
+    this.spawnRisingLanterns();
   }
 
   private createBackButton() {
@@ -439,6 +517,65 @@ export class MuseumScene extends Phaser.Scene {
         this.input.keyboard?.off("keydown", this.keyHandler);
         this.keyHandler = undefined;
       }
+      this.lanternTimer?.remove(false);
+      this.lanternTimer = undefined;
+    });
+  }
+
+  private spawnRisingLanterns() {
+    if (this.lanternTimer) {
+      return;
+    }
+    for (let i = 0; i < 3; i++) {
+      this.time.delayedCall(i * 400, () => this.createSingleLantern());
+    }
+    this.lanternTimer = this.time.addEvent({
+      delay: 1800,
+      callback: () => {
+        if (!this.sys.isActive() || !gameState.museum.complete) return;
+        this.createSingleLantern();
+      },
+      loop: true
+    });
+  }
+
+  private createSingleLantern() {
+    if (!this.sys.isActive()) return;
+    const x = Phaser.Math.Between(100, 1180);
+    const y = 740;
+    const scale = Phaser.Math.FloatBetween(0.4, 0.72);
+    
+    const lantern = this.add.container(x, y).setDepth(5).setScale(scale);
+    
+    const glow = this.add.circle(0, 0, 24, 0xffa040, 0.22);
+    const body = this.add.polygon(0, 0, [
+      -12, -18,
+      12, -18,
+      16, 12,
+      -16, 12
+    ], 0xff7c25, 0.82).setStrokeStyle(1.5, 0xffd080, 0.55);
+    const flame = this.add.circle(0, 10, 4, 0xffffff, 0.95);
+    
+    lantern.add([glow, body, flame]);
+    
+    this.tweens.add({
+      targets: lantern,
+      y: -100,
+      x: x + Phaser.Math.Between(-60, 60),
+      scale: scale * 0.45,
+      alpha: { from: 0.9, to: 0.1 },
+      duration: Phaser.Math.Between(7500, 11000),
+      ease: "Sine.easeOut",
+      onComplete: () => lantern.destroy()
+    });
+    
+    this.tweens.add({
+      targets: lantern,
+      angle: Phaser.Math.Between(-8, 8),
+      duration: Phaser.Math.Between(2000, 3200),
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
     });
   }
 }

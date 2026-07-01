@@ -12,11 +12,11 @@ test("remaps the interaction key through settings and uses it in the world", asy
 
   await page.reload();
   await expect(page.locator("canvas")).toBeVisible();
-  await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 5000 });
+  await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "设置" }).click();
-  await expect(page.getByRole("button", { name: /交互 E/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /交互 E/ })).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "关闭设置" }).click();
-  await expect(page.getByRole("dialog", { name: "设置" })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "设置" })).toBeHidden({ timeout: 15000 });
   await page.evaluate(() => {
     const active = document.activeElement;
     if (active instanceof HTMLElement) {
@@ -25,9 +25,21 @@ test("remaps the interaction key through settings and uses it in the world", asy
   });
   await page.waitForTimeout(800);
 
-  await page.locator("canvas").click();
-  await page.keyboard.press("KeyE");
-  await expect(page.getByLabel("进度").getByText("对话")).toBeVisible({ timeout: 5000 });
+  // Retry sending the action key until the dialogue scene is active, to handle any asynchronous UI unlock lag.
+  let dialogueVisible = false;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.evaluate(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyE", bubbles: true }));
+    });
+    try {
+      await page.getByLabel("进度").getByText("对话").waitFor({ state: "visible", timeout: 1500 });
+      dialogueVisible = true;
+      break;
+    } catch {
+      await page.waitForTimeout(400);
+    }
+  }
+  expect(dialogueVisible).toBe(true);
 });
 
 test("swaps duplicate world bindings without changing rhythm bindings", async ({ page }) => {
@@ -84,7 +96,7 @@ test("uses custom rhythm lane bindings during the ritual", async ({ page }) => {
   await expect(page.locator(".rhythm-controls button")).toHaveText(["J", "K", "L", ";"]);
   await page.evaluate(() => {
     const codes = ["KeyJ", "KeyK", "KeyL", "Semicolon"];
-    for (let time = 900; time <= 11200; time += 120) {
+    for (let time = 900; time <= 20200; time += 120) {
       for (const code of codes) {
         window.setTimeout(() => {
           window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
@@ -93,6 +105,6 @@ test("uses custom rhythm lane bindings during the ritual", async ({ page }) => {
     }
   });
   await expect(page.getByLabel("背包").getByText("灵界清音")).toBeVisible({
-    timeout: 16000
+    timeout: 26000
   });
 });

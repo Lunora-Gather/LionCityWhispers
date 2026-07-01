@@ -75,7 +75,7 @@ export class RunesPuzzle extends Phaser.Scene {
       }).setOrigin(0.5);
       button.add([aura, seal, inner, scratchA, scratchB, text]);
       button.setInteractive(new Phaser.Geom.Circle(0, 0, 62), Phaser.Geom.Circle.Contains);
-      button.on("pointerdown", () => this.choose(rune, config));
+      button.on("pointerdown", () => this.choose(rune, config, x, 430));
       button.on("pointerover", () => {
         aura.setAlpha(0.38);
         seal.setStrokeStyle(3, 0x3de0c8, 0.95);
@@ -115,7 +115,8 @@ export class RunesPuzzle extends Phaser.Scene {
       const index = Number(event.key) - 1;
       const rune = config.choices[index];
       if (rune) {
-        this.choose(rune, config);
+        const x = 370 + index * 180;
+        this.choose(rune, config, x, 430);
       }
     };
     this.input.keyboard.on("keydown", this.keyHandler);
@@ -127,11 +128,14 @@ export class RunesPuzzle extends Phaser.Scene {
     });
   }
 
-  private choose(rune: string, config: RuneConfig) {
+  private choose(rune: string, config: RuneConfig, x?: number, y?: number) {
     if (isUiLocked()) {
       return;
     }
     playUiClick();
+    if (x !== undefined && y !== undefined && !gameState.settings.reduceMotion) {
+      burst(this, x, y, 0x1f8f82, 10, 3);
+    }
     if (this.selected.length >= config.order.length) {
       this.selected = [];
     }
