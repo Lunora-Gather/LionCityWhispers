@@ -74,4 +74,22 @@ jobs:
         run: npm run audit:game
 
       - name: Audit dependencies
-        run: npm run audit:security
+        run: |
+          for attempt in 1 2 3; do
+            set +e
+            npm run audit:security 2>&1 | tee audit-security.log
+            status=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+
+            if ! grep -q "audit endpoint returned an error" audit-security.log; then
+              exit "$status"
+            fi
+
+            sleep $((attempt * 5))
+          done
+
+          echo "::warning::npm audit endpoint remained unavailable after 3 attempts."
