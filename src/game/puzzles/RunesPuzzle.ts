@@ -4,6 +4,7 @@ import { addArtifact, emitGameState, gameState, isUiLocked } from "../state";
 import { playMiss, playSuccess, playUiClick } from "../audio";
 import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { puzzleCopy } from "@/data/i18n";
+import { bindSceneHint, pulseSceneHint } from "../hints";
 
 type RuneConfig = {
   order: string[];
@@ -41,17 +42,17 @@ export class RunesPuzzle extends Phaser.Scene {
       overlayAlpha: 0.5
     });
 
-    this.add.rectangle(640, 318, 560, 128, 0x050c0a, 0.4).setStrokeStyle(2, 0x1f8f82, 0.28);
-    this.add.rectangle(640, 310, 488, 78, 0x0c1b18, 0.82).setStrokeStyle(1.5, 0xd1a95d, 0.44);
+    this.add.rectangle(640, 316, 520, 112, 0x050c0a, 0.32).setStrokeStyle(1, 0x1f8f82, 0.2);
+    this.add.rectangle(640, 308, 468, 70, 0x0c1b18, 0.74).setStrokeStyle(1, 0xd1a95d, 0.36);
     for (let index = 0; index < 9; index += 1) {
       this.add.line(424 + index * 54, 318, 0, -36, 0, 36, 0xd1a95d, 0.16);
     }
     this.readout = this.add.text(640, 310, copy.runesEmpty, {
       fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
-      fontSize: "34px",
+      fontSize: "30px",
       fontStyle: "700",
-      color: "#3de0c8",
-      shadow: { offsetX: 0, offsetY: 0, color: "#3de0c8", blur: 8, stroke: true, fill: true }
+      color: "#d8eee8",
+      shadow: { offsetX: 0, offsetY: 1, color: "#07110f", blur: 3, stroke: true, fill: true }
     }).setOrigin(0.5);
     config.order.forEach((_rune, index) => {
       const slot = this.add.rectangle(550 + index * 60, 372, 40, 10, 0x091412, 0.8).setStrokeStyle(1, 0xd1a95d, 0.36);
@@ -62,23 +63,29 @@ export class RunesPuzzle extends Phaser.Scene {
     config.choices.forEach((rune, index) => {
       const x = 370 + index * 180;
       const button = this.add.container(x, 430);
-      const aura = this.add.circle(0, 0, 70, 0x3de0c8, 0.14);
-      const seal = this.add.circle(0, 0, 58, 0x0c1b18, 0.9).setStrokeStyle(2.5, 0xd1a95d, 0.76);
-      const inner = this.add.circle(0, 0, 42, 0x1f8f82, 0.22).setStrokeStyle(1, 0x3de0c8, 0.24);
-      const scratchA = this.add.line(0, 0, -34, -22, 28, -32, 0xfff4d6, 0.18);
-      const scratchB = this.add.line(0, 0, -28, 32, 32, 22, 0xfff4d6, 0.12);
+      const aura = this.add.circle(0, 4, 58, 0x3de0c8, 0.06);
+      const shadow = this.add.rectangle(5, 7, 104, 104, 0x020504, 0.3);
+      const seal = this.add.rectangle(0, 0, 102, 102, 0x0c1b18, 0.92).setStrokeStyle(1.5, 0xd1a95d, 0.58);
+      const inner = this.add.rectangle(0, 0, 82, 82, 0x1f8f82, 0.12).setStrokeStyle(1, 0x3de0c8, 0.18);
+      const scratchA = this.add.line(0, 0, -34, -30, 28, -34, 0xfff4d6, 0.14);
+      const scratchB = this.add.line(0, 0, -32, 34, 34, 28, 0xfff4d6, 0.1);
       const text = this.add.text(0, 0, rune, {
         fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
-        fontSize: "38px",
+        fontSize: "34px",
         fontStyle: "700",
         color: "#fffcf2"
       }).setOrigin(0.5);
-      button.add([aura, seal, inner, scratchA, scratchB, text]);
-      button.setInteractive(new Phaser.Geom.Circle(0, 0, 62), Phaser.Geom.Circle.Contains);
+      const key = this.add.text(-42, -42, String(index + 1), {
+        fontFamily: "Georgia, serif",
+        fontSize: "12px",
+        color: "#bda66d"
+      }).setOrigin(0.5);
+      button.add([aura, shadow, seal, inner, scratchA, scratchB, text, key]);
+      button.setInteractive(new Phaser.Geom.Rectangle(-54, -54, 108, 108), Phaser.Geom.Rectangle.Contains);
       button.on("pointerdown", () => this.choose(rune, config, x, 430));
       button.on("pointerover", () => {
-        aura.setAlpha(0.38);
-        seal.setStrokeStyle(3, 0x3de0c8, 0.95);
+        aura.setAlpha(0.18);
+        seal.setStrokeStyle(2, 0x3de0c8, 0.8);
         this.tweens.add({
           targets: button,
           scale: 1.1,
@@ -86,8 +93,8 @@ export class RunesPuzzle extends Phaser.Scene {
         });
       });
       button.on("pointerout", () => {
-        aura.setAlpha(0.14);
-        seal.setStrokeStyle(2.5, 0xd1a95d, 0.76);
+        aura.setAlpha(0.06);
+        seal.setStrokeStyle(1.5, 0xd1a95d, 0.58);
         this.tweens.add({
           targets: button,
           scale: 1,
@@ -96,6 +103,13 @@ export class RunesPuzzle extends Phaser.Scene {
       });
     });
     this.bindKeyboard(config);
+    bindSceneHint(this, () => {
+      const nextRune = config.order[this.selected.length] ?? config.order[0];
+      const index = config.choices.indexOf(nextRune);
+      if (index >= 0) {
+        pulseSceneHint(this, 370 + index * 180, 430, 0xc6523d);
+      }
+    });
 
     this.createFooter();
     emitGameState("runes");

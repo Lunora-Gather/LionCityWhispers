@@ -4,6 +4,7 @@ import { addArtifact, emitGameState, gameState, isUiLocked } from "../state";
 import { playMiss, playSuccess, playUiClick } from "../audio";
 import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { puzzleCopy } from "@/data/i18n";
+import { bindSceneHint, pulseSceneHint } from "../hints";
 
 type LockConfig = {
   order: string[];
@@ -47,51 +48,54 @@ export class LockPuzzle extends Phaser.Scene {
     });
     this.createBackButton();
 
-    this.add.rectangle(640, 356, 340, 230, 0x091412, 0.52).setStrokeStyle(2, 0xd1a95d, 0.36);
-    this.add.circle(640, 346, 132, 0x07110f, 0.88).setStrokeStyle(3, 0x1f8f82, 0.62);
-    this.add.circle(640, 346, 96, 0x091412, 0.9).setStrokeStyle(2.5, 0xd1a95d, 0.54);
-    this.add.circle(640, 346, 58, 0x0c1b18, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.42);
-    this.add.circle(640, 332, 20, 0x050c0a, 0.8).setStrokeStyle(1.5, 0xd1a95d, 0.36);
-    this.add.rectangle(640, 370, 30, 70, 0x050c0a, 0.8).setStrokeStyle(1.5, 0xd1a95d, 0.32);
-    this.add.rectangle(640, 346, 244, 2, 0xd1a95d, 0.22);
-    this.add.rectangle(640, 346, 2, 196, 0xd1a95d, 0.18);
+    this.add.rectangle(640, 350, 310, 210, 0x091412, 0.34).setStrokeStyle(1, 0xd1a95d, 0.24);
+    this.add.circle(640, 342, 112, 0x07110f, 0.76).setStrokeStyle(2, 0x1f8f82, 0.42);
+    this.add.circle(640, 342, 80, 0x091412, 0.84).setStrokeStyle(1.5, 0xd1a95d, 0.4);
+    this.add.circle(640, 342, 50, 0x0c1b18, 0.9).setStrokeStyle(1, 0x3de0c8, 0.28);
+    this.add.circle(640, 330, 16, 0x050c0a, 0.8).setStrokeStyle(1, 0xd1a95d, 0.3);
+    this.add.rectangle(640, 362, 24, 60, 0x050c0a, 0.8).setStrokeStyle(1, 0xd1a95d, 0.26);
+    this.add.rectangle(640, 342, 204, 1, 0xd1a95d, 0.18);
+    this.add.rectangle(640, 342, 1, 164, 0xd1a95d, 0.14);
     config.order.forEach((_seal, index) => {
       const slot = this.add.rectangle(547 + index * 62, 392, 42, 10, 0x07110f, 0.88).setStrokeStyle(1, 0xd1a95d, 0.36);
       this.sequenceSlots.push(slot);
     });
     this.refreshSequenceSlots();
 
-    // Styled neon timer panel
-    this.add.rectangle(1015, 228, 92, 46, 0x0c1b18, 0.86).setStrokeStyle(1.5, 0xff4d4d, 0.62);
+    this.add.text(1015, 203, "剩余时间", {
+      fontFamily: "Microsoft YaHei, sans-serif",
+      fontSize: "11px",
+      color: "#9fb1ac"
+    }).setOrigin(0.5);
+    this.add.rectangle(1015, 232, 86, 40, 0x0c1b18, 0.78).setStrokeStyle(1, 0xc6523d, 0.48);
     this.timerText = this.add.text(1015, 228, `${this.secondsLeft}s`, {
       fontFamily: "Georgia, serif",
-      fontSize: "28px",
+      fontSize: "24px",
       fontStyle: "700",
-      color: "#ff4d4d",
-      shadow: { offsetX: 0, offsetY: 0, color: "#ff4d4d", blur: 6, stroke: true, fill: true }
+      color: "#e19078"
     }).setOrigin(0.5);
 
     config.seals.forEach((seal, index) => {
       const x = 355 + index * 190;
       const node = this.add.container(x, 472);
       const color = Phaser.Display.Color.HexStringToColor(seal.color).color;
-      const shadow = this.add.circle(6, 9, 64, 0x111817, 0.2);
-      const aura = this.add.circle(0, 0, 72, color, 0.15);
-      const disc = this.add.circle(0, 0, 64, 0x0c1b18, 0.92).setStrokeStyle(3, color, 0.8);
-      const ring = this.add.circle(0, 0, 43, 0x07110f, 0.6).setStrokeStyle(1.5, 0xd1a95d, 0.32);
-      const shine = this.add.line(0, 0, -28, -32, 24, -38, 0xfff4d6, 0.26);
+      const shadow = this.add.circle(5, 8, 54, 0x111817, 0.2);
+      const aura = this.add.circle(0, 0, 60, color, 0.07);
+      const disc = this.add.circle(0, 0, 53, 0x0c1b18, 0.92).setStrokeStyle(2, color, 0.62);
+      const ring = this.add.circle(0, 0, 38, 0x07110f, 0.6).setStrokeStyle(1, 0xd1a95d, 0.26);
+      const shine = this.add.line(0, 0, -24, -28, 20, -32, 0xfff4d6, 0.18);
       const label = this.add.text(0, 0, seal.label, {
         fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
-        fontSize: "34px",
+        fontSize: "30px",
         fontStyle: "700",
         color: "#fffcf2"
       }).setOrigin(0.5);
       node.add([shadow, aura, disc, ring, shine, label]);
-      node.setInteractive(new Phaser.Geom.Circle(0, 0, 66), Phaser.Geom.Circle.Contains);
+      node.setInteractive(new Phaser.Geom.Circle(0, 0, 56), Phaser.Geom.Circle.Contains);
       node.on("pointerdown", () => this.choose(seal.label, config, x, 472, color));
       node.on("pointerover", () => {
-        aura.setAlpha(0.38);
-        disc.setStrokeStyle(3.5, 0x3de0c8, 0.95);
+        aura.setAlpha(0.2);
+        disc.setStrokeStyle(2.5, 0x3de0c8, 0.82);
         this.tweens.add({
           targets: node,
           scale: 1.1,
@@ -99,8 +103,8 @@ export class LockPuzzle extends Phaser.Scene {
         });
       });
       node.on("pointerout", () => {
-        aura.setAlpha(0.15);
-        disc.setStrokeStyle(3, color, 0.8);
+        aura.setAlpha(0.07);
+        disc.setStrokeStyle(2, color, 0.62);
         this.tweens.add({
           targets: node,
           scale: 1,
@@ -109,6 +113,19 @@ export class LockPuzzle extends Phaser.Scene {
       });
     });
     this.bindKeyboard(config);
+    bindSceneHint(this, () => {
+      const nextSeal = config.order[this.selected.length] ?? config.order[0];
+      const index = config.seals.findIndex((seal) => seal.label === nextSeal);
+      if (index >= 0) {
+        const seal = config.seals[index];
+        pulseSceneHint(
+          this,
+          355 + index * 190,
+          472,
+          Phaser.Display.Color.HexStringToColor(seal.color).color
+        );
+      }
+    });
 
     this.timer = this.time.addEvent({
       delay: 1000,

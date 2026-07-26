@@ -3,6 +3,7 @@ import { ArtifactId, emitGameState, gameState, isUiLocked } from "../state";
 import { playMiss, playSnap, playSuccess, playUiClick } from "../audio";
 import { artifactColors, burst, drawArtifactIcon } from "../visuals";
 import { formatCopy, localizedArtifact, puzzleCopy } from "@/data/i18n";
+import { bindSceneHint, pulseSceneHint } from "../hints";
 
 type CaseSlot = {
   index: number;
@@ -43,6 +44,29 @@ export class MuseumScene extends Phaser.Scene {
     this.drawInventory();
     this.createBackButton();
     this.bindKeyboard();
+    bindSceneHint(this, () => {
+      const storyOrder: ArtifactId[] = [
+        "badang-stone",
+        "rune-plaque",
+        "harbor-seal",
+        "spirit-chime"
+      ];
+      const artifactId =
+        this.selectedArtifactId ??
+        storyOrder.find((id) => gameState.museum.placements[id] === undefined);
+      if (!artifactId) {
+        return;
+      }
+      const targetIndex = storyOrder.indexOf(artifactId);
+      const targetSlot = this.slots[targetIndex];
+      const token = this.tokens.get(artifactId);
+      if (token) {
+        pulseSceneHint(this, token.x, token.y, 0xd1a95d);
+      }
+      if (targetSlot) {
+        pulseSceneHint(this, targetSlot.x, targetSlot.y - 64, 0x3de0c8);
+      }
+    });
     this.updateStatus();
     this.spawnWalkers();
   }
@@ -92,9 +116,9 @@ export class MuseumScene extends Phaser.Scene {
     const bg = this.add.image(640, 360, "museum-gallery");
     const scale = Math.max(1280 / bg.width, 720 / bg.height);
     bg.setScale(scale);
-    this.add.rectangle(640, 360, 1280, 720, 0x050909, 0.08);
+    this.add.rectangle(640, 360, 1280, 720, 0x050909, 0.14);
     const lights = this.add.graphics();
-    lights.fillStyle(0xfff4d6, 0.08);
+      lights.fillStyle(0xfff4d6, 0.055);
     for (const slot of this.slots) {
       lights.fillTriangle(slot.x - 48, 106, slot.x + 48, 106, slot.x + 104, 508);
       lights.fillTriangle(slot.x - 48, 106, slot.x + 48, 106, slot.x - 104, 508);
@@ -103,8 +127,8 @@ export class MuseumScene extends Phaser.Scene {
     for (let index = 0; index < 7; index += 1) {
       lights.lineBetween(210 + index * 126, 536, 260 + index * 116, 654);
     }
-    this.add.rectangle(640, 68, 1280, 136, 0x090f0f, 0.38);
-    this.add.rectangle(640, 665, 1280, 110, 0x090f0f, 0.4);
+    this.add.rectangle(640, 68, 1280, 136, 0x090f0f, 0.46);
+    this.add.rectangle(640, 665, 1280, 110, 0x090f0f, 0.48);
     this.add.rectangle(640, 520, 980, 2, 0xfff4d6, 0.12);
     this.add.rectangle(640, 548, 980, 1, 0xd1a95d, 0.14);
     this.add.text(78, 198, copy.museumTitle, {
@@ -117,13 +141,12 @@ export class MuseumScene extends Phaser.Scene {
       fontSize: "18px",
       color: "#d8c8a3"
     });
-    this.add.rectangle(640, 516, 560, 52, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6);
-    this.add.rectangle(640, 516, 554, 46, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24);
+    this.add.rectangle(640, 516, 520, 46, 0x091412, 0.8).setStrokeStyle(1, 0x2bc7ab, 0.42);
     this.status = this.add.text(640, 528, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "20px",
       color: "#fff4d6",
-      shadow: { offsetX: 0, offsetY: 0, color: "#ffffff", blur: 4, fill: true }
+      shadow: { offsetX: 0, offsetY: 1, color: "#050909", blur: 3, fill: true }
     }).setOrigin(0.5);
     this.visitorFeedback = this.add.text(640, 502, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
@@ -149,7 +172,7 @@ export class MuseumScene extends Phaser.Scene {
       
       const dotColor = occupied ? 0x2bc7ab : 0xd1a95d;
       const indicator = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 1);
-      const halo = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 0.38);
+      const halo = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 0.24);
       this.slotIndicators.set(slot.index, indicator);
       this.slotHalos.set(slot.index, halo);
       if (!gameState.settings.reduceMotion) {
@@ -187,11 +210,11 @@ export class MuseumScene extends Phaser.Scene {
   private createArtifactToken(id: ArtifactId, name: string, detail: string, x: number, y: number) {
     const token = this.add.container(x, y).setDepth(24);
     const color = artifactColors[id];
-    const shadow = this.add.rectangle(6, 7, 174, 62, 0x020504, 0.4);
-    const card = this.add.rectangle(0, 0, 172, 58, 0x0c1b18, 0.9).setStrokeStyle(1.5, 0xd1a95d, 0.76);
-    const innerBorder = this.add.rectangle(0, 0, 166, 52, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.28);
-    const colorRail = this.add.rectangle(-78, 0, 8, 48, color, 0.88);
-    const sheen = this.add.rectangle(22, -22, 110, 2, 0xffffff, 0.16);
+    const shadow = this.add.rectangle(5, 6, 168, 58, 0x020504, 0.34);
+    const card = this.add.rectangle(0, 0, 166, 56, 0x0c1b18, 0.88).setStrokeStyle(1, 0xd1a95d, 0.58);
+    const innerBorder = this.add.rectangle(0, 0, 160, 50, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.18);
+    const colorRail = this.add.rectangle(-76, 0, 5, 44, color, 0.72);
+    const sheen = this.add.rectangle(20, -20, 104, 1, 0xffffff, 0.12);
     const icon = drawArtifactIcon(this, id, -54, 0, 42);
     const label = this.add.text(-24, -18, name, {
       fontFamily: "Microsoft YaHei, sans-serif",

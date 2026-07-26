@@ -5,6 +5,7 @@ import { Note } from "./Note";
 import { playMiss, playRitualHit, playSuccess } from "../audio";
 import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { formatCopy, puzzleCopy } from "@/data/i18n";
+import { bindSceneHint, pulseSceneHint } from "../hints";
 
 function formatBinding(code: string) {
   const namedKeys: Record<string, string> = {
@@ -90,22 +91,20 @@ export class RhythmScene extends Phaser.Scene {
 
     this.scoreText = this.add.text(1010, 198, "0", {
       fontFamily: "Georgia, serif",
-      fontSize: "38px",
-      color: "#3de0c8",
-      shadow: { offsetX: 0, offsetY: 0, color: "#3de0c8", blur: 8, stroke: true, fill: true }
+      fontSize: "32px",
+      color: "#d8eee8"
     }).setOrigin(0.5).setDepth(25);
     this.feedback = this.add.text(640, 282, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "24px",
       fontStyle: "bold",
       color: "#fff4d6",
-      shadow: { offsetX: 0, offsetY: 0, color: "#ffffff", blur: 6, fill: true }
+      shadow: { offsetX: 0, offsetY: 1, color: "#07110f", blur: 3, fill: true }
     }).setOrigin(0.5).setDepth(45);
     this.comboText = this.add.text(1010, 240, "COMBO 0", {
       fontFamily: "Georgia, serif",
       fontSize: "16px",
       color: "#ffd685",
-      shadow: { offsetX: 0, offsetY: 0, color: "#ffd685", blur: 4, stroke: true, fill: true }
     }).setOrigin(0.5).setDepth(25);
 
     const travel = gameState.easyMode ? 3300 : 2500;
@@ -154,6 +153,10 @@ export class RhythmScene extends Phaser.Scene {
       }
       this.returnTimer?.remove(false);
       this.returnTimer = undefined;
+    });
+    bindSceneHint(this, () => {
+      pulseSceneHint(this, 640, 535, 0x3de0c8);
+      this.laneFlashes.forEach((_flash, lane) => this.flashLane(lane, laneColors[lane]));
     });
   }
 
@@ -360,40 +363,34 @@ export class RhythmScene extends Phaser.Scene {
       backgroundAlpha: 0.28,
       overlayAlpha: 0.54
     });
-    this.add.circle(640, 370, 246, 0x2bc7ab, 0.07).setStrokeStyle(2, 0x2bc7ab, 0.18);
-    this.add.circle(640, 370, 184, 0x111817, 0.06).setStrokeStyle(1, 0xd1a95d, 0.16);
-    this.add.rectangle(640, 380, 688, 438, 0x07100f, 0.08).setStrokeStyle(1, 0x2bc7ab, 0.14);
+    this.add.circle(640, 370, 208, 0x2bc7ab, 0.035).setStrokeStyle(1, 0x2bc7ab, 0.1);
+    this.add.circle(640, 370, 154, 0x111817, 0.035).setStrokeStyle(1, 0xd1a95d, 0.1);
+    this.add.rectangle(640, 380, 620, 420, 0x07100f, 0.06).setStrokeStyle(1, 0x2bc7ab, 0.1);
 
-    // Glassmorphic HUD feedback panel
-    this.add.rectangle(640, 282, 340, 54, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6).setDepth(20);
-    this.add.rectangle(640, 282, 334, 48, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24).setDepth(20);
+    this.add.rectangle(640, 282, 296, 48, 0x091412, 0.76).setStrokeStyle(1, 0x2bc7ab, 0.38).setDepth(20);
 
-    // Glassmorphic HUD score/combo panel
-    this.add.rectangle(1010, 218, 150, 112, 0x091412, 0.88).setStrokeStyle(1.5, 0xd1a95d, 0.6).setDepth(20);
-    this.add.rectangle(1010, 218, 144, 106, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.24).setDepth(20);
+    this.add.rectangle(1010, 218, 132, 98, 0x091412, 0.78).setStrokeStyle(1, 0xd1a95d, 0.42).setDepth(20);
 
     const laneXs = [435, 570, 705, 840];
     laneXs.forEach((x, lane) => {
       const color = laneColors[lane];
-      this.add.rectangle(x + 5, 366, 104, 424, 0x020504, 0.1);
-      this.add.rectangle(x, 360, 98, 416, 0x0b1514, 0.1).setStrokeStyle(1, color, 0.22);
-      this.add.rectangle(x, 535, 110, 72, 0x111817, 0.12).setStrokeStyle(1, color, 0.28);
-      this.add.line(x, 360, 0, -184, 0, 184, color, 0.18);
-      this.add.circle(x, 535, 33, color, 0.1).setStrokeStyle(2, color, 0.28);
-      this.add.circle(x, 535, 18, 0xfff4d6, 0.16);
-      const flash = this.add.rectangle(x, 360, 98, 416, color, 0).setDepth(15);
+      this.add.rectangle(x + 4, 370, 84, 404, 0x020504, 0.08);
+      this.add.rectangle(x, 366, 80, 398, 0x0b1514, 0.08).setStrokeStyle(1, color, 0.14);
+      this.add.rectangle(x, 535, 88, 62, 0x111817, 0.1).setStrokeStyle(1, color, 0.22);
+      this.add.line(x, 366, 0, -176, 0, 176, color, 0.12);
+      this.add.circle(x, 535, 28, color, 0.07).setStrokeStyle(1.5, color, 0.24);
+      this.add.circle(x, 535, 14, 0xfff4d6, 0.12);
+      const flash = this.add.rectangle(x, 366, 80, 398, color, 0).setDepth(15);
       this.laneFlashes.push(flash);
       this.add.text(x, 586, formatBinding(gameState.settings.bindings.rhythm[lane]), {
         fontFamily: "Georgia, serif",
-        fontSize: "30px",
+        fontSize: "24px",
         color: "#fff4d6",
-        shadow: { offsetX: 0, offsetY: 0, color: "#ffd685", blur: 6, stroke: true, fill: true }
+        shadow: { offsetX: 0, offsetY: 1, color: "#07110f", blur: 3, fill: true }
       }).setOrigin(0.5).setDepth(20);
     });
-    // Glowing cyan/jade hit laser line
-    this.add.rectangle(640, 535, 642, 4, 0xffffff, 0.95).setDepth(18);
-    this.add.rectangle(640, 535, 646, 8, 0x3de0c8, 0.6).setDepth(17);
-    this.add.rectangle(640, 535, 650, 18, 0x2bc7ab, 0.2).setDepth(16);
+    this.add.rectangle(640, 535, 560, 2, 0xfff4d6, 0.62).setDepth(18);
+    this.add.rectangle(640, 535, 566, 8, 0x2bc7ab, 0.12).setDepth(17);
     this.add.rectangle(640, 154, 620, 6, 0x111817, 0.1).setStrokeStyle(1, 0x2bc7ab, 0.16);
     this.progressFill = this.add.rectangle(330, 154, 1, 6, 0x2bc7ab, 0.78).setOrigin(0, 0.5);
     return laneXs;

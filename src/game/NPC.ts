@@ -36,42 +36,42 @@ export class NPC {
 
   constructor(private scene: Phaser.Scene, readonly config: InteractableConfig) {
     this.marker = scene.add.container(config.x, config.y);
-    const guideGlow = scene.add.circle(0, 0, 52, config.color, 0.1).setStrokeStyle(1, 0xd0a84c, 0.32);
-    const guideRing = scene.add.circle(0, 0, 38, config.color, 0).setStrokeStyle(1, config.color, 0.55);
-    const guideNeedle = scene.add.triangle(0, -44, -8, -10, 8, -10, 0, 6, 0xd0a84c, 0.86);
-    const guideSpark = scene.add.circle(0, -44, 4, 0xf8edd2, 0.74);
+    const guideGlow = scene.add.circle(0, 0, 34, config.color, 0.08).setStrokeStyle(1, 0xd0a84c, 0.22);
+    const guideRing = scene.add.circle(0, 0, 27, config.color, 0).setStrokeStyle(1, config.color, 0.48);
+    const guideNeedle = scene.add.triangle(0, -34, -5, -8, 5, -8, 0, 3, 0xd0a84c, 0.82);
+    const guideSpark = scene.add.circle(0, -34, 2.5, 0xf8edd2, 0.7);
     this.guide = scene.add.container(0, 0, [guideGlow, guideRing, guideNeedle, guideSpark]).setAlpha(0);
-    this.halo = scene.add.circle(0, 0, 34, config.color, 0.14).setStrokeStyle(2, 0xf8efd5, 0.48);
+    this.halo = scene.add.circle(0, 0, 24, config.color, 0.1).setStrokeStyle(1.5, 0xf8efd5, 0.38);
     
     // Tight, subtle pulse ring (32px radius, much smaller footprint)
-    const pulse = scene.add.circle(0, 0, 32, config.color, 0.04).setStrokeStyle(1, config.color, 0.28);
-    const outer = scene.add.circle(0, 0, 23, 0x07100f, 0.48).setStrokeStyle(2, 0xf8efd5, 0.64);
-    this.base = scene.add.circle(0, 0, 15, 0xf8efd5, 0.94).setStrokeStyle(2, config.color, 0.96);
-    const diamond = scene.add.rectangle(0, 0, 13, 13, config.color, 0.9).setRotation(Math.PI / 4);
-    const glint = scene.add.rectangle(0, -10, 15, 2, 0xffffff, 0.48).setRotation(-0.5);
+    const pulse = scene.add.circle(0, 0, 23, config.color, 0.025).setStrokeStyle(1, config.color, 0.2);
+    const outer = scene.add.circle(0, 0, 17, 0x07100f, 0.62).setStrokeStyle(1.5, 0xf8efd5, 0.52);
+    this.base = scene.add.circle(0, 0, 11, 0xf8efd5, 0.94).setStrokeStyle(1.5, config.color, 0.88);
+    const diamond = scene.add.rectangle(0, 0, 8, 8, config.color, 0.9).setRotation(Math.PI / 4);
+    const glint = scene.add.rectangle(0, -7, 10, 1, 0xffffff, 0.42).setRotation(-0.5);
     const glyph = scene.add.text(0, -1, kindGlyphs[config.kind], {
       fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "26px",
+      fontSize: "9px",
       fontStyle: "bold",
       color: "#07100f"
-    }).setOrigin(0.5).setScale(0.5);
+    }).setOrigin(0.5);
 
     // Sleek rounded rectangle plaque with crisp bold text
-    const plaqueWidth = Math.max(100, config.label.length * 16 + 24);
+    const plaqueWidth = Math.max(82, config.label.length * 13 + 22);
     const plaque = scene.add.graphics();
     plaque.fillStyle(0x07100f, 0.94);
-    plaque.fillRoundedRect(-plaqueWidth / 2, -92, plaqueWidth, 32, 6);
-    plaque.lineStyle(1.5, 0xd0a84c, 0.85);
-    plaque.strokeRoundedRect(-plaqueWidth / 2, -92, plaqueWidth, 32, 6);
+    plaque.fillRoundedRect(-plaqueWidth / 2, -62, plaqueWidth, 25, 7);
+    plaque.lineStyle(1, 0xd0a84c, 0.68);
+    plaque.strokeRoundedRect(-plaqueWidth / 2, -62, plaqueWidth, 25, 7);
 
-    const text = scene.add.text(0, -76, config.label, {
+    const text = scene.add.text(0, -49, config.label, {
       fontFamily: "Microsoft YaHei, Noto Sans SC, Noto Sans, sans-serif",
-      fontSize: "28px",
+      fontSize: "12px",
       fontStyle: "bold",
       color: "#fffcf0",
       stroke: "#07100f",
-      strokeThickness: 4
-    }).setOrigin(0.5).setScale(0.5);
+      strokeThickness: 2
+    }).setOrigin(0.5);
 
     this.label = scene.add.container(0, 0, [plaque, text]).setAlpha(0);
     this.marker.add([this.guide, pulse, this.halo, outer, this.base, diamond, glyph, glint, this.label]);
@@ -103,7 +103,7 @@ export class NPC {
       });
       scene.tweens.add({
         targets: [guideNeedle, guideSpark],
-        y: -49,
+        y: -38,
         duration: 800,
         yoyo: true,
         repeat: -1,

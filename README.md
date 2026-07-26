@@ -1,138 +1,110 @@
-# 狮城秘语 | Lion City Whispers
+# 狮城秘语 · Lion City Whispers
 
 <p align="center">
-  <img src="public/assets/images/world-cinematic-v3.webp" alt="Lion City Whispers Banner" width="100%" style="border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.4);" />
+  <img src="public/assets/images/world-cinematic-v3.webp" alt="《狮城秘语》游戏场景" width="100%" />
 </p>
 
 <p align="center">
-  <strong>Version 1.0.0 Stable Release</strong><br />
-  一款可直接在浏览器中游玩的双语叙事解谜游戏：探索狮城传说，修复文物，完成灵界仪式，并策划最终博物馆展览。<br />
-  A bilingual browser narrative game about restoring Lion City legends through puzzles, rhythm ritual, and museum curation.
+  一款以新加坡城市传说为灵感的双语浏览器叙事解谜游戏。<br />
+  Explore the riverbank, restore lost artifacts, complete a rhythm ritual, and curate the final exhibition.
 </p>
 
 <p align="center">
-  <a href="https://lunora-gather.github.io/LionCityWhispers/"><strong>🎮 立即进入网页版游戏 / Play Now</strong></a> ·
-  <a href="https://github.com/Lunora-Gather/LionCityWhispers"><strong>📁 仓库地址 / Repository</strong></a> ·
-  <a href=".github/workflows/pages.yml"><strong>🚀 部署流程 / Pages Workflow</strong></a>
+  <a href="https://lunora-gather.github.io/LionCityWhispers/"><strong>立即进入网页版游戏 / Play Now</strong></a>
+  ·
+  <a href="https://github.com/Lunora-Gather/LionCityWhispers/actions/workflows/pages.yml">部署状态</a>
 </p>
 
----
+## 游戏内容
 
-## 📖 游戏简介 | About
+玩家将扮演博物馆馆长林，在河岸与灵界之间寻找失落文物，并把修复后的故事带回博物馆。
 
-**《狮城秘语》（Lion City Whispers）** 是一款 Web 端沉浸式叙事解谜游戏。玩家扮演一名博物馆馆长，在新加坡河畔、神秘灵界与博物馆展厅之间穿梭，寻找并修复散落的古老文物碎片，最终完成策展并唤醒城市记忆。
+- 探索式主场景与 NPC 对话
+- 石碑拼合、古文排序和限时机关锁
+- 四轨节奏仪式，支持简易模式与自定义按键
+- 可拖放、可点击、可键盘操作的博物馆策展终章
+- 中文与 English 完整双语界面
+- 情境提示、存档导入导出、图鉴和进度管理
+- 桌面、移动端横屏与 PWA 离线支持
+- Reduce Motion、音量控制、触控操作和清晰焦点状态
 
-**Lion City Whispers** is a browser-based narrative exploration game. You play as a museum curator, travel between the Singapore riverbank, the spiritual realm, and the museum gallery, restore legendary artifacts, and complete an exhibition that revives the city's forgotten stories.
+## 操作
 
----
-
-## ✨ 核心特色 | Core Features
-
-- **沉浸式场景探索**：写意电影感场景、实时当前目标提示、馆长对话引导。
-- **互动文物解谜**：包含巴当巨石、古老符文、海门古钥等文物修复关卡。
-- **灵界仪式节奏玩法**：4 轨道节奏判定，支持标准模式与简易模式。
-- **博物馆策展终章**：自由放置修复文物，吸引游客并获得策展评分。
-- **完整双语体验**：中文/英文界面、线索、目标、设置与文物图鉴。
-- **PWA 与离线支持**：Service Worker 缓存关键资源，支持安装到桌面/移动端。
-- **无障碍与体验设置**：音量、静音、动作减弱、自定义按键、触控操作、高对比度焦点反馈。
-- **响应式视觉优化**：保留 `polish.css` 高级视觉层，补充移动端安全区、触控反馈与焦点可见性。
-- **发布体验增强**：提供无 JavaScript 兜底、关键图片预加载、公开 sitemap 与游戏结构化数据。
-
----
-
-## 🎮 操作方式 | Controls
-
-| 操作 | 默认按键 / 方式 |
+| 场景 | 默认操作 |
 | --- | --- |
-| 移动 | `W` `A` `S` `D` / 屏幕方向键 |
-| 交互 | `Space` / 屏幕圆形交互键 |
-| 节奏轨道 | `A` `S` `D` `F` / 屏幕节奏按钮 |
-| 打开图鉴 | 顶部书本按钮 |
-| 暂停 / 音频 / 设置 | 顶部工具栏按钮 |
-| 重置进度 | 顶部重置按钮，二次确认后生效 |
+| 移动 | `W` `A` `S` `D`、方向键或屏幕方向键 |
+| 交互 | `Space` 或屏幕交互键 |
+| 解谜 | 鼠标、触控或数字键 `1`–`4` |
+| 节奏仪式 | `A` `S` `D` `F` 或屏幕节奏键 |
+| 提示 | 顶部灯泡按钮 |
 
-> 按键可在游戏内设置面板中重新绑定。
+所有主要按键都可以在设置中重新绑定。
 
----
+## 技术栈
 
-## 🛠️ 技术栈 | Technology Stack
+- Next.js 16、React 19、TypeScript
+- Phaser 4
+- 原生 CSS 响应式 HUD
+- Playwright 端到端测试
+- Web App Manifest 与 Service Worker
+- GitHub Actions 与 GitHub Pages
 
-- **Framework**: Next.js 16 + React 19 + Pages Router
-- **Game Engine**: Phaser 4
-- **Language**: TypeScript, React TSX
-- **Styling**: Vanilla CSS, glassmorphism HUD, responsive polish, accessibility polish
-- **Testing**: Playwright E2E tests
-- **PWA**: Web App Manifest + Service Worker runtime cache
-- **Deployment**: GitHub Actions + GitHub Pages static export
+## 本地运行
 
----
-
-## 📁 项目结构 | Project Structure
-
-```text
-.
-├── .github/workflows/pages.yml   # GitHub Pages 自动部署流程
-├── public/                       # 图标、manifest、Service Worker、图片与音频资源
-├── scripts/                      # 音频生成与游戏资源审计脚本
-├── src/
-│   ├── components/               # React 外壳与 HUD 面板
-│   ├── data/                     # 文案、双语文本、图鉴数据
-│   ├── game/                     # Phaser 场景、玩法与引导逻辑
-│   ├── pages/                    # Next.js 页面入口
-│   ├── styles/                   # 全局样式、视觉优化与体验增强样式
-│   └── utils/                    # 路径、资源与通用工具
-├── tests/                        # Playwright 回归测试
-├── next.config.mjs               # 本地与 GitHub Pages 构建配置
-└── package.json                  # 项目脚本与依赖版本
-```
-
----
-
-## 🚀 快速开始 | Quick Start
-
-### 1. 环境要求 | Requirements
-
-建议使用 **Node.js 24**，与 GitHub Actions 部署环境保持一致。
-
-### 2. 本地开发 | Local Development
+需要 Node.js 24。
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-启动后打开：
+访问 `http://127.0.0.1:3019`。
+
+开发模式默认不启用 Service Worker。需要验证 PWA 缓存时，可访问：
 
 ```text
-http://127.0.0.1:3000
+http://127.0.0.1:3019/?pwa=1
 ```
 
-本地开发默认关闭 Service Worker 缓存，避免调试时旧资源残留。如需测试 PWA/离线缓存：
-
-```text
-http://127.0.0.1:3000/?pwa=1
-```
-
-### 3. 质量检查 | Quality Gate
+## 质量检查
 
 ```bash
 npm run check
 ```
 
-该命令会依次执行：
+完整检查包含 TypeScript、生产构建、Playwright 回归测试、游戏资源审计和依赖安全审计。也可以单独运行：
 
-1. `npm run build`：Next.js 构建检查。
-2. `npm run test`：Playwright 端到端测试。
-3. `npm run audit:game`：资源、README、manifest、Service Worker 与依赖版本审计。
-4. `npm run audit:security`：中等及以上级别安全审计。
+```bash
+npm run typecheck
+npm run build
+npm run test:ci
+npm run audit:game
+```
 
----
+## 项目结构
 
-## 📦 构建与部署 | Build & Deployment
+```text
+.
+├── .github/workflows/       # CI 与 GitHub Pages 部署
+├── public/
+│   ├── assets/images/       # 场景、人物和文物图像
+│   ├── assets/audio/        # 交互与仪式音效
+│   └── sw.js                # 离线缓存
+├── scripts/                 # 资源生成与发布审计
+├── src/
+│   ├── components/          # React 游戏外壳、HUD 与设置
+│   ├── data/                # 双语文本、谜题与节奏谱面
+│   ├── game/                # Phaser 场景、玩法、提示和状态
+│   ├── pages/               # Next.js 页面入口
+│   └── styles/              # 基础、体验与视觉重构样式
+└── tests/                   # Playwright 端到端回归测试
+```
 
-### 本地静态导出 | Local GitHub Pages Build
+## 部署
 
-Windows PowerShell:
+推送到 `main` 后，[Deploy GitHub Pages](.github/workflows/pages.yml) 会自动执行资源审计、静态导出并部署到 GitHub Pages。
+
+如需在本地验证 Pages 静态导出：
 
 ```powershell
 $env:GITHUB_PAGES="1"
@@ -140,59 +112,8 @@ $env:GITHUB_PAGES_REPO="LionCityWhispers"
 npm run build:pages
 ```
 
-macOS / Linux:
+生成结果位于 `out/`，该目录不会提交到仓库。
 
-```bash
-GITHUB_PAGES=1 GITHUB_PAGES_REPO=LionCityWhispers npm run build:pages
-```
+## 资源与隐私
 
-### 自动部署 | Automatic Deployment
-
-推送到 `main` 后，`.github/workflows/pages.yml` 会自动：
-
-1. 使用 Node 24 安装依赖；
-2. 执行 `npm run build:pages`；
-3. 写入 `out/.nojekyll`；
-4. 上传静态产物并部署到 GitHub Pages。
-
----
-
-## 🧪 资源与质量约束 | Quality Budgets
-
-项目内置 `scripts/audit-game.mjs`，用于保证资源和发布质量：
-
-- 必需图片、音频、图标、manifest、robots 与 sitemap 资源必须存在；
-- 图片总体积不得超过 `2.2MB`；
-- 音频总体积不得超过 `120KB`；
-- `robots.txt` 必须允许 GitHub Pages base path，并指向公开 sitemap；
-- 直接依赖必须固定版本，不能使用 `latest`、`^` 或 `~`；
-- README 顶部必须保留网页版游戏入口，且不能出现本地协议链接；
-- Service Worker 缓存名必须带数字版本，并缓存关键资源；
-- 源码中禁止遗留发布前标记，例如临时修复或忽略类型检查。
-
----
-
-## ♿ 适配与无障碍 | Accessibility & Device Support
-
-- 支持键盘、鼠标与触控操作；
-- 支持中文 / English 切换；
-- 支持静音、主音量、音效音量、环境音量调整；
-- 支持 Reduce Motion，降低动画干扰；
-- 支持高对比度模式、清晰焦点环与触控按钮按压反馈；
-- 支持移动端横屏优先的 PWA 体验；
-- HUD、背包、路线进度与设置面板已针对桌面、平板、手机布局优化。
-
----
-
-## 🧭 当前优化方向 | Current Optimization Focus
-
-- 保持游戏核心玩法稳定，不随意改动 Phaser 场景逻辑；
-- 优先优化布局、触控体验、可读性、加载体验与 PWA 细节；
-- 每次改动尽量保持可审查、可回滚，并通过 `npm run check` 验证。
-
----
-
-## 🎨 资源版权声明 | Assets & Rights
-
-- 本项目中使用的美术资源、音效音频以及关卡配置均为本项目专有。
-- 本游戏完全免费，不包含第三方广告、付费流程或隐私追踪代码。
+游戏不包含广告、付费流程或第三方行为追踪。仓库中的美术、音频、关卡和文案资源用于本项目。

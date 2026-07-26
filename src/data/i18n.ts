@@ -37,6 +37,8 @@ export const shellCopy = {
     gameTitleAria: "游戏标题",
     currentObjective: "当前目标",
     nextStep: "下一步",
+    hint: "提示",
+    hintAria: "获取当前任务提示",
     controls: "游戏控制",
     codex: "线索册",
     difficultyEasy: "舒缓节奏",
@@ -119,6 +121,13 @@ export const shellCopy = {
       museum: "回到博物馆，把四件文物放入展柜形成展线。",
       complete: "展览已开幕，可在线索册查看完整修复成果。"
     },
+    hints: {
+      jigsaw: "先点选一块石纹，再拖到相同文字的浅色轮廓；提示光环会标出对应位置。",
+      runes: "从碑脚诗句寻找顺序。提示光环只会标出下一枚应尝试的符文。",
+      lock: "观察朱、金、青、墨的色温变化；提示光环会标出下一道色印。",
+      rhythm: "看准音符与发光判定线重合的一刻，再按对应轨道。",
+      museum: "按巨石、碑文、海门、清音的故事顺序，从左到右布置展柜。"
+    },
     route: {
       aria: "修复路线",
       jigsaw: "巨石",
@@ -174,6 +183,8 @@ export const shellCopy = {
     gameTitleAria: "Game title",
     currentObjective: "Current Objective",
     nextStep: "Next Step",
+    hint: "Hint",
+    hintAria: "Get a hint for the current objective",
     controls: "Game Controls",
     codex: "Codex",
     difficultyEasy: "Relaxed Tempo",
@@ -255,6 +266,13 @@ export const shellCopy = {
       ritual: "When enough clues are restored, enter the spirit gate for the chime rite.",
       museum: "Return to the museum and place all four artifacts into the cases.",
       complete: "The exhibition is open. Review the restored route in the codex."
+    },
+    hints: {
+      jigsaw: "Select a stone mark, then move it to the pale outline with the same glyph. The hint ring marks its target.",
+      runes: "Read the inscription at the foot of the plaque. The hint ring marks only the next glyph to try.",
+      lock: "Follow the seals from heat to light, then into blue-green and ink. The ring marks the next seal.",
+      rhythm: "Press the matching lane exactly as a chime reaches the glowing judgment line.",
+      museum: "Build the story from left to right: stone, inscription, harbor gate, then spirit chime."
     },
     route: {
       aria: "Restoration Route",

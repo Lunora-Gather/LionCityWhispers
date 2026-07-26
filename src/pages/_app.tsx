@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import "@/styles/globals.css";
 import "@/styles/polish.css";
 import "@/styles/experience-polish.css";
+import "@/styles/redesign.css";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();

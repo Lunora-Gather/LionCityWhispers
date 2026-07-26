@@ -5,6 +5,7 @@ import { startPuzzle, transitionTo } from "./PuzzleManager";
 import { playUiClick } from "./audio";
 import { completedPuzzleCount, emitGameState, gameState, isUiLocked } from "./state";
 import { worldCopy } from "@/data/i18n";
+import { bindSceneHint, pulseSceneHint } from "./hints";
 
 function formatBinding(code: string) {
   const namedKeys: Record<string, string> = {
@@ -75,6 +76,14 @@ export class WorldScene extends Phaser.Scene {
     this.bindKeyboard();
     this.bindVirtualControls();
     this.bindPointerInteractions();
+    bindSceneHint(this, () => {
+      const targetId = this.getGuidedInteractableId();
+      const target = this.interactables.find((item) => item.config.id === targetId);
+      if (target) {
+        target.setGuided(true);
+        pulseSceneHint(this, target.config.x, target.config.y, target.config.color);
+      }
+    });
 
     if (!this.hasMoved) {
       this.createOnboardingGuide();
@@ -314,11 +323,11 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
-    const gateAura = this.add.circle(1085, 269, 128, 0x2bc7ab, 0.05).setDepth(4);
-    const gateRing = this.add.circle(1085, 269, 116, 0x2bc7ab, 0).setDepth(6);
-    gateRing.setStrokeStyle(1.5, 0x5ed6c0, 0.45);
-    const innerRing = this.add.circle(1085, 269, 82, 0x2bc7ab, 0).setDepth(6);
-    innerRing.setStrokeStyle(1, 0xf8edd2, 0.28);
+    const gateAura = this.add.circle(1085, 269, 112, 0x2bc7ab, 0.025).setDepth(4);
+    const gateRing = this.add.circle(1085, 269, 103, 0x2bc7ab, 0).setDepth(6);
+    gateRing.setStrokeStyle(1, 0x5ed6c0, 0.22);
+    const innerRing = this.add.circle(1085, 269, 74, 0x2bc7ab, 0).setDepth(6);
+    innerRing.setStrokeStyle(1, 0xf8edd2, 0.12);
     if (!gameState.settings.reduceMotion) {
       this.tweens.add({
         targets: [gateAura, gateRing, innerRing],
@@ -334,17 +343,17 @@ export class WorldScene extends Phaser.Scene {
     // Dynamic rotating ritual magic circle
     const portalDecors = this.add.graphics().setDepth(5);
     portalDecors.setPosition(1085, 269);
-    portalDecors.lineStyle(1, 0x5ed6c0, 0.28);
-    portalDecors.strokeCircle(0, 0, 118);
-    portalDecors.strokeCircle(0, 0, 82);
-    portalDecors.lineStyle(1, 0xd1a95d, 0.25);
-    for (let index = 0; index < 18; index += 1) {
-      const angle = (Math.PI * 2 * index) / 18;
+    portalDecors.lineStyle(1, 0x5ed6c0, 0.16);
+    portalDecors.strokeCircle(0, 0, 104);
+    portalDecors.strokeCircle(0, 0, 74);
+    portalDecors.lineStyle(1, 0xd1a95d, 0.12);
+    for (let index = 0; index < 12; index += 1) {
+      const angle = (Math.PI * 2 * index) / 12;
       portalDecors.lineBetween(
-        Math.cos(angle) * 91,
-        Math.sin(angle) * 91,
-        Math.cos(angle) * 120,
-        Math.sin(angle) * 120
+        Math.cos(angle) * 82,
+        Math.sin(angle) * 82,
+        Math.cos(angle) * 105,
+        Math.sin(angle) * 105
       );
     }
     if (!gameState.settings.reduceMotion) {

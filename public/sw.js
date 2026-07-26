@@ -1,4 +1,4 @@
-const CACHE_NAME = "lion-city-whispers-v8";
+const CACHE_NAME = "lion-city-whispers-v9";
 const CACHE_PREFIX = "lion-city-whispers";
 const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/, "");
 const withBase = (path) => `${BASE_PATH}${path}`;

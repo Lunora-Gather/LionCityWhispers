@@ -7,6 +7,7 @@ import {
   Check,
   Circle,
   Gauge,
+  Lightbulb,
   Pause,
   RotateCcw,
   Settings,
@@ -234,6 +235,26 @@ function guidanceFor(hud: HudState, ui: ShellUi) {
     return ui.guidance.runes;
   }
   return ui.guidance.lock;
+}
+
+function hintFor(hud: HudState, ui: ShellUi) {
+  const scene = hud.scene;
+  if (scene === sceneCopy.zh.jigsaw || scene === sceneCopy.en.jigsaw) {
+    return ui.hints.jigsaw;
+  }
+  if (scene === sceneCopy.zh.runes || scene === sceneCopy.en.runes) {
+    return ui.hints.runes;
+  }
+  if (scene === sceneCopy.zh.lock || scene === sceneCopy.en.lock) {
+    return ui.hints.lock;
+  }
+  if (scene === sceneCopy.zh.rhythm || scene === sceneCopy.en.rhythm) {
+    return ui.hints.rhythm;
+  }
+  if (scene === sceneCopy.zh.museum || scene === sceneCopy.en.museum) {
+    return ui.hints.museum;
+  }
+  return guidanceFor(hud, ui);
 }
 
 function isLocalSecureOrigin() {
@@ -889,6 +910,8 @@ export function GameShell() {
   ];
   const isRitualScene =
     hud.scene === shellCopy.zh.ritual || hud.scene === shellCopy.en.ritual;
+  const isOpeningScene =
+    hud.scene === sceneCopy.zh.boot || hud.scene === sceneCopy.en.boot;
 
   const isDialogueActive = useMemo(() => {
     return hud.scene === sceneCopy.zh.dialogue || hud.scene === sceneCopy.en.dialogue;
@@ -904,11 +927,14 @@ export function GameShell() {
       s === sceneCopy.zh.lock ||
       s === sceneCopy.en.lock ||
       s === sceneCopy.zh.rhythm ||
-      s === sceneCopy.en.rhythm
+      s === sceneCopy.en.rhythm ||
+      s === sceneCopy.zh.museum ||
+      s === sceneCopy.en.museum
     );
   }, [hud.scene]);
 
   const currentGuidance = guidanceFor(hud, ui);
+  const currentHint = hintFor(hud, ui);
   const parsedDialogue = useMemo(() => {
     if (!hud.dialogue) return { speaker: "", message: "" };
     const match = hud.dialogue.match(/^([^：:]+)[：:]([\s\S]+)$/);
@@ -976,7 +1002,11 @@ export function GameShell() {
   };
 
   return (
-    <div className={`shell ${hud.settings.reduceMotion ? "reduced-motion" : ""}`}>
+    <div
+      className={`shell ${isOpeningScene ? "is-opening" : "is-playing"} ${
+        hud.settings.reduceMotion ? "reduced-motion" : ""
+      }`}
+    >
       <main className="stage" aria-label={ui.gameAria} style={stageStyle}>
         <div id={hostId} className="game-host" />
         {!loading.ready ? (
@@ -1005,6 +1035,20 @@ export function GameShell() {
           <section className="objective" aria-live="polite">
             <span>{ui.currentObjective}</span>
             <p>{hud.objective}</p>
+            <button
+              className="hint-button"
+              type="button"
+              aria-label={ui.hintAria}
+              title={ui.hintAria}
+              onClick={() => {
+                resumeAudioContext();
+                triggerToast(currentHint);
+                window.dispatchEvent(new CustomEvent("lcw:hint"));
+              }}
+            >
+              <Lightbulb size={15} />
+              <span>{ui.hint}</span>
+            </button>
             <small>
               <b>{ui.nextStep}</b>
               {currentGuidance}
