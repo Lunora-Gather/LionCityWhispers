@@ -1,5 +1,5 @@
-const CACHE_NAME = "lion-city-whispers-v10";
-const RUNTIME_CACHE = "lion-city-whispers-runtime-v10";
+const CACHE_NAME = "lion-city-whispers-v11";
+const RUNTIME_CACHE = "lion-city-whispers-runtime-v11";
 const RUNTIME_CACHE_LIMIT = 80;
 const CACHE_PREFIX = "lion-city-whispers";
 const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/, "");

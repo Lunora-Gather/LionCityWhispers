@@ -131,7 +131,13 @@ const swVersion = `v${swVersionMatch[1]}`;
 const precacheHash = createHash("sha256");
 for (const asset of [...requiredAssets, "public/icon.svg"].sort()) {
   precacheHash.update(asset);
-  precacheHash.update(await readFile(join(root, asset)));
+  if (/\.(webmanifest|txt|xml|svg)$/.test(asset)) {
+    // Git converts text-file line endings per platform; normalize so the
+    // hash matches between Windows checkouts and Linux CI.
+    precacheHash.update((await readFile(join(root, asset), "utf8")).replaceAll("\r\n", "\n"));
+  } else {
+    precacheHash.update(await readFile(join(root, asset)));
+  }
 }
 const assetsHash = precacheHash.digest("hex");
 const swLockPath = join(root, "scripts/sw-cache.lock.json");
