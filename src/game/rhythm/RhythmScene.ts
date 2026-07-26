@@ -13,8 +13,12 @@ const laneColors = [0xd1a95d, 0xc6523d, 0x2bc7ab, 0x6f7772];
 
 export class RhythmScene extends Phaser.Scene {
   private notes: Note[] = [];
-  // Song clock accumulated from per-frame delta so pause/UI-lock time never counts.
+  // Song clock accumulated from wall-clock gaps between unblocked frames.
+  // Phaser's smoothed `delta` is clamped on slow frames (~200ms cap), so a
+  // delta sum falls behind real time on weak machines and desyncs the chart;
+  // raw timestamp differences keep pace while still excluding pause/UI-lock.
   private songTime = -600;
+  private lastTickTime = -1;
   private score = 0;
   private scoreText!: Phaser.GameObjects.Text;
   private feedback!: Phaser.GameObjects.Text;
@@ -72,6 +76,12 @@ export class RhythmScene extends Phaser.Scene {
     // instead of popping in mid-travel.
     const firstNoteTime = chart.notes.reduce((min, note) => Math.min(min, note.time), Infinity);
     this.songTime = -Math.max(600, travel - firstNoteTime + 200);
+    this.lastTickTime = -1;
+    // scene.pause() halts update entirely, so the tick anchor goes stale
+    // across a pause; drop it on resume to exclude the paused span.
+    this.events.on(Phaser.Scenes.Events.RESUME, () => {
+      this.lastTickTime = -1;
+    });
     this.notes = chart.notes.map(
       (note) =>
         new Note(
@@ -124,12 +134,19 @@ export class RhythmScene extends Phaser.Scene {
     });
   }
 
-  override update(_time: number, delta: number) {
-    if (this.finished || gameState.paused || isUiLocked()) {
+  override update(time: number) {
+    if (this.finished) {
+      return;
+    }
+    if (gameState.paused || isUiLocked()) {
+      this.lastTickTime = -1;
       return;
     }
 
-    this.songTime += delta;
+    if (this.lastTickTime >= 0) {
+      this.songTime += time - this.lastTickTime;
+    }
+    this.lastTickTime = time;
     const elapsed = this.songTime;
     this.updateProgress(elapsed);
     let newlyMissed = 0;

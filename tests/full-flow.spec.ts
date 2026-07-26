@@ -69,7 +69,9 @@ test("plays through the full prototype loop", async ({ page }) => {
 
   await clickUntilScene(page, 1092, 282, "仪式");
   await page.evaluate(() => {
-    for (let time = 900; time <= 22800; time += 120) {
+    // Cover the full easy-mode song (2300ms lead-in + 20200ms chart) plus CI
+    // scheduling slack; extra hits after finish() are ignored.
+    for (let time = 900; time <= 25200; time += 120) {
       for (let lane = 0; lane < 4; lane += 1) {
         window.setTimeout(() => {
           window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: lane }));

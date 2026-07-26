@@ -96,7 +96,9 @@ test("uses custom rhythm lane bindings during the ritual", async ({ page }) => {
   await expect(page.locator(".rhythm-controls button")).toHaveText(["J", "K", "L", ";"]);
   await page.evaluate(() => {
     const codes = ["KeyJ", "KeyK", "KeyL", "Semicolon"];
-    for (let time = 900; time <= 22800; time += 120) {
+    // Cover the full easy-mode song (2300ms lead-in + 20200ms chart) plus CI
+    // scheduling slack; extra hits after finish() are ignored.
+    for (let time = 900; time <= 25200; time += 120) {
       for (const code of codes) {
         window.setTimeout(() => {
           window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
