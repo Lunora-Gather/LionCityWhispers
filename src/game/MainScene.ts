@@ -4,7 +4,6 @@ import { shellCopy } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
 
 export class MainScene extends Phaser.Scene {
-  private startTimer?: Phaser.Time.TimerEvent;
   private readonly gameplayScenes = [
     "WorldScene",
     "JigsawPuzzle",
@@ -25,7 +24,6 @@ export class MainScene extends Phaser.Scene {
         new CustomEvent("lcw:loading", { detail: { ready: false, progress } })
       );
     });
-    this.load.image("ink-bg", assetPath("/assets/images/lion-city-ink-bg.webp"));
     this.load.image("world-cinematic", assetPath("/assets/images/world-cinematic-v3.webp"));
     this.load.image("museum-gallery", assetPath("/assets/images/museum-gallery.webp"));
     this.load.image("curator-lin", assetPath("/assets/images/curator-lin.webp"));
@@ -83,7 +81,7 @@ export class MainScene extends Phaser.Scene {
     const btnGlow = this.add.rectangle(0, 0, btnWidth + 6, btnHeight + 6, 0xd1a95d, 0)
       .setStrokeStyle(2, 0xd1a95d, 0);
 
-    const btnText = this.add.text(0, 0, (copy as any).startExploring || "开始探索", {
+    const btnText = this.add.text(0, 0, copy.startExploring, {
       fontFamily: "Microsoft YaHei, Outfit, sans-serif",
       fontSize: "16px",
       fontStyle: "bold",
@@ -155,11 +153,6 @@ export class MainScene extends Phaser.Scene {
 
     emitGameState("boot");
     window.dispatchEvent(new CustomEvent("lcw:loading", { detail: { ready: true, progress: 1 } }));
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.startTimer?.remove(false);
-      this.startTimer = undefined;
-    });
   }
 
   private hasGameplaySceneActive() {

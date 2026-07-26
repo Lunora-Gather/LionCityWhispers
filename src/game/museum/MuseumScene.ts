@@ -11,6 +11,8 @@ type CaseSlot = {
   y: number;
 };
 
+const REACTION_EMOJIS = ["😊", "😮", "👏", "👍", "📝", "💖", "✨"];
+
 export class MuseumScene extends Phaser.Scene {
   private slots: CaseSlot[] = [
     { index: 0, x: 334, y: 446 },
@@ -26,6 +28,7 @@ export class MuseumScene extends Phaser.Scene {
   private slotHalos = new Map<number, Phaser.GameObjects.Arc>();
   private selectedArtifactId?: ArtifactId;
   private completionBanner?: Phaser.GameObjects.Container;
+  private completionTimers: Phaser.Time.TimerEvent[] = [];
   private keyHandler?: (event: KeyboardEvent) => void;
   private lanternTimer?: Phaser.Time.TimerEvent;
 
@@ -37,8 +40,19 @@ export class MuseumScene extends Phaser.Scene {
     const copy = puzzleCopy[gameState.settings.locale];
     this.tokens.clear();
     this.slotFrames.clear();
+    this.slotIndicators.clear();
+    this.slotHalos.clear();
     this.selectedArtifactId = undefined;
     this.completionBanner = undefined;
+    this.completionTimers = [];
+    this.lanternTimer = undefined;
+    // Registered here (not in bindKeyboard) so it also runs on keyboard-less
+    // devices; otherwise a stale lanternTimer blocks lanterns on re-entry.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.lanternTimer?.remove(false);
+      this.lanternTimer = undefined;
+      this.clearCompletionTimers();
+    });
     this.drawGallery(copy);
     this.drawSlots();
     this.drawInventory();
@@ -100,6 +114,8 @@ export class MuseumScene extends Phaser.Scene {
         x: endX,
         duration: 15000 + Math.random() * 8000,
         onComplete: () => {
+          // Kill the infinite bob tween too; destroy() alone leaves it ticking.
+          this.tweens.killTweensOf(walker);
           walker.destroy();
           this.time.delayedCall(4000 + Math.random() * 4000, spawnWalker);
         }
@@ -389,7 +405,15 @@ export class MuseumScene extends Phaser.Scene {
     }
   }
 
+  private clearCompletionTimers() {
+    for (const timer of this.completionTimers) {
+      timer.remove(false);
+    }
+    this.completionTimers = [];
+  }
+
   private showCompletionMoment(copy: (typeof puzzleCopy)[keyof typeof puzzleCopy], animated: boolean) {
+    this.clearCompletionTimers();
     this.completionBanner?.destroy();
     const banner = this.add.container(640, 208).setDepth(92);
     const rayLeft = this.add.triangle(-260, 18, -46, -74, 20, -74, 96, 92, 0xfff4d6, 0.12);
@@ -430,12 +454,11 @@ export class MuseumScene extends Phaser.Scene {
           delay: index * 100
         });
 
-        this.time.addEvent({
+        this.completionTimers.push(this.time.addEvent({
           delay: 2000 + Math.random() * 4000,
           callback: () => {
             if (!this.sys.isActive() || !banner.active) return;
-            const emojis = ["😊", "😮", "👏", "👍", "📝", "💖", "✨"];
-            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+            const emoji = REACTION_EMOJIS[Math.floor(Math.random() * REACTION_EMOJIS.length)];
             const bubble = this.add.text(visitor.x, visitor.y - 32, emoji, {
               fontSize: "16px"
             }).setOrigin(0.5).setDepth(99);
@@ -451,7 +474,7 @@ export class MuseumScene extends Phaser.Scene {
             });
           },
           loop: true
-        });
+        }));
       }
     }
     this.completionBanner = banner;
@@ -540,8 +563,6 @@ export class MuseumScene extends Phaser.Scene {
         this.input.keyboard?.off("keydown", this.keyHandler);
         this.keyHandler = undefined;
       }
-      this.lanternTimer?.remove(false);
-      this.lanternTimer = undefined;
     });
   }
 
@@ -589,7 +610,11 @@ export class MuseumScene extends Phaser.Scene {
       alpha: { from: 0.9, to: 0.1 },
       duration: Phaser.Math.Between(7500, 11000),
       ease: "Sine.easeOut",
-      onComplete: () => lantern.destroy()
+      onComplete: () => {
+        // Kill the infinite sway tween before destroying, or it leaks.
+        this.tweens.killTweensOf(lantern);
+        lantern.destroy();
+      }
     });
     
     this.tweens.add({

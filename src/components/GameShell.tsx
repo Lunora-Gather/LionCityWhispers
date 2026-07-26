@@ -1,8 +1,4 @@
 import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
   BookOpen,
   Check,
   Circle,
@@ -17,7 +13,7 @@ import {
   VolumeX,
   X
 } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getCodexEntries, getEndingCopy } from "@/data/codex";
 import { formatCopy, objectiveCopy, sceneName, sceneCopy, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
@@ -313,15 +309,18 @@ async function clearDevServiceWorkers() {
   return hadController;
 }
 
-const TouchJoystick = ({ onMove, onEnd }: { onMove: (x: number, y: number) => void; onEnd: () => void }) => {
+const TouchJoystick = memo(function TouchJoystick({ onMove, onEnd }: { onMove: (x: number, y: number) => void; onEnd: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [touchState, setTouchState] = useState<{ active: boolean; startX: number; startY: number; moveX: number; moveY: number }>({
-    active: false,
-    startX: 0,
-    startY: 0,
-    moveX: 0,
-    moveY: 0
-  });
+  const handleRef = useRef<HTMLDivElement>(null);
+  // Drag state lives in refs and the handle moves via direct style writes, so
+  // a 60-120 Hz touchmove stream never re-renders the component.
+  const touchStateRef = useRef({ active: false, startX: 0, startY: 0 });
+
+  const setHandleOffset = (x: number, y: number) => {
+    if (handleRef.current) {
+      handleRef.current.style.transform = `translate(${x}px, ${y}px)`;
+    }
+  };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.touches[0];
@@ -329,23 +328,19 @@ const TouchJoystick = ({ onMove, onEnd }: { onMove: (x: number, y: number) => vo
     if (!rect) return;
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    
-    setTouchState({
-      active: true,
-      startX: centerX,
-      startY: centerY,
-      moveX: touch.clientX - centerX,
-      moveY: touch.clientY - centerY
-    });
+
+    touchStateRef.current = { active: true, startX: centerX, startY: centerY };
+    setHandleOffset(touch.clientX - centerX, touch.clientY - centerY);
     updateMove(touch.clientX - centerX, touch.clientY - centerY);
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touchState = touchStateRef.current;
     if (!touchState.active) return;
     const touch = e.touches[0];
     const dx = touch.clientX - touchState.startX;
     const dy = touch.clientY - touchState.startY;
-    
+
     const maxRadius = 45;
     const distance = Math.sqrt(dx * dx + dy * dy);
     let clampedX = dx;
@@ -354,24 +349,14 @@ const TouchJoystick = ({ onMove, onEnd }: { onMove: (x: number, y: number) => vo
       clampedX = (dx / distance) * maxRadius;
       clampedY = (dy / distance) * maxRadius;
     }
-    
-    setTouchState(prev => ({
-      ...prev,
-      moveX: clampedX,
-      moveY: clampedY
-    }));
-    
+
+    setHandleOffset(clampedX, clampedY);
     updateMove(clampedX, clampedY);
   };
 
   const handleTouchEnd = () => {
-    setTouchState({
-      active: false,
-      startX: 0,
-      startY: 0,
-      moveX: 0,
-      moveY: 0
-    });
+    touchStateRef.current = { active: false, startX: 0, startY: 0 };
+    setHandleOffset(0, 0);
     onEnd();
   };
 
@@ -413,13 +398,9 @@ const TouchJoystick = ({ onMove, onEnd }: { onMove: (x: number, y: number) => vo
     onMove(vx, vy);
   };
 
-  const transformStyle = {
-    transform: `translate(${touchState.moveX}px, ${touchState.moveY}px)`
-  };
-
   return (
-    <div 
-      className="joystick-container" 
+    <div
+      className="joystick-container"
       ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -427,14 +408,20 @@ const TouchJoystick = ({ onMove, onEnd }: { onMove: (x: number, y: number) => vo
       onTouchCancel={handleTouchEnd}
     >
       <div className="joystick-base">
-        <div className="joystick-handle" style={transformStyle} />
+        <div className="joystick-handle" ref={handleRef} />
       </div>
     </div>
   );
-};
+});
+
+const hostId = "lion-city-game-host";
+
+const stageStyle = {
+  "--lcw-loading-bg": `url("${assetPath("/assets/images/lion-city-ink-bg.webp")}")`,
+  "--lcw-artifact-sheet": `url("${assetPath("/assets/images/artifact-sheet.webp")}")`
+} as CSSProperties;
 
 export function GameShell() {
-  const hostId = useMemo(() => "lion-city-game-host", []);
   const gameRef = useRef<{ destroy: () => void } | null>(null);
   const [hud, setHud] = useState<HudState>(initialHud);
   const [paused, setPaused] = useState(false);
@@ -449,10 +436,13 @@ export function GameShell() {
   const [listeningBinding, setListeningBinding] = useState<ControlBindingId | null>(null);
   const [bindingNotice, setBindingNotice] = useState("");
   const [updateReady, setUpdateReady] = useState(false);
+  const swRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const ui = shellCopy[hud.settings.locale];
 
-  const [typedMessage, setTypedMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  // The typewriter writes straight into this node; routing the 50 Hz tick
+  // through state would re-render the whole shell for every character.
+  const dialogueTextRef = useRef<HTMLParagraphElement | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; visible: boolean; isAchievement?: boolean }>({
     message: "",
@@ -599,17 +589,23 @@ export function GameShell() {
     }
   };
   const uiLocked = settingsOpen || codexOpen || resetConfirm || listeningBinding !== null;
-  const stageStyle = {
-    "--lcw-loading-bg": `url("${assetPath("/assets/images/lion-city-ink-bg.webp")}")`,
-    "--lcw-artifact-sheet": `url("${assetPath("/assets/images/artifact-sheet.webp")}")`
-  } as CSSProperties;
 
   useEffect(() => {
     let active = true;
 
     const onState = (event: Event) => {
       const custom = event as CustomEvent<HudState>;
-      setHud((current) => ({ ...current, ...custom.detail }));
+      setHud((current) => {
+        // The emitter keeps object identities stable when nothing changed, so
+        // a shallow comparison lets idle heartbeat emits skip the re-render.
+        const detail = custom.detail;
+        for (const key of Object.keys(detail) as Array<keyof HudState>) {
+          if (detail[key] !== current[key]) {
+            return { ...current, ...detail };
+          }
+        }
+        return current;
+      });
     };
     const onLoading = (event: Event) => {
       const detail = (event as CustomEvent<{ ready?: boolean; progress?: number }>).detail ?? {};
@@ -656,7 +652,7 @@ export function GameShell() {
       gameRef.current?.destroy();
       gameRef.current = null;
     };
-  }, [hostId]);
+  }, []);
 
   useEffect(() => {
     const closePanels = (event: KeyboardEvent) => {
@@ -673,10 +669,15 @@ export function GameShell() {
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("lcw:ui-lock", { detail: uiLocked }));
+  }, [uiLocked]);
+
+  useEffect(() => {
+    // Release the lock only on true unmount; a per-change cleanup would emit a
+    // spurious `false` before every real value and flap the Phaser side.
     return () => {
       window.dispatchEvent(new CustomEvent("lcw:ui-lock", { detail: false }));
     };
-  }, [uiLocked]);
+  }, []);
 
   useEffect(() => {
     if (!listeningBinding) {
@@ -746,39 +747,69 @@ export function GameShell() {
         urls: [window.location.href, ...urls]
       });
     };
+    let active = true;
+    const warmTimers: number[] = [];
+    const scheduleWarm = () => {
+      warmTimers.push(window.setTimeout(() => {
+        if (active) {
+          warmRuntimeCache();
+        }
+      }, 800));
+    };
     let hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshing = false;
     const onControllerChange = () => {
       if (hadController) {
-        setUpdateReady(true);
+        // The waiting worker only activates after the user accepts the update
+        // prompt (SKIP_WAITING), so reload once to pick up the new assets.
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+        return;
       }
       hadController = true;
-      window.setTimeout(warmRuntimeCache, 800);
+      scheduleWarm();
+    };
+    const onUpdateFound = () => {
+      const registration = swRegistrationRef.current;
+      const worker = registration?.installing;
+      worker?.addEventListener("statechange", () => {
+        if (active && worker.state === "installed" && navigator.serviceWorker.controller) {
+          setUpdateReady(true);
+        }
+      });
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
     navigator.serviceWorker.register(assetPath("/sw.js")).then((registration) => {
-      registration.addEventListener("updatefound", () => {
-        const worker = registration.installing;
-        worker?.addEventListener("statechange", () => {
-          if (worker.state === "installed" && navigator.serviceWorker.controller) {
-            setUpdateReady(true);
-          }
-        });
+      if (!active) {
+        return;
+      }
+      swRegistrationRef.current = registration;
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        setUpdateReady(true);
+      }
+      registration.addEventListener("updatefound", onUpdateFound);
+      navigator.serviceWorker.ready.then(() => {
+        if (active) {
+          scheduleWarm();
+        }
       });
-      navigator.serviceWorker.ready.then(() => window.setTimeout(warmRuntimeCache, 800));
     }).catch(() => {
       // Offline caching is optional; the game remains playable when registration is blocked.
     });
-    return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+    return () => {
+      active = false;
+      warmTimers.forEach((id) => window.clearTimeout(id));
+      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+      swRegistrationRef.current?.removeEventListener("updatefound", onUpdateFound);
+    };
   }, []);
 
   useEffect(() => {
     const nextTitle =
       hud.settings.locale === "zh" ? `${ui.brand} | ${ui.subtitle}` : ui.brand;
     document.title = nextTitle;
-    const titleTimer = window.setTimeout(() => {
-      document.title = nextTitle;
-    }, 0);
-    return () => window.clearTimeout(titleTimer);
   }, [hud.settings.locale, ui.brand, ui.subtitle]);
 
   const togglePause = () => {
@@ -787,9 +818,10 @@ export function GameShell() {
     window.dispatchEvent(new CustomEvent("lcw:pause", { detail: next }));
   };
 
-  const sendMove = (x: number, y: number) => {
+  // Stable identities so the memo'd TouchJoystick never re-renders with the shell.
+  const sendMove = useCallback((x: number, y: number) => {
     window.dispatchEvent(new CustomEvent("lcw:virtual-move", { detail: { x, y } }));
-  };
+  }, []);
 
   const sendAction = () => {
     window.dispatchEvent(new CustomEvent("lcw:virtual-action"));
@@ -799,7 +831,7 @@ export function GameShell() {
     window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: lane }));
   };
 
-  const clearMove = () => sendMove(0, 0);
+  const clearMove = useCallback(() => sendMove(0, 0), [sendMove]);
   const toggleAudio = () => {
     resumeAudioContext();
     window.dispatchEvent(new CustomEvent("lcw:audio-toggle"));
@@ -811,7 +843,15 @@ export function GameShell() {
   };
 
   const resetBindings = () => updateSettings({ bindings: defaultBindings });
-  const applyUpdate = () => window.location.reload();
+  const applyUpdate = () => {
+    const waiting = swRegistrationRef.current?.waiting;
+    if (waiting) {
+      // The controllerchange listener reloads once the new worker takes over.
+      waiting.postMessage({ type: "SKIP_WAITING" });
+      return;
+    }
+    window.location.reload();
+  };
 
   const resetGame = () => {
     resumeAudioContext();
@@ -908,14 +948,12 @@ export function GameShell() {
     { id: "moveRight", label: ui.moveRightBinding },
     { id: "action", label: ui.actionBinding }
   ];
+  // hud.scene comes from sceneCopy (sceneName), so compare against sceneCopy —
+  // matching shellCopy.ritual only worked while the two strings coincided.
   const isRitualScene =
-    hud.scene === shellCopy.zh.ritual || hud.scene === shellCopy.en.ritual;
+    hud.scene === sceneCopy.zh.rhythm || hud.scene === sceneCopy.en.rhythm;
   const isOpeningScene =
     hud.scene === sceneCopy.zh.boot || hud.scene === sceneCopy.en.boot;
-
-  const isDialogueActive = useMemo(() => {
-    return hud.scene === sceneCopy.zh.dialogue || hud.scene === sceneCopy.en.dialogue;
-  }, [hud.scene]);
 
   const isPuzzleOrRitualActive = useMemo(() => {
     const s = hud.scene;
@@ -946,27 +984,32 @@ export function GameShell() {
 
   // Typewriter effect for dialogue messages
   useEffect(() => {
+    const setText = (value: string) => {
+      if (dialogueTextRef.current) {
+        dialogueTextRef.current.textContent = value;
+      }
+    };
     const msg = parsedDialogue.message;
     if (!msg) {
-      setTypedMessage("");
+      setText("");
       setIsTyping(false);
       return;
     }
 
     const isFast = hud.settings.reduceMotion || (typeof window !== "undefined" && window.navigator.webdriver);
     if (isFast) {
-      setTypedMessage(msg);
+      setText(msg);
       setIsTyping(false);
       return;
     }
 
-    setTypedMessage("");
+    setText("");
     setIsTyping(true);
 
     let index = 0;
     const interval = setInterval(() => {
       index += 1;
-      setTypedMessage(msg.slice(0, index));
+      setText(msg.slice(0, index));
       if (index >= msg.length) {
         setIsTyping(false);
         clearInterval(interval);
@@ -980,7 +1023,9 @@ export function GameShell() {
 
   const handleDialogueClick = () => {
     if (isTyping) {
-      setTypedMessage(parsedDialogue.message);
+      if (dialogueTextRef.current) {
+        dialogueTextRef.current.textContent = parsedDialogue.message;
+      }
       setIsTyping(false);
     } else {
       window.dispatchEvent(new CustomEvent("lcw:advance-dialogue"));
@@ -1205,7 +1250,7 @@ export function GameShell() {
               {parsedDialogue.speaker}
             </span>
           ) : null}
-          <p>{typedMessage}</p>
+          <p ref={dialogueTextRef} />
           <span className="dialogue-hint-key">SPACE</span>
         </section>
 
@@ -1574,7 +1619,6 @@ export function GameShell() {
           const totalCount = codexEntries.length;
           const unlockedCount = codexEntries.filter((entry) => unlockedIds.has(entry.id)).length;
           const percentCollected = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
-          const unlockedEntriesCount = unlockedCount;
           const lockedEntriesCount = totalCount - unlockedCount;
 
           return (
@@ -1623,7 +1667,7 @@ export function GameShell() {
                     className={codexFilter === "unlocked" ? "active" : ""}
                     onClick={() => setCodexFilter("unlocked")}
                   >
-                    {ui.codexFilterUnlocked} ({unlockedEntriesCount})
+                    {ui.codexFilterUnlocked} ({unlockedCount})
                   </button>
                   <button
                     type="button"

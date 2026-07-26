@@ -155,16 +155,22 @@ function playAudioAsset(key: AudioAssetKey, fallback: () => void) {
 }
 
 let generativeTimer: number | null = null;
+let pendingToneTimers: number[] = [];
 const pentatonicScale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
 let noiseSource: AudioBufferSourceNode | null = null;
 let waveLfo: OscillatorNode | null = null;
+let noiseBuffer: AudioBuffer | null = null;
 
 function createNoiseNode(ctx: AudioContext) {
-  const bufferSize = 2 * ctx.sampleRate;
-  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const output = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    output[i] = Math.random() * 2 - 1;
+  // Filling ~2s of samples is a visible main-thread hitch, so generate the
+  // buffer once and reuse it across every ambient restart (mute/pause/focus).
+  if (!noiseBuffer || noiseBuffer.sampleRate !== ctx.sampleRate) {
+    const bufferSize = 2 * ctx.sampleRate;
+    noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
   }
   const source = ctx.createBufferSource();
   source.buffer = noiseBuffer;
@@ -189,11 +195,16 @@ function startGenerativeMusic() {
       for (let i = 0; i < noteCount; i++) {
         const freqIndex = Math.floor(Math.random() * pentatonicScale.length);
         const freq = pentatonicScale[freqIndex];
-        window.setTimeout(() => {
-          playTone(freq, 1.2, "sine", 0.008);
-        }, arpeggioDelay);
+        pendingToneTimers.push(
+          window.setTimeout(() => {
+            if (ambientAllowed) {
+              playTone(freq, 1.2, "sine", 0.008);
+            }
+          }, arpeggioDelay)
+        );
         arpeggioDelay += 280 + Math.random() * 180;
       }
+      pendingToneTimers = pendingToneTimers.slice(-8);
       scheduleNext();
     }, delay);
   };
@@ -205,6 +216,10 @@ function stopGenerativeMusic() {
     window.clearTimeout(generativeTimer);
     generativeTimer = null;
   }
+  for (const timer of pendingToneTimers) {
+    window.clearTimeout(timer);
+  }
+  pendingToneTimers = [];
 }
 
 export function startAmbient() {
@@ -258,7 +273,11 @@ export function startAmbient() {
 
     noiseSource.start();
     waveLfo.start();
-  } catch (err) {}
+  } catch (err) {
+    // Leave both null so the next startAmbient() can retry cleanly.
+    noiseSource = null;
+    waveLfo = null;
+  }
 
   ambient = { oscillators: [low, high], gain };
   startGenerativeMusic();
@@ -292,6 +311,17 @@ export function stopAmbient() {
     ambient.gain.disconnect();
   } catch (e) {}
   ambient = null;
+}
+
+export function closeAudioContext() {
+  stopAmbient();
+  if (context) {
+    void context.close().catch(() => {
+      // The context may already be closed by the browser.
+    });
+    context = null;
+  }
+  noiseBuffer = null;
 }
 
 export function playTone(

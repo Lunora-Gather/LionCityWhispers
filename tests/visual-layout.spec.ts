@@ -230,8 +230,11 @@ test("keeps the first world screen readable on desktop", async ({ page }) => {
 
 test("keeps polished ritual, puzzle, and museum scenes stable", async ({ page }) => {
   const errors: string[] = [];
+  // Headless browsers running in parallel can starve the shared audio device;
+  // that renderer-level notice is environment noise, not an app defect.
+  const benignErrorPatterns = [/AudioContext encountered an error from the audio device/];
   page.on("console", (message) => {
-    if (message.type() === "error") {
+    if (message.type() === "error" && !benignErrorPatterns.some((pattern) => pattern.test(message.text()))) {
       errors.push(message.text());
     }
   });

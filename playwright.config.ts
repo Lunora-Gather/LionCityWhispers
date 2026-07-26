@@ -3,14 +3,18 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 const isCi = Boolean(process.env.CI);
-const hasBuild = existsSync(join(process.cwd(), ".next"));
+// `.next` also exists after `next dev`; only BUILD_ID proves a production build.
+const hasBuild = existsSync(join(process.cwd(), ".next", "BUILD_ID"));
 
 export default defineConfig({
   testDir: "./tests",
   timeout: 150000,
   forbidOnly: isCi,
   retries: isCi ? 2 : 0,
-  workers: 1,
+  fullyParallel: true,
+  // Each test boots a WebGL Phaser instance; more concurrent browsers than
+  // this starve the GPU/audio device and produce timeout flakes.
+  workers: 4,
   reporter: isCi ? "line" : "list",
   expect: {
     timeout: 15000
@@ -24,7 +28,7 @@ export default defineConfig({
   webServer: {
     command: (isCi || hasBuild) ? "npm run start" : "npm run dev",
     url: "http://127.0.0.1:3019",
-    reuseExistingServer: false,
+    reuseExistingServer: !isCi,
     timeout: 120000
   },
   projects: [

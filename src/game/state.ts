@@ -401,8 +401,8 @@ export function addArtifact(id: ArtifactId) {
 }
 
 export function completedPuzzleCount() {
-  return [gameState.flags.jigsaw, gameState.flags.runes, gameState.flags.lock].filter(Boolean)
-    .length;
+  // Called from WorldScene.update every frame; keep it allocation-free.
+  return (gameState.flags.jigsaw ? 1 : 0) + (gameState.flags.runes ? 1 : 0) + (gameState.flags.lock ? 1 : 0);
 }
 
 export function getObjective() {
@@ -433,6 +433,22 @@ export function getObjective() {
   return text(objectiveCopy.continueRiver, gameState.settings.locale);
 }
 
+// Reuse the localized inventory array across emits while its contents are
+// unchanged, so React listeners can bail out on identity comparisons.
+let localizedInventoryKey = "";
+let localizedInventory: Artifact[] = [];
+
+function getLocalizedInventory() {
+  const key = `${gameState.settings.locale}:${gameState.inventory.map((item) => item.id).join(",")}`;
+  if (key !== localizedInventoryKey) {
+    localizedInventoryKey = key;
+    localizedInventory = gameState.inventory.map((item) =>
+      localizedArtifact(item.id, gameState.settings.locale)
+    );
+  }
+  return localizedInventory;
+}
+
 export function emitGameState(scene?: string) {
   if (typeof window === "undefined") {
     return;
@@ -445,9 +461,7 @@ export function emitGameState(scene?: string) {
     new CustomEvent("lcw:state", {
       detail: {
         objective: getObjective(),
-        inventory: gameState.inventory.map((item) =>
-          localizedArtifact(item.id, gameState.settings.locale)
-        ),
+        inventory: getLocalizedInventory(),
         visitors: gameState.museum.visitors,
         scene: sceneName(currentScene, gameState.settings.locale),
         completedPuzzles: completedPuzzleCount(),
@@ -464,7 +478,20 @@ export function emitGameState(scene?: string) {
 }
 
 export function updatePerformanceStats(stats: PerformanceStats) {
-  gameState.performance = sanitizePerformanceStats(stats);
+  const next = sanitizePerformanceStats(stats);
+  const previous = gameState.performance;
+  // Preserve object identity when nothing changed so state listeners can skip work.
+  if (
+    next.fps === previous.fps &&
+    next.longFrames === previous.longFrames &&
+    next.inputLatency === previous.inputLatency &&
+    next.worstInputLatency === previous.worstInputLatency &&
+    next.interactionSamples === previous.interactionSamples
+  ) {
+    return false;
+  }
+  gameState.performance = next;
+  return true;
 }
 
 export function serializeSaveString(): string {

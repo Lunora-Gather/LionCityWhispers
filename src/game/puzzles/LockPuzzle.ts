@@ -62,7 +62,7 @@ export class LockPuzzle extends Phaser.Scene {
     });
     this.refreshSequenceSlots();
 
-    this.add.text(1015, 203, "剩余时间", {
+    this.add.text(1015, 203, copy.lockTimeLeft, {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "11px",
       color: "#9fb1ac"

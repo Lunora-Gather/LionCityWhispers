@@ -18,6 +18,10 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    # bash with pipefail so `cmd | tee log` steps fail when cmd fails, not when tee does.
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -53,8 +57,24 @@ jobs:
           path: build.log
           retention-days: 7
 
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
       - name: Install Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: Run Playwright regression tests
         run: npm run test:ci 2>&1 | tee playwright.log
@@ -68,6 +88,17 @@ jobs:
             playwright.log
             test-results
             playwright-report
+          retention-days: 7
+
+      - name: Verify static export build (GitHub Pages target)
+        run: npm run build:pages 2>&1 | tee build-pages.log
+
+      - name: Upload static export diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-pages-diagnostics
+          path: build-pages.log
           retention-days: 7
 
       - name: Audit game assets

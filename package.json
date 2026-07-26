@@ -10,14 +10,14 @@
     "check": "npm run typecheck && npm run build && npm run test && npm run audit:game && npm run audit:security",
     "dev": "next dev -H 127.0.0.1 -p 3019",
     "build": "next build",
-    "build:pages": "next build",
+    "build:pages": "node scripts/build-pages.mjs",
     "start": "next start -H 127.0.0.1 -p 3019",
     "test": "playwright test",
     "test:ci": "playwright test --reporter=line"
   },
   "dependencies": {
     "lucide-react": "1.17.0",
-    "next": "16.2.7",
+    "next": "16.2.12",
     "phaser": "4.1.0",
     "react": "19.2.7",
     "react-dom": "19.2.7"
@@ -30,6 +30,7 @@
     "typescript": "6.0.3"
   },
   "overrides": {
-    "postcss": "8.5.10"
+    "postcss": "8.5.23",
+    "sharp": "0.35.3"
   }
 }

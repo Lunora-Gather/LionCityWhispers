@@ -1,4 +1,6 @@
-const CACHE_NAME = "lion-city-whispers-v9";
+const CACHE_NAME = "lion-city-whispers-v10";
+const RUNTIME_CACHE = "lion-city-whispers-runtime-v10";
+const RUNTIME_CACHE_LIMIT = 80;
 const CACHE_PREFIX = "lion-city-whispers";
 const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/, "");
 const withBase = (path) => `${BASE_PATH}${path}`;
@@ -41,7 +43,7 @@ const normalizeSameOriginUrl = (url) => {
   return `${parsed.pathname}${parsed.search}`;
 };
 
-async function putInCache(request, response) {
+async function putInShellCache(request, response) {
   if (!isCacheableResponse(response)) {
     return;
   }
@@ -49,9 +51,26 @@ async function putInCache(request, response) {
   await cache.put(request, response.clone());
 }
 
+async function trimRuntimeCache(cache) {
+  const keys = await cache.keys();
+  if (keys.length <= RUNTIME_CACHE_LIMIT) {
+    return;
+  }
+  await Promise.all(keys.slice(0, keys.length - RUNTIME_CACHE_LIMIT).map((key) => cache.delete(key)));
+}
+
+async function putInRuntimeCache(request, response) {
+  if (!isCacheableResponse(response)) {
+    return;
+  }
+  const cache = await caches.open(RUNTIME_CACHE);
+  await cache.put(request, response.clone());
+  await trimRuntimeCache(cache);
+}
+
 async function warmCache(urls) {
   const uniqueUrls = [...new Set(urls.filter((url) => typeof url === "string").filter(isSameOrigin))];
-  const cache = await caches.open(CACHE_NAME);
+  const cache = await caches.open(RUNTIME_CACHE);
   await Promise.all(
     uniqueUrls.map(async (url) => {
       try {
@@ -64,6 +83,7 @@ async function warmCache(urls) {
       }
     })
   );
+  await trimRuntimeCache(cache);
 }
 
 self.addEventListener("install", (event) => {
@@ -82,7 +102,6 @@ self.addEventListener("install", (event) => {
           )
         )
       )
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -93,7 +112,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key.startsWith(`${CACHE_PREFIX}-`) && key !== CACHE_NAME)
+            .filter((key) => key.startsWith(`${CACHE_PREFIX}-`) && key !== CACHE_NAME && key !== RUNTIME_CACHE)
             .map((key) => caches.delete(key))
         )
       )
@@ -102,6 +121,12 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    // Sent by the page when the user accepts the in-app update prompt; the new
+    // worker never seizes live pages on its own (no skipWaiting during install).
+    self.skipWaiting();
+    return;
+  }
   if (event.data?.type !== "CACHE_URLS" || !Array.isArray(event.data.urls)) {
     return;
   }
@@ -118,7 +143,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          void putInCache(BASE_ROOT, response);
+          void putInShellCache(BASE_ROOT, response);
           return response;
         })
         .catch(() => caches.match(BASE_ROOT))
@@ -130,7 +155,7 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)
         .then((response) => {
-          void putInCache(request, response);
+          void putInRuntimeCache(request, response);
           return response;
         })
         .catch(() => undefined);

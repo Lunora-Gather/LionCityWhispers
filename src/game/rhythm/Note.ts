@@ -30,19 +30,31 @@ export class Note {
       color: "#14201f"
     }).setOrigin(0.5);
     this.marker.add([shadow, glow, string, cap, body, lower, shine, text]);
+    // Stay hidden until the note enters its travel window; the renderer then
+    // skips the container entirely instead of drawing it far off-screen.
+    this.marker.setVisible(false);
   }
 
+  /** Returns true on the single frame this note transitions to missed. */
   update(elapsed: number) {
     if (this.hit || this.missed) {
-      return;
+      return false;
     }
     const progress = (elapsed - (this.time - this.travelMs)) / this.travelMs;
+    if (progress < -0.05) {
+      return false;
+    }
+    if (!this.marker.visible) {
+      this.marker.setVisible(true);
+    }
     this.marker.y = Phaser.Math.Linear(166, this.hitY, progress);
     this.marker.setAlpha(Phaser.Math.Clamp(progress + 0.18, 0, 1));
     if (progress > 1.18) {
       this.missed = true;
       this.marker.setAlpha(0.2);
+      return true;
     }
+    return false;
   }
 
   diff(elapsed: number) {

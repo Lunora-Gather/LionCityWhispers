@@ -128,10 +128,6 @@ export class Player {
     });
   }
 
-  distanceTo(x: number, y: number) {
-    return Phaser.Math.Distance.Between(this.root.x, this.root.y, x, y);
-  }
-
   get x() {
     return this.root.x;
   }

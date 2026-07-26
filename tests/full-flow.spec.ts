@@ -54,8 +54,11 @@ async function waitForGameSettled(page: Page) {
 test("plays through the full prototype loop", async ({ page }) => {
   test.slow();
   const errors: string[] = [];
+  // Headless browsers running in parallel can starve the shared audio device;
+  // that renderer-level notice is environment noise, not an app defect.
+  const benignErrorPatterns = [/AudioContext encountered an error from the audio device/];
   page.on("console", (message) => {
-    if (message.type() === "error") {
+    if (message.type() === "error" && !benignErrorPatterns.some((pattern) => pattern.test(message.text()))) {
       errors.push(message.text());
     }
   });

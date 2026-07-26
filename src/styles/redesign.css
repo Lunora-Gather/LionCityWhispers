@@ -11,7 +11,6 @@
   --lcw-text: #f7efd9;
   --lcw-muted: rgba(237, 231, 210, 0.64);
   --lcw-accent: #d9b66e;
-  --lcw-jade: #69cbbb;
   --lcw-radius: 14px;
   --lcw-shadow: 0 16px 44px rgba(0, 0, 0, 0.42);
 }
@@ -654,11 +653,6 @@ body::after {
     gap: 3px;
     padding: 7px 6px;
     transform: none;
-  }
-
-  .inventory-dock:not(:has(.inventory-empty)) + .dialogue-bar,
-  .inventory-dock:not(:has(.inventory-empty)) ~ .route-rail {
-    margin-top: 38px;
   }
 
   .route-step {

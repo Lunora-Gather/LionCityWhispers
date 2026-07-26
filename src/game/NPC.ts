@@ -141,7 +141,9 @@ export class NPC {
   }
 
   private updateFocus() {
-    const isDialogueOpen = (this.scene as any).activeDialogue !== null;
+    // Truthy only for WorldScene with a dialogue open; scenes without the
+    // field read undefined, which must count as "no dialogue".
+    const isDialogueOpen = Boolean((this.scene as { activeDialogue?: unknown }).activeDialogue);
     const focused = this.proximityFocused || this.hovered || this.guided;
     const labelVisible = (this.proximityFocused || this.hovered || this.guided) && !isDialogueOpen;
     const guideVisible = this.guided && !isDialogueOpen;

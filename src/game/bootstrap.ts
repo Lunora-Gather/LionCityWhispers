@@ -8,6 +8,7 @@ import { RhythmScene } from "./rhythm/RhythmScene";
 import { WorldScene } from "./WorldScene";
 import {
   applyAudioSettings,
+  closeAudioContext,
   playAchievementFanfare,
   preloadAudioAssets,
   resumeAudioContext,
@@ -78,9 +79,9 @@ export function startGame(parent: string) {
     },
     render: {
       antialias: true,
-      pixelArt: false
-    },
-    ...({ resolution: typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 1, 2) : 1 } as any)
+      pixelArt: false,
+      powerPreference: "high-performance"
+    }
   };
 
   const game = new Phaser.Game(config);
@@ -89,19 +90,15 @@ export function startGame(parent: string) {
   let inputLatency = 0;
   let worstInputLatency = 0;
   let interactionSamples = 0;
-  let lastFrame = performance.now();
-  let windowStart = lastFrame;
-  let rafId = 0;
-  const tick = (time: number) => {
-    const delta = time - lastFrame;
-    lastFrame = time;
+  let windowStart = performance.now();
+  // Piggyback on Phaser's own game loop instead of running a second rAF loop.
+  const onPostStep = (_time: number, delta: number) => {
     frameCount += 1;
     if (delta > 80) {
       longFrames += 1;
     }
-    rafId = window.requestAnimationFrame(tick);
   };
-  rafId = window.requestAnimationFrame(tick);
+  game.events.on(Phaser.Core.Events.POST_STEP, onPostStep);
   const performanceTimer = window.setInterval(() => {
     const now = performance.now();
     const elapsed = Math.max(1, now - windowStart);
@@ -135,7 +132,7 @@ export function startGame(parent: string) {
     const key = managedScenes.find(
       (sceneKey) => game.scene.isActive(sceneKey) || game.scene.isPaused(sceneKey)
     );
-    return key ? sceneLabels[key] : "world";
+    return (key && sceneLabels[key]) || "world";
   };
 
   const onPause = (event: Event) => {
@@ -264,9 +261,12 @@ export function startGame(parent: string) {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", onFocus);
-      window.cancelAnimationFrame(rafId);
       window.clearInterval(performanceTimer);
+      game.events.off(Phaser.Core.Events.POST_STEP, onPostStep);
       game.destroy(true);
+      // The Phaser game owns no audio nodes; the ambient soundscape lives on a
+      // module-level AudioContext that must be shut down explicitly.
+      closeAudioContext();
     }
   };
 }

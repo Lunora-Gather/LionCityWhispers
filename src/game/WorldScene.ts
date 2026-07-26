@@ -6,40 +6,7 @@ import { playUiClick } from "./audio";
 import { completedPuzzleCount, emitGameState, gameState, isUiLocked } from "./state";
 import { worldCopy } from "@/data/i18n";
 import { bindSceneHint, pulseSceneHint } from "./hints";
-
-function formatBinding(code: string) {
-  const namedKeys: Record<string, string> = {
-    Semicolon: ";",
-    Quote: "'",
-    Comma: ",",
-    Period: ".",
-    Slash: "/",
-    Backslash: "\\",
-    Minus: "-",
-    Equal: "=",
-    BracketLeft: "[",
-    BracketRight: "]"
-  };
-  if (namedKeys[code]) {
-    return namedKeys[code];
-  }
-  if (code === "Space") {
-    return "Space";
-  }
-  if (code.startsWith("Key")) {
-    return code.slice(3);
-  }
-  if (code.startsWith("Digit")) {
-    return code.slice(5);
-  }
-  if (code.startsWith("Arrow")) {
-    return code.replace("Arrow", "");
-  }
-  if (code.startsWith("Numpad")) {
-    return `Num ${code.slice(6)}`;
-  }
-  return code;
-}
+import { formatBinding } from "./bindings";
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -54,7 +21,9 @@ export class WorldScene extends Phaser.Scene {
     index: number;
   } | null = null;
   private nearestId = "";
+  private promptBindingCode = "";
   private virtualMove = { x: 0, y: 0 };
+  private moveInput = { left: false, right: false, up: false, down: false };
   private virtualMoveHandler?: (event: Event) => void;
   private virtualActionHandler?: () => void;
   private pressedCodes = new Set<string>();
@@ -92,7 +61,7 @@ export class WorldScene extends Phaser.Scene {
     emitGameState("world");
   }
 
-  update(_time: number, delta: number) {
+  override update(_time: number, delta: number) {
     if (this.onboardingContainer && !this.hasMoved) {
       const moving =
         this.cursors.left.isDown ||
@@ -121,10 +90,17 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
+    // Reuse the same input object every frame instead of allocating literals.
+    const move = this.moveInput;
     if (isUiLocked()) {
       this.pressedCodes.clear();
-      this.virtualMove = { x: 0, y: 0 };
-      this.player.update({ left: false, right: false, up: false, down: false }, delta);
+      this.virtualMove.x = 0;
+      this.virtualMove.y = 0;
+      move.left = false;
+      move.right = false;
+      move.up = false;
+      move.down = false;
+      this.player.update(move, delta);
       return;
     }
 
@@ -132,27 +108,16 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    this.player.update(
-      {
-        left:
-          this.cursors.left.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveLeft) ||
-          this.virtualMove.x < 0,
-        right:
-          this.cursors.right.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveRight) ||
-          this.virtualMove.x > 0,
-        up:
-          this.cursors.up.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveUp) ||
-          this.virtualMove.y < 0,
-        down:
-          this.cursors.down.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveDown) ||
-          this.virtualMove.y > 0
-      },
-      delta
-    );
+    const bindings = gameState.settings.bindings;
+    move.left =
+      this.cursors.left.isDown || this.pressedCodes.has(bindings.moveLeft) || this.virtualMove.x < 0;
+    move.right =
+      this.cursors.right.isDown || this.pressedCodes.has(bindings.moveRight) || this.virtualMove.x > 0;
+    move.up =
+      this.cursors.up.isDown || this.pressedCodes.has(bindings.moveUp) || this.virtualMove.y < 0;
+    move.down =
+      this.cursors.down.isDown || this.pressedCodes.has(bindings.moveDown) || this.virtualMove.y > 0;
+    this.player.update(move, delta);
 
     const nearest = this.getNearest();
     this.updateGuidedInteractable();
@@ -161,10 +126,12 @@ export class WorldScene extends Phaser.Scene {
     }
 
     if (nearest) {
-      this.nearestId = nearest.config.id;
-      this.promptText.setText(
-        `${nearest.config.label}  /  ${formatBinding(gameState.settings.bindings.action)}`
-      );
+      // Only rebuild the label when the target or binding actually changes.
+      if (nearest.config.id !== this.nearestId || bindings.action !== this.promptBindingCode) {
+        this.nearestId = nearest.config.id;
+        this.promptBindingCode = bindings.action;
+        this.promptText.setText(`${nearest.config.label}  /  ${formatBinding(bindings.action)}`);
+      }
       this.prompt.setAlpha(1);
     } else {
       this.nearestId = "";
@@ -398,7 +365,7 @@ export class WorldScene extends Phaser.Scene {
         radius: 96,
         label: copy.curator,
         color: 0x1f8f82,
-        onInteract: () => this.showDialogue(this.getCuratorLines())
+        onInteract: () => this.showDialogue(this.getNpcLines("curator"))
       },
       {
         id: "boatman",
@@ -408,7 +375,7 @@ export class WorldScene extends Phaser.Scene {
         radius: 96,
         label: copy.boatman,
         color: 0xd1a95d,
-        onInteract: () => this.showDialogue(this.getBoatmanLines())
+        onInteract: () => this.showDialogue(this.getNpcLines("boatman"))
       },
       {
         id: "jigsaw",
@@ -505,48 +472,33 @@ export class WorldScene extends Phaser.Scene {
     this.prompt = this.add.container(640, 548, [panel, this.promptText]).setDepth(40).setAlpha(0);
   }
 
-  private getCuratorLines() {
+  private getNpcLines(role: "curator" | "boatman") {
     const copy = worldCopy[gameState.settings.locale];
     if (gameState.museum.complete) {
-      return copy.curatorMuseumDone;
+      return copy[`${role}MuseumDone`];
     }
     if (gameState.flags.rhythm) {
-      return copy.curatorRitualDone;
+      return copy[`${role}RitualDone`];
     }
     if (completedPuzzleCount() >= 2) {
-      return copy.curatorReadyRitual;
+      return copy[`${role}ReadyRitual`];
     }
     if (completedPuzzleCount() === 1) {
-      return copy.curatorOnePuzzle;
+      return copy[`${role}OnePuzzle`];
     }
-    return copy.curatorStart;
-  }
-
-  private getBoatmanLines() {
-    const copy = worldCopy[gameState.settings.locale];
-    if (gameState.museum.complete) {
-      return copy.boatmanMuseumDone;
-    }
-    if (gameState.flags.rhythm) {
-      return copy.boatmanRitualDone;
-    }
-    if (completedPuzzleCount() >= 2) {
-      return copy.boatmanReadyRitual;
-    }
-    if (completedPuzzleCount() === 1) {
-      return copy.boatmanOnePuzzle;
-    }
-    return copy.boatmanStart;
+    return copy[`${role}Start`];
   }
 
   private bindVirtualControls() {
     this.virtualMoveHandler = (event: Event) => {
       if (isUiLocked()) {
-        this.virtualMove = { x: 0, y: 0 };
+        this.virtualMove.x = 0;
+        this.virtualMove.y = 0;
         return;
       }
       const detail = (event as CustomEvent<{ x: number; y: number }>).detail;
-      this.virtualMove = detail ?? { x: 0, y: 0 };
+      this.virtualMove.x = detail?.x ?? 0;
+      this.virtualMove.y = detail?.y ?? 0;
     };
     this.virtualActionHandler = () => {
       if (isUiLocked()) {

@@ -1,9 +1,15 @@
 name: Deploy GitHub Pages
 
+# Deploys only after the CI workflow succeeds on main (or on manual dispatch),
+# so a red build can no longer reach production.
 on:
-  push:
+  workflow_run:
+    workflows:
+      - CI
     branches:
       - main
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -17,6 +23,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,16 +38,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Audit game assets
-        run: npm run audit:game
-
       - name: Build static site
         run: npm run build:pages
         env:
-          GITHUB_PAGES: "1"
           GITHUB_PAGES_REPO: ${{ github.event.repository.name }}
 
       - name: Keep _next assets visible to Pages

@@ -45,7 +45,6 @@ a:focus-visible {
 
 .icon-button:active,
 .artifact-pill:active,
-.touch-pad button:active,
 .touch-action:active,
 .rhythm-controls button:active,
 .setting-row button:active,
@@ -54,7 +53,6 @@ a:focus-visible {
   filter: brightness(1.18);
 }
 
-.touch-pad button,
 .touch-action,
 .rhythm-controls button {
   -webkit-backdrop-filter: blur(12px) saturate(150%);
@@ -155,7 +153,6 @@ a:focus-visible {
     min-height: 44px;
   }
 
-  .touch-pad button,
   .touch-action,
   .rhythm-controls button {
     border-color: rgba(255, 244, 214, 0.34);
@@ -282,13 +279,6 @@ a:focus-visible {
     top: 116px;
   }
 
-  .touch-pad {
-    grid-template-columns: repeat(3, 32px);
-    grid-template-rows: repeat(2, 32px);
-    gap: 4px;
-  }
-
-  .touch-pad button,
   .touch-action {
     min-width: 0;
     min-height: 0;
@@ -574,8 +564,4 @@ a:focus-visible {
   box-shadow: 0 0 5px #3de0c8;
 }
 
-@keyframes lcw-pulse-arrow {
-  0%, 100% { opacity: 0.55; transform: scale(0.98); }
-  50% { opacity: 1; transform: scale(1.02); }
-}
 

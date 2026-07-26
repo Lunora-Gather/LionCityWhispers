@@ -6,40 +6,7 @@ import { playMiss, playRitualHit, playSuccess } from "../audio";
 import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { formatCopy, puzzleCopy } from "@/data/i18n";
 import { bindSceneHint, pulseSceneHint } from "../hints";
-
-function formatBinding(code: string) {
-  const namedKeys: Record<string, string> = {
-    Semicolon: ";",
-    Quote: "'",
-    Comma: ",",
-    Period: ".",
-    Slash: "/",
-    Backslash: "\\",
-    Minus: "-",
-    Equal: "=",
-    BracketLeft: "[",
-    BracketRight: "]"
-  };
-  if (namedKeys[code]) {
-    return namedKeys[code];
-  }
-  if (code === "Space") {
-    return "Space";
-  }
-  if (code.startsWith("Key")) {
-    return code.slice(3);
-  }
-  if (code.startsWith("Digit")) {
-    return code.slice(5);
-  }
-  if (code.startsWith("Arrow")) {
-    return code.replace("Arrow", "");
-  }
-  if (code.startsWith("Numpad")) {
-    return `Num ${code.slice(6)}`;
-  }
-  return code;
-}
+import { formatBinding } from "../bindings";
 
 const laneColors = [0xd1a95d, 0xc6523d, 0x2bc7ab, 0x6f7772];
 
@@ -57,12 +24,9 @@ export class RhythmScene extends Phaser.Scene {
   private domKeyHandler?: (event: KeyboardEvent) => void;
   private virtualLaneHandler?: (event: Event) => void;
   private combo = 0;
-  private previousMissed = 0;
   private perfectHits = 0;
   private goodHits = 0;
-  private assistHits = 0;
   private misses = 0;
-  private maxCombo = 0;
   private returnTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
@@ -75,12 +39,9 @@ export class RhythmScene extends Phaser.Scene {
     this.finished = false;
     this.score = 0;
     this.combo = 0;
-    this.previousMissed = 0;
     this.perfectHits = 0;
     this.goodHits = 0;
-    this.assistHits = 0;
     this.misses = 0;
-    this.maxCombo = 0;
     this.returnTimer?.remove(false);
     this.returnTimer = undefined;
     this.startTime = -1;
@@ -160,7 +121,7 @@ export class RhythmScene extends Phaser.Scene {
     });
   }
 
-  update(time: number) {
+  override update(time: number) {
     if (this.finished || gameState.paused || isUiLocked()) {
       return;
     }
@@ -171,20 +132,21 @@ export class RhythmScene extends Phaser.Scene {
     }
     const elapsed = time - this.startTime;
     this.updateProgress(elapsed);
+    let newlyMissed = 0;
     for (const note of this.notes) {
-      note.update(elapsed);
+      if (note.update(elapsed)) {
+        newlyMissed += 1;
+      }
     }
 
-    const missed = this.notes.filter((note) => note.missed).length;
-    if (missed > this.previousMissed) {
-      this.misses += missed - this.previousMissed;
+    if (newlyMissed > 0) {
+      this.misses += newlyMissed;
       this.combo = 0;
       this.comboText.setText("COMBO 0");
       this.feedback.setText("MISS");
       this.feedback.setColor("#ff4d4d");
       playMiss();
     }
-    this.previousMissed = missed;
 
     if (elapsed > chart.duration) {
       this.finish();
@@ -199,9 +161,18 @@ export class RhythmScene extends Phaser.Scene {
       return;
     }
     const elapsed = this.currentTime - this.startTime;
-    const candidate = this.notes
-      .filter((note) => note.lane === lane && !note.hit && !note.missed)
-      .sort((a, b) => a.diff(elapsed) - b.diff(elapsed))[0];
+    let candidate: Note | undefined;
+    let candidateDiff = Number.POSITIVE_INFINITY;
+    for (const note of this.notes) {
+      if (note.lane !== lane || note.hit || note.missed) {
+        continue;
+      }
+      const noteDiff = note.diff(elapsed);
+      if (noteDiff < candidateDiff) {
+        candidateDiff = noteDiff;
+        candidate = note;
+      }
+    }
 
     if (!candidate) {
       this.combo = 0;
@@ -213,14 +184,13 @@ export class RhythmScene extends Phaser.Scene {
       return;
     }
 
-    const diff = candidate.diff(elapsed);
+    const diff = candidateDiff;
     if (diff <= 180) {
       this.score += 120;
       candidate.markHit();
       this.feedback.setText("PERFECT");
       this.combo += 1;
       this.perfectHits += 1;
-      this.maxCombo = Math.max(this.maxCombo, this.combo);
       playRitualHit(true, lane);
       if (!gameState.settings.reduceMotion) {
         this.cameras.main.shake(60, 0.001);
@@ -235,7 +205,6 @@ export class RhythmScene extends Phaser.Scene {
       this.feedback.setText("GOOD");
       this.combo += 1;
       this.goodHits += 1;
-      this.maxCombo = Math.max(this.maxCombo, this.combo);
       playRitualHit(false, lane);
       this.feedback.setColor("#ffd685");
       this.flashLane(lane, 0xd1a95d);
@@ -245,7 +214,6 @@ export class RhythmScene extends Phaser.Scene {
       this.score += 25;
       candidate.markHit();
       this.feedback.setText("ASSIST");
-      this.assistHits += 1;
       this.combo = 0;
       playRitualHit(false, lane);
       this.feedback.setColor("#a8c0ba");
