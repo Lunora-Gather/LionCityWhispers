@@ -86,6 +86,7 @@ body::after {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.075), transparent 26%),
     linear-gradient(185deg, var(--lcw-panel), var(--lcw-panel-strong));
+  -webkit-backdrop-filter: blur(20px) saturate(155%);
   backdrop-filter: blur(20px) saturate(155%);
   box-shadow:
     0 18px 46px rgba(0, 0, 0, 0.48),
@@ -193,12 +194,6 @@ body::after {
 .artifact-rune-plaque i { color: #d66a53; }
 .artifact-harbor-seal i { color: #aab3aa; }
 .artifact-spirit-chime i { color: #3de0c8; }
-
-.dialogue-bar::before {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-}
 
 .settings-panel,
 .codex-panel,

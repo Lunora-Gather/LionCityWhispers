@@ -64,26 +64,21 @@ export class Note {
   markHit() {
     this.hit = true;
     const scene = this.marker.scene;
-    if (scene) {
-      if (gameState.settings.reduceMotion) {
-        this.marker.setScale(1.18);
-        this.marker.setAlpha(0.3);
-      } else {
-        scene.tweens.add({
-          targets: this.marker,
-          scale: 1.5,
-          angle: Phaser.Math.Between(-35, 35),
-          alpha: 0,
-          duration: 320,
-          ease: "Back.easeOut",
-          onComplete: () => {
-            this.marker.setAlpha(0);
-          }
-        });
-      }
-    } else {
+    if (gameState.settings.reduceMotion || !scene) {
       this.marker.setScale(1.18);
       this.marker.setAlpha(0.3);
+      return;
     }
+    scene.tweens.add({
+      targets: this.marker,
+      scale: 1.5,
+      angle: Phaser.Math.Between(-35, 35),
+      alpha: 0,
+      duration: 320,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.marker.setAlpha(0);
+      }
+    });
   }
 }

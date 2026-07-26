@@ -1,6 +1,8 @@
 import { assetPath } from "@/utils/assetPath";
 
 let context: AudioContext | null = null;
+let contextClosed = false;
+const sequenceTimers = new Set<number>();
 let muted = false;
 let masterVolume = 0.78;
 let effectsVolume = 0.78;
@@ -28,7 +30,7 @@ type AudioAssetKey = keyof typeof audioAssetSources;
 const audioPools = new Map<AudioAssetKey, HTMLAudioElement[]>();
 
 function getContext() {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || contextClosed) {
     return null;
   }
   if (!context) {
@@ -121,6 +123,8 @@ export function applyAudioSettings(settings: {
 }
 
 export function preloadAudioAssets() {
+  // A new game session may follow a previous teardown; allow audio again.
+  contextClosed = false;
   if (typeof window === "undefined" || audioPools.size > 0) {
     return;
   }
@@ -285,18 +289,21 @@ export function startAmbient() {
 
 export function stopAmbient() {
   stopGenerativeMusic();
-  try {
-    if (noiseSource) {
+  // Tear down each node independently so one throw can't strand the other.
+  if (noiseSource) {
+    try {
       noiseSource.stop();
       noiseSource.disconnect();
-      noiseSource = null;
-    }
-    if (waveLfo) {
+    } catch (err) {}
+    noiseSource = null;
+  }
+  if (waveLfo) {
+    try {
       waveLfo.stop();
       waveLfo.disconnect();
-      waveLfo = null;
-    }
-  } catch (err) {}
+    } catch (err) {}
+    waveLfo = null;
+  }
 
   if (!ambient) {
     return;
@@ -314,6 +321,13 @@ export function stopAmbient() {
 }
 
 export function closeAudioContext() {
+  // Cancel queued sequence notes so a late setTimeout can't lazily rebuild
+  // a fresh AudioContext after teardown.
+  for (const timer of sequenceTimers) {
+    window.clearTimeout(timer);
+  }
+  sequenceTimers.clear();
+  contextClosed = true;
   stopAmbient();
   if (context) {
     void context.close().catch(() => {
@@ -360,7 +374,11 @@ export function playTone(
 export function playSequence(notes: Array<[number, number]>, type: OscillatorType = "sine") {
   let delay = 0;
   for (const [frequency, duration] of notes) {
-    window.setTimeout(() => playTone(frequency, duration, type), delay);
+    const timer = window.setTimeout(() => {
+      sequenceTimers.delete(timer);
+      playTone(frequency, duration, type);
+    }, delay);
+    sequenceTimers.add(timer);
     delay += duration * 1000 * 0.72;
   }
 }

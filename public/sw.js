@@ -59,6 +59,17 @@ async function trimRuntimeCache(cache) {
   await Promise.all(keys.slice(0, keys.length - RUNTIME_CACHE_LIMIT).map((key) => cache.delete(key)));
 }
 
+// Re-inserting a hit moves it to the back of cache.keys() order, turning the
+// insertion-order trim above into LRU eviction instead of FIFO.
+async function refreshRuntimeRecency(cache, request, response) {
+  try {
+    await cache.delete(request);
+    await cache.put(request, response);
+  } catch {
+    // Recency tracking is best-effort; serving the response already succeeded.
+  }
+}
+
 async function putInRuntimeCache(request, response) {
   if (!isCacheableResponse(response)) {
     return;
@@ -90,18 +101,26 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) =>
-        Promise.allSettled(
+      .then(async (cache) => {
+        // cache: "reload" bypasses the HTTP cache so a version bump can't pin
+        // stale bytes that were fetched before the deploy.
+        await Promise.allSettled(
           ASSETS.map((asset) =>
-            fetch(asset, { credentials: "same-origin" }).then((response) => {
+            fetch(asset, { credentials: "same-origin", cache: "reload" }).then((response) => {
               if (isCacheableResponse(response)) {
                 return cache.put(asset, response);
               }
               return undefined;
             })
           )
-        )
-      )
+        );
+        // Without the shell document the new cache is useless offline; fail the
+        // install so the previous worker and its caches stay in service.
+        const shell = await cache.match(BASE_ROOT);
+        if (!shell) {
+          throw new Error("app shell precache failed");
+        }
+      })
   );
 });
 
@@ -143,7 +162,15 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          void putInShellCache(BASE_ROOT, response);
+          // Only the HTML app shell may overwrite the shell cache entry;
+          // navigations to robots.txt/sitemap.xml/etc. must not poison it.
+          const path = new URL(request.url).pathname;
+          const contentType = (response.headers.get("content-type") || "").toLowerCase();
+          const isShellPath =
+            path === BASE_ROOT || path === BASE_ROOT.replace(/\/$/, "") || path === withBase("/index.html");
+          if (isShellPath && contentType.includes("text/html")) {
+            void putInShellCache(BASE_ROOT, response);
+          }
           return response;
         })
         .catch(() => caches.match(BASE_ROOT))
@@ -152,14 +179,23 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkFetch = fetch(request)
-        .then((response) => {
-          void putInRuntimeCache(request, response);
-          return response;
-        })
-        .catch(() => undefined);
-      return cached || networkFetch;
-    })
+    (async () => {
+      // Cached assets are immutable until the cache version bumps;
+      // re-fetching them would just duplicate bytes and churn eviction.
+      const shellCache = await caches.open(CACHE_NAME);
+      const shellHit = await shellCache.match(request);
+      if (shellHit) {
+        return shellHit;
+      }
+      const runtimeCache = await caches.open(RUNTIME_CACHE);
+      const runtimeHit = await runtimeCache.match(request);
+      if (runtimeHit) {
+        event.waitUntil(refreshRuntimeRecency(runtimeCache, request, runtimeHit.clone()));
+        return runtimeHit;
+      }
+      const response = await fetch(request);
+      void putInRuntimeCache(request, response);
+      return response;
+    })()
   );
 });

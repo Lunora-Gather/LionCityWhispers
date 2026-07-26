@@ -10,6 +10,7 @@ export class Player {
   private body: Phaser.GameObjects.Container;
   private cursor: Phaser.GameObjects.Triangle;
   private shadow: Phaser.GameObjects.Ellipse;
+  private portrait: Phaser.GameObjects.Image;
   private lanternGlow: Phaser.GameObjects.Arc;
   private moveVector = new Phaser.Math.Vector2();
   private trailCooldown = 0;
@@ -23,7 +24,8 @@ export class Player {
       .setStrokeStyle(2, 0xd1a95d, 0.78);
     const innerFrame = scene.add.rectangle(0, -2, 58, 68, 0x000000, 0)
       .setStrokeStyle(1, 0x3de0c8, 0.28);
-    const portrait = scene.add.image(0, -2, "curator-lin").setDisplaySize(54, 64);
+    this.portrait = scene.add.image(0, -2, "curator-lin").setDisplaySize(54, 64);
+    const portrait = this.portrait;
     const nameplate = scene.add.rectangle(0, 29, 52, 14, 0x07100f, 0.9);
     const initials = scene.add.text(0, 29, gameState.settings.locale === "en" ? "CURATOR" : "馆长", {
       fontFamily: "Microsoft YaHei, sans-serif",
@@ -81,7 +83,8 @@ export class Player {
       this.root.x = Phaser.Math.Clamp(this.root.x + this.moveVector.x, 80, 1200);
       this.root.y = Phaser.Math.Clamp(this.root.y + this.moveVector.y, 250, 585);
       if (this.moveVector.x !== 0) {
-        this.body.scaleX = this.moveVector.x < 0 ? -1 : 1;
+        // Flip only the portrait; mirroring the whole body would mirror the nameplate text.
+        this.portrait.setFlipX(this.moveVector.x < 0);
       }
       this.walkTime += safeDelta;
       const bob = gameState.settings.reduceMotion ? 0 : Math.sin(this.walkTime / 92) * 1.4;

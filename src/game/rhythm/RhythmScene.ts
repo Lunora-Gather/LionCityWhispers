@@ -7,13 +7,14 @@ import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { formatCopy, puzzleCopy } from "@/data/i18n";
 import { bindSceneHint, pulseSceneHint } from "../hints";
 import { formatBinding } from "../bindings";
+import { onSceneTeardown } from "../sceneCleanup";
 
 const laneColors = [0xd1a95d, 0xc6523d, 0x2bc7ab, 0x6f7772];
 
 export class RhythmScene extends Phaser.Scene {
   private notes: Note[] = [];
-  private startTime = -1;
-  private currentTime = 0;
+  // Song clock accumulated from per-frame delta so pause/UI-lock time never counts.
+  private songTime = -600;
   private score = 0;
   private scoreText!: Phaser.GameObjects.Text;
   private feedback!: Phaser.GameObjects.Text;
@@ -44,8 +45,6 @@ export class RhythmScene extends Phaser.Scene {
     this.misses = 0;
     this.returnTimer?.remove(false);
     this.returnTimer = undefined;
-    this.startTime = -1;
-    this.currentTime = 0;
     this.laneFlashes = [];
     this.progressFill = undefined;
     const laneXs = this.drawRitualStage(copy);
@@ -69,6 +68,10 @@ export class RhythmScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(25);
 
     const travel = gameState.easyMode ? 3300 : 2500;
+    // Lead in long enough for the first note to enter from the top of its lane
+    // instead of popping in mid-travel.
+    const firstNoteTime = chart.notes.reduce((min, note) => Math.min(min, note.time), Infinity);
+    this.songTime = -Math.max(600, travel - firstNoteTime + 200);
     this.notes = chart.notes.map(
       (note) =>
         new Note(
@@ -84,7 +87,7 @@ export class RhythmScene extends Phaser.Scene {
     );
 
     this.domKeyHandler = (event: KeyboardEvent) => {
-      if (isUiLocked()) {
+      if (event.repeat || gameState.paused || isUiLocked()) {
         return;
       }
       const lane = gameState.settings.bindings.rhythm.findIndex((code) => code === event.code);
@@ -93,7 +96,7 @@ export class RhythmScene extends Phaser.Scene {
       }
     };
     this.virtualLaneHandler = (event: Event) => {
-      if (isUiLocked()) {
+      if (gameState.paused || isUiLocked()) {
         return;
       }
       const lane = Number((event as CustomEvent<number>).detail);
@@ -103,7 +106,7 @@ export class RhythmScene extends Phaser.Scene {
     };
     window.addEventListener("keydown", this.domKeyHandler);
     window.addEventListener("lcw:rhythm-hit", this.virtualLaneHandler);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    onSceneTeardown(this, () => {
       if (this.domKeyHandler) {
         window.removeEventListener("keydown", this.domKeyHandler);
         this.domKeyHandler = undefined;
@@ -121,16 +124,13 @@ export class RhythmScene extends Phaser.Scene {
     });
   }
 
-  override update(time: number) {
+  override update(_time: number, delta: number) {
     if (this.finished || gameState.paused || isUiLocked()) {
       return;
     }
 
-    this.currentTime = time;
-    if (this.startTime < 0) {
-      this.startTime = time + 600;
-    }
-    const elapsed = time - this.startTime;
+    this.songTime += delta;
+    const elapsed = this.songTime;
     this.updateProgress(elapsed);
     let newlyMissed = 0;
     for (const note of this.notes) {
@@ -154,13 +154,10 @@ export class RhythmScene extends Phaser.Scene {
   }
 
   private hitLane(lane: number) {
-    if (this.finished || isUiLocked()) {
+    if (this.finished || gameState.paused || isUiLocked()) {
       return;
     }
-    if (this.startTime < 0) {
-      return;
-    }
-    const elapsed = this.currentTime - this.startTime;
+    const elapsed = this.songTime;
     let candidate: Note | undefined;
     let candidateDiff = Number.POSITIVE_INFINITY;
     for (const note of this.notes) {
@@ -410,11 +407,12 @@ export class RhythmScene extends Phaser.Scene {
   }
 
   private gradeRun() {
+    const totalNotes = chart.notes.length;
     const totalHits = this.perfectHits + this.goodHits;
-    if (this.perfectHits >= 22 && this.misses === 0) {
+    if (this.perfectHits >= Math.ceil(totalNotes * 0.73) && this.misses === 0) {
       return "S";
     }
-    if (totalHits >= 20 && this.misses <= 4) {
+    if (totalHits >= Math.ceil(totalNotes * 0.66) && this.misses <= 4) {
       return "A";
     }
     if (this.score >= 500) {

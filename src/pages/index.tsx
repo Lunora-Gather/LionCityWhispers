@@ -50,8 +50,6 @@ export default function Home() {
         <link rel="manifest" href={assetPath("/manifest.webmanifest")} />
         <link rel="apple-touch-icon" href={assetPath("/icon-192.png")} />
         <link rel="icon" href={assetPath("/icon.svg")} type="image/svg+xml" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={englishDescription} />
         <meta property="og:type" content="website" />

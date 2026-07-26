@@ -110,7 +110,7 @@ export const artifacts: Record<ArtifactId, Artifact> = {
   "spirit-chime": localizedArtifact("spirit-chime", "zh")
 };
 
-function createDefaultState(): GameState {
+function createDefaultState(locale: Locale = "zh"): GameState {
   return {
     inventory: [],
     flags: {
@@ -124,7 +124,7 @@ function createDefaultState(): GameState {
       visitors: 0,
       complete: false
     },
-    dialogue: text(stateCopy.opening, "zh"),
+    dialogue: text(stateCopy.opening, locale),
     paused: false,
     easyMode: true,
     settings: createDefaultSettings(),
@@ -314,7 +314,8 @@ function loadPersistedState() {
     if (parsed.version !== SAVE_VERSION) {
       return null;
     }
-    const defaults = createDefaultState();
+    const settings = sanitizeSettings(parsed.settings, createDefaultSettings());
+    const defaults = createDefaultState(settings.locale);
     return {
       ...defaults,
       inventory: (parsed.inventoryIds ?? [])
@@ -327,7 +328,7 @@ function loadPersistedState() {
           ? parsed.dialogue
           : defaults.dialogue,
       easyMode: typeof parsed.easyMode === "boolean" ? parsed.easyMode : defaults.easyMode,
-      settings: sanitizeSettings(parsed.settings, defaults.settings)
+      settings
     } satisfies GameState;
   } catch {
     return null;
@@ -343,7 +344,7 @@ export function initializeGameState() {
 
 export function resetGameState() {
   const currentSettings = gameState.settings;
-  applyState({ ...createDefaultState(), settings: currentSettings });
+  applyState({ ...createDefaultState(currentSettings.locale), settings: currentSettings });
   uiLocked = false;
   emitGameState("world");
 }
@@ -390,7 +391,8 @@ export function updateSettings(settings: Partial<GameSettings>) {
 }
 
 export function toggleMuted() {
-  gameState.settings.muted = !gameState.settings.muted;
+  // Replace the settings object so React listeners comparing by identity re-render.
+  gameState.settings = { ...gameState.settings, muted: !gameState.settings.muted };
   return gameState.settings.muted;
 }
 
@@ -520,7 +522,8 @@ export function importSaveString(saveStr: string): boolean {
     if (parsed.version !== SAVE_VERSION) {
       return false;
     }
-    const defaults = createDefaultState();
+    const settings = sanitizeSettings(parsed.settings, createDefaultSettings());
+    const defaults = createDefaultState(settings.locale);
     const imported = {
       ...defaults,
       inventory: (parsed.inventoryIds ?? [])
@@ -533,7 +536,7 @@ export function importSaveString(saveStr: string): boolean {
           ? parsed.dialogue
           : defaults.dialogue,
       easyMode: typeof parsed.easyMode === "boolean" ? parsed.easyMode : defaults.easyMode,
-      settings: sanitizeSettings(parsed.settings, defaults.settings)
+      settings
     } satisfies GameState;
     applyState(imported);
     emitGameState("world");

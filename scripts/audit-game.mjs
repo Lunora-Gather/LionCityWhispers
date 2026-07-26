@@ -20,7 +20,8 @@ const requiredAssets = [
   "public/assets/audio/ritual-perfect.wav",
   "public/assets/audio/ritual-good.wav",
   "public/icon-192.png",
-  "public/icon-512.png"
+  "public/icon-512.png",
+  "public/icon.svg"
 ];
 
 const sourceRoots = ["src", "tests", "scripts"];
@@ -115,6 +116,12 @@ const swVersionMatch = swText.match(/lion-city-whispers-v(\d+)/);
 if (!swVersionMatch) {
   fail("Service worker cache name must include a numeric version.");
 }
+const swAllVersions = [...swText.matchAll(/lion-city-whispers(?:-runtime)?-v(\d+)/g)].map(
+  (match) => match[1]
+);
+if (new Set(swAllVersions).size > 1) {
+  fail("CACHE_NAME and RUNTIME_CACHE must carry the same version number.");
+}
 for (const asset of requiredAssets) {
   const publicPath = `/${asset.replace(/^public\//, "")}`;
   if (!swText.includes(publicPath)) {
@@ -129,7 +136,7 @@ for (const asset of requiredAssets) {
 // version fails the audit.
 const swVersion = `v${swVersionMatch[1]}`;
 const precacheHash = createHash("sha256");
-for (const asset of [...requiredAssets, "public/icon.svg"].sort()) {
+for (const asset of [...requiredAssets].sort()) {
   precacheHash.update(asset);
   if (/\.(webmanifest|txt|xml|svg)$/.test(asset)) {
     // Git converts text-file line endings per platform; normalize so the

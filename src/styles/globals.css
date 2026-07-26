@@ -140,6 +140,7 @@ input:focus-visible {
   gap: 0;
   border: 1px solid rgba(43, 199, 171, 0.32);
   background: linear-gradient(185deg, rgba(10, 20, 18, 0.82), rgba(4, 8, 7, 0.92));
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
   box-shadow:
     0 16px 40px rgba(0, 0, 0, 0.6),
@@ -156,13 +157,14 @@ input:focus-visible {
   border: 1px solid rgba(43, 199, 171, 0.28);
   background:
     linear-gradient(185deg, rgba(10, 20, 18, 0.82), rgba(4, 8, 7, 0.92));
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
   box-shadow:
     0 16px 38px rgba(0, 0, 0, 0.5),
     0 0 1px 1px rgba(209, 169, 93, 0.15),
     inset 0 1px 0 rgba(255, 244, 214, 0.12);
   border-radius: 12px;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
 }
 
 .brand {
@@ -270,7 +272,7 @@ input:focus-visible {
   color: #fff4d6;
   cursor: pointer;
   border-radius: 50%;
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: background 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .icon-button:hover {
@@ -289,6 +291,7 @@ input:focus-visible {
   gap: 10px;
   border: 0;
   background: none;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   box-shadow: none;
   padding: 0;
@@ -301,7 +304,8 @@ input:focus-visible {
   font-weight: 600;
   white-space: nowrap;
   border-radius: 20px;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -343,6 +347,7 @@ input:focus-visible {
   padding: 10px 18px;
   border: 1px solid rgba(43, 199, 171, 0.32);
   background: linear-gradient(185deg, rgba(9, 18, 16, 0.82), rgba(4, 8, 7, 0.92));
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
   box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.5),
@@ -358,7 +363,7 @@ input:focus-visible {
   gap: 3px;
   color: rgba(248, 237, 210, 0.72);
   cursor: default;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
 }
 
 .route-step i {
@@ -374,7 +379,7 @@ input:focus-visible {
   font-size: 13px;
   border-radius: 50%;
   font-family: 'Cinzel', 'Microsoft YaHei', serif;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: background 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .route-step:hover {
@@ -478,6 +483,7 @@ input:focus-visible {
   padding: 0;
   border: 0;
   background: none;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   box-shadow: none;
   pointer-events: auto;
@@ -493,6 +499,7 @@ input:focus-visible {
   color: rgba(248, 237, 210, 0.52);
   border: 1px dashed rgba(209, 169, 93, 0.45);
   background: rgba(10, 17, 17, 0.45);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-radius: 20px;
   pointer-events: none;
@@ -511,11 +518,12 @@ input:focus-visible {
   padding: 6px 14px;
   border: 1px solid rgba(209, 169, 93, 0.48);
   background: rgba(9, 15, 14, 0.65);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   color: #fff4d6;
   font-size: 12px;
   border-radius: 20px;
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
@@ -565,6 +573,7 @@ input:focus-visible {
   border-radius: 16px;
   border: 1.5px solid rgba(43, 199, 171, 0.6);
   background: linear-gradient(185deg, rgba(9, 18, 16, 0.92), rgba(4, 8, 7, 0.96));
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: 
     0 20px 50px rgba(0, 0, 0, 0.7),
@@ -630,19 +639,15 @@ input:focus-visible {
 }
 
 .touch-action {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(248, 237, 210, 0.22);
   background: rgba(10, 17, 17, 0.78);
   color: #fff4d6;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-}
-
-.touch-action {
-  width: 64px;
-  height: 64px;
   pointer-events: auto;
   border-radius: 50%;
 }
@@ -664,6 +669,7 @@ input:focus-visible {
   color: #fff4d6;
   font-family: Georgia, serif;
   font-size: 22px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -684,6 +690,7 @@ input:focus-visible {
   border: 1px solid rgba(248, 237, 210, 0.18);
   background: rgba(9, 15, 15, 0.82);
   color: #fff4d6;
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
 }
@@ -747,6 +754,7 @@ input:focus-visible {
   background: linear-gradient(135deg, rgba(9, 20, 18, 0.92), rgba(4, 9, 8, 0.96));
   color: #fff4d6;
   border-radius: 16px;
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
   box-shadow: 
     0 24px 60px rgba(0, 0, 0, 0.7),
@@ -821,7 +829,7 @@ input:focus-visible {
   color: #ffd685;
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
 }
 
 .settings-panel header button:hover,
@@ -858,7 +866,7 @@ input:focus-visible {
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
 }
 
 .setting-row button:hover:not(:disabled),
@@ -921,7 +929,7 @@ input:focus-visible {
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
 }
 
 .settings-group-title button:hover {
@@ -953,7 +961,7 @@ input:focus-visible {
   cursor: pointer;
   text-align: left;
   padding: 7px 11px;
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
 }
 
 .binding-grid button:hover {
@@ -995,7 +1003,7 @@ input:focus-visible {
   border-radius: 3px;
   outline: none;
   border: 1px solid rgba(43, 199, 171, 0.3);
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
 }
 
 .setting-row input[type="range"]::-webkit-slider-thumb {
@@ -1045,7 +1053,7 @@ input:focus-visible {
   border-radius: 6px;
   cursor: pointer;
   position: relative;
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: background 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .setting-row input[type="checkbox"]:checked {
@@ -1128,7 +1136,7 @@ input:focus-visible {
   box-shadow: 
     0 4px 15px rgba(0, 0, 0, 0.35),
     inset 0 0 12px rgba(43, 199, 171, 0.08);
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
 }
 
 .codex-entry:hover {
@@ -1166,7 +1174,7 @@ input:focus-visible {
   background-image: var(--lcw-artifact-sheet);
   background-size: 200% 200%;
   box-shadow: 0 0 8px rgba(209, 169, 93, 0.25);
-  transition: all 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
 }
 
 .codex-entry:hover .codex-art {
@@ -1335,6 +1343,7 @@ input:focus-visible {
     gap: 8px;
     border: 0;
     background: none;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
     box-shadow: none;
     border-radius: 0;
@@ -1345,6 +1354,7 @@ input:focus-visible {
   .toolbar {
     border: 1px solid rgba(43, 199, 171, 0.28);
     background: linear-gradient(185deg, rgba(16, 25, 24, 0.8), rgba(6, 10, 9, 0.92));
+    -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
@@ -1391,6 +1401,7 @@ input:focus-visible {
     justify-content: flex-start;
     border: 1px solid rgba(209, 169, 93, 0.22);
     background: linear-gradient(185deg, rgba(16, 25, 24, 0.72), rgba(6, 10, 9, 0.88));
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     backdrop-filter: blur(14px) saturate(140%);
     box-shadow: 0 16px 38px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
@@ -1417,6 +1428,7 @@ input:focus-visible {
     padding: 7px 6px;
     border: 1px solid rgba(209, 169, 93, 0.22);
     background: linear-gradient(185deg, rgba(16, 25, 24, 0.72), rgba(6, 10, 9, 0.88));
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     backdrop-filter: blur(14px) saturate(140%);
     box-shadow: 0 16px 38px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
@@ -1517,6 +1529,7 @@ input:focus-visible {
     gap: 6px;
     border: 0;
     background: none;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
     box-shadow: none;
     border-radius: 0;
@@ -1527,6 +1540,7 @@ input:focus-visible {
   .toolbar {
     border: 1px solid rgba(43, 199, 171, 0.28);
     background: linear-gradient(185deg, rgba(16, 25, 24, 0.8), rgba(6, 10, 9, 0.92));
+    -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
@@ -1599,6 +1613,7 @@ input:focus-visible {
     position: absolute;
     border: 1px solid rgba(209, 169, 93, 0.22);
     background: linear-gradient(185deg, rgba(16, 25, 24, 0.72), rgba(6, 10, 9, 0.88));
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     backdrop-filter: blur(14px) saturate(140%);
     box-shadow: 0 16px 38px rgba(0, 0, 0, 0.4);
     border-radius: 12px;
@@ -1642,6 +1657,7 @@ input:focus-visible {
     padding: 5px 6px;
     border: 1px solid rgba(209, 169, 93, 0.22);
     background: linear-gradient(185deg, rgba(16, 25, 24, 0.72), rgba(6, 10, 9, 0.88));
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     backdrop-filter: blur(14px) saturate(140%);
     box-shadow: 0 16px 38px rgba(0, 0, 0, 0.4);
     border-radius: 12px;

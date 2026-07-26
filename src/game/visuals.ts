@@ -44,7 +44,7 @@ export function drawPuzzleBackdrop(scene: Phaser.Scene, config: PuzzleBackdropCo
   scene.add.rectangle(640, 360, 1280, 720, 0x030807);
   const bg = scene.add.image(640, 360, "world-cinematic");
   const scale = Math.max(1280 / bg.width, 720 / bg.height);
-  bg.setScale(scale).setAlpha(0.34).setTint(0x6c8278);
+  bg.setScale(scale).setAlpha(config.backgroundAlpha ?? 0.34).setTint(0x6c8278);
   scene.add.rectangle(640, 360, 1280, 720, 0x04100e, config.overlayAlpha ?? 0.58);
 
   const ambientLeft = scene.add.circle(214, 220, 170, 0xd1a95d, 0.045);

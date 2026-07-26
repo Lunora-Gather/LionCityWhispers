@@ -1,11 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
+import { openScene as openSceneBase } from "./helpers";
 
 async function openScene(page: Page, scene: string, label: string) {
-  await page.evaluate((target) => {
-    window.dispatchEvent(new CustomEvent("lcw:chapter", { detail: target }));
-  }, scene);
-  await expect(page.getByLabel("进度").getByText(label)).toBeVisible({ timeout: 15000 });
-  await page.waitForTimeout(1500);
+  await openSceneBase(page, scene, label, 1500);
 }
 
 async function pressNumberSequence(page: Page, keys: string[]) {

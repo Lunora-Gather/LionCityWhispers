@@ -7,6 +7,7 @@ import { completedPuzzleCount, emitGameState, gameState, isUiLocked } from "./st
 import { worldCopy } from "@/data/i18n";
 import { bindSceneHint, pulseSceneHint } from "./hints";
 import { formatBinding } from "./bindings";
+import { onSceneTeardown } from "./sceneCleanup";
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -145,6 +146,9 @@ export class WorldScene extends Phaser.Scene {
         this.pressedCodes.clear();
         return;
       }
+      if (gameState.paused) {
+        return;
+      }
       this.pressedCodes.add(event.code);
       if (event.key === "Escape" && this.activeDialogue) {
         this.closeDialogue();
@@ -170,7 +174,7 @@ export class WorldScene extends Phaser.Scene {
     window.addEventListener("keydown", this.keyDownHandler);
     window.addEventListener("keyup", this.keyUpHandler);
     window.addEventListener("lcw:advance-dialogue", this.dialogueHandler);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    onSceneTeardown(this, () => {
       this.pressedCodes.clear();
       if (this.keyDownHandler) {
         window.removeEventListener("keydown", this.keyDownHandler);
@@ -501,7 +505,7 @@ export class WorldScene extends Phaser.Scene {
       this.virtualMove.y = detail?.y ?? 0;
     };
     this.virtualActionHandler = () => {
-      if (isUiLocked()) {
+      if (isUiLocked() || gameState.paused) {
         return;
       }
       if (this.activeDialogue) {
@@ -512,7 +516,7 @@ export class WorldScene extends Phaser.Scene {
     };
     window.addEventListener("lcw:virtual-move", this.virtualMoveHandler);
     window.addEventListener("lcw:virtual-action", this.virtualActionHandler);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    onSceneTeardown(this, () => {
       if (this.virtualMoveHandler) {
         window.removeEventListener("lcw:virtual-move", this.virtualMoveHandler);
       }
@@ -554,7 +558,25 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private getNearest() {
-    return this.interactables.find((item) => item.isNear(this.player.x, this.player.y));
+    // Pick the closest in-range interactable so keyboard and click targeting agree.
+    let best: NPC | undefined;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const item of this.interactables) {
+      if (!item.isNear(this.player.x, this.player.y)) {
+        continue;
+      }
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        item.config.x,
+        item.config.y
+      );
+      if (distance < bestDistance) {
+        best = item;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 
   private getGuidedInteractableId() {
@@ -607,6 +629,13 @@ export class WorldScene extends Phaser.Scene {
       lines,
       index: 0
     };
+    // update() stops running while dialogue is open, so clear the focus
+    // highlights and interaction prompt here or they linger under the box.
+    this.prompt.setAlpha(0);
+    this.nearestId = "";
+    for (const item of this.interactables) {
+      item.setFocus(false);
+    }
     if (this.onboardingContainer) {
       this.onboardingContainer.setVisible(false);
     }

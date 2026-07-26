@@ -1,9 +1,10 @@
 import Phaser from "phaser";
 import { gameState } from "./state";
+import { onSceneTeardown } from "./sceneCleanup";
 
 export function bindSceneHint(scene: Phaser.Scene, handler: () => void) {
   window.addEventListener("lcw:hint", handler);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+  onSceneTeardown(scene, () => {
     window.removeEventListener("lcw:hint", handler);
   });
 }

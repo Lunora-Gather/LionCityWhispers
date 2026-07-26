@@ -63,16 +63,18 @@ test("keeps install metadata and critical asset budgets valid", async ({ request
 test("starts from the cached route after the service worker is warmed", async ({ page, context }) => {
   await page.goto("/?pwa=1");
   await expect(page.locator("canvas")).toBeVisible();
-  await page.evaluate(async () => {
+  const hasController = await page.evaluate(async () => {
     if (!("serviceWorker" in navigator)) {
       throw new Error("service worker unavailable");
     }
     await navigator.serviceWorker.ready;
-    if (!navigator.serviceWorker.controller) {
-      location.reload();
-    }
+    return Boolean(navigator.serviceWorker.controller);
   });
-  await page.waitForLoadState("load");
+  if (!hasController) {
+    // Reload from the test side; calling location.reload() inside evaluate
+    // destroys the execution context mid-call and rejects the evaluation.
+    await page.reload({ waitUntil: "load" });
+  }
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(async () => {
     const resourceUrls = performance

@@ -5,6 +5,7 @@ import {
   Gauge,
   Lightbulb,
   Pause,
+  Play,
   RotateCcw,
   Settings,
   Share2,
@@ -13,7 +14,7 @@ import {
   VolumeX,
   X
 } from "lucide-react";
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { getCodexEntries, getEndingCopy } from "@/data/codex";
 import { formatCopy, objectiveCopy, sceneName, sceneCopy, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
@@ -272,6 +273,48 @@ function shouldUseServiceWorker() {
   return process.env.NODE_ENV === "production" || isDevPwaOptIn();
 }
 
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Trap keyboard focus inside an open dialog: focus its first control on open,
+// cycle Tab within it, and hand focus back to the opener on close.
+function useModalFocus(open: boolean, containerRef: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!open || !container) {
+      return;
+    }
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusables = () => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+    focusables()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") {
+        return;
+      }
+      const items = focusables();
+      if (items.length === 0) {
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const inside = active instanceof HTMLElement && container.contains(active);
+      if (event.shiftKey && (active === first || !inside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !inside)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    container.addEventListener("keydown", onKeyDown);
+    return () => {
+      container.removeEventListener("keydown", onKeyDown);
+      previous?.focus();
+    };
+  }, [open, containerRef]);
+}
+
 async function loadGameBootstrap() {
   try {
     return await import("@/game/bootstrap");
@@ -443,6 +486,11 @@ export function GameShell() {
   // The typewriter writes straight into this node; routing the 50 Hz tick
   // through state would re-render the whole shell for every character.
   const dialogueTextRef = useRef<HTMLParagraphElement | null>(null);
+  const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const settingsPanelRef = useRef<HTMLElement | null>(null);
+  const codexPanelRef = useRef<HTMLElement | null>(null);
+  const resetPanelRef = useRef<HTMLElement | null>(null);
+  const importPanelRef = useRef<HTMLElement | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; visible: boolean; isAchievement?: boolean }>({
     message: "",
@@ -450,13 +498,22 @@ export function GameShell() {
     isAchievement: false
   });
 
+  // Queue toasts so simultaneous unlocks display one after another instead of
+  // the later one clobbering the earlier one.
+  const toastQueueRef = useRef<Array<{ message: string; isAchievement: boolean }>>([]);
+  const [toastTick, setToastTick] = useState(0);
+
+  const enqueueToast = (message: string, isAchievement: boolean) => {
+    toastQueueRef.current.push({ message, isAchievement });
+    setToastTick((tick) => tick + 1);
+  };
+
   const triggerToast = (message: string) => {
-    setToast({ message, visible: true, isAchievement: false });
+    enqueueToast(message, false);
   };
 
   const triggerAchievementToast = (message: string) => {
-    window.dispatchEvent(new CustomEvent("lcw:audio-achievement"));
-    setToast({ message, visible: true, isAchievement: true });
+    enqueueToast(message, true);
   };
 
   const earnedAchievementsRef = useRef<Record<string, boolean>>({});
@@ -491,12 +548,23 @@ export function GameShell() {
   }, [loading.ready, hud.museumComplete, hud.visitors, hud.ritualComplete, hud.inventory.length, ui]);
 
   useEffect(() => {
+    if (toast.visible) return;
+    const next = toastQueueRef.current.shift();
+    if (next) {
+      if (next.isAchievement) {
+        window.dispatchEvent(new CustomEvent("lcw:audio-achievement"));
+      }
+      setToast({ ...next, visible: true });
+    }
+  }, [toastTick, toast.visible]);
+
+  useEffect(() => {
     if (!toast.visible) return;
     const timer = setTimeout(() => {
       setToast((prev) => ({ ...prev, visible: false }));
     }, 2500);
     return () => clearTimeout(timer);
-  }, [toast.visible]);
+  }, [toast.visible, toast.message]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -521,7 +589,7 @@ export function GameShell() {
     window.dispatchEvent(new CustomEvent("lcw:audio-resume"));
   };
 
-  const handleExportSave = () => {
+  const handleExportSave = async () => {
     resumeAudioContext();
     try {
       const raw = window.localStorage.getItem("lcw:save:v2");
@@ -530,10 +598,12 @@ export function GameShell() {
         return;
       }
       const base64 = window.btoa(encodeURIComponent(raw));
-      void navigator.clipboard.writeText(base64);
+      await navigator.clipboard.writeText(base64);
       triggerToast(ui.saveExported);
     } catch {
-      triggerToast(ui.saveImportInvalid);
+      triggerToast(
+        hud.settings.locale === "zh" ? "复制失败，请重试" : "Copy failed, please try again"
+      );
     }
   };
 
@@ -565,10 +635,15 @@ export function GameShell() {
 
   const handleInstallGame = async () => {
     if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setDeferredPrompt(null);
+    // beforeinstallprompt events are single-use: clear it up front so a
+    // second click can't call prompt() again and throw.
+    const prompt = deferredPrompt;
+    setDeferredPrompt(null);
+    try {
+      prompt.prompt();
+      await prompt.userChoice;
+    } catch {
+      // Prompt already consumed or blocked; nothing to recover.
     }
   };
 
@@ -588,7 +663,13 @@ export function GameShell() {
       triggerToast(isZh ? "复制失败，请手动分享" : "Failed to copy, please share manually");
     }
   };
-  const uiLocked = settingsOpen || codexOpen || resetConfirm || listeningBinding !== null;
+  const uiLocked =
+    settingsOpen || codexOpen || resetConfirm || importOpen || listeningBinding !== null;
+
+  useModalFocus(settingsOpen, settingsPanelRef);
+  useModalFocus(codexOpen, codexPanelRef);
+  useModalFocus(resetConfirm, resetPanelRef);
+  useModalFocus(importOpen, importPanelRef);
 
   useEffect(() => {
     let active = true;
@@ -660,7 +741,11 @@ export function GameShell() {
         setListeningBinding(null);
         setSettingsOpen(false);
         setCodexOpen(false);
+        setCodexSearch("");
+        setCodexFilter("all");
         setResetConfirm(false);
+        setImportOpen(false);
+        setImportText("");
       }
     };
     window.addEventListener("keydown", closePanels);
@@ -689,6 +774,10 @@ export function GameShell() {
       const code = event.code || event.key;
       if (!code || code === "Escape") {
         setListeningBinding(null);
+        return;
+      }
+      // Bare modifiers and Tab make unusable bindings; keep listening instead.
+      if (/^(Shift|Control|Alt|Meta)(Left|Right)?$/.test(code) || code === "Tab") {
         return;
       }
       const group = listeningBinding.startsWith("rhythm") ? rhythmBindingOrder : movementBindingOrder;
@@ -950,8 +1039,19 @@ export function GameShell() {
   ];
   // hud.scene comes from sceneCopy (sceneName), so compare against sceneCopy —
   // matching shellCopy.ritual only worked while the two strings coincided.
-  const isRitualScene =
-    hud.scene === sceneCopy.zh.rhythm || hud.scene === sceneCopy.en.rhythm;
+  // While paused the label becomes "paused"; keep the last real answer so the
+  // rhythm touch pads don't swap to the joystick mid-ritual.
+  const isPausedLabel =
+    hud.scene === sceneCopy.zh.paused || hud.scene === sceneCopy.en.paused;
+  const wasRitualSceneRef = useRef(false);
+  const isRitualScene = isPausedLabel
+    ? wasRitualSceneRef.current
+    : hud.scene === sceneCopy.zh.rhythm || hud.scene === sceneCopy.en.rhythm;
+  useEffect(() => {
+    if (!isPausedLabel) {
+      wasRitualSceneRef.current = isRitualScene;
+    }
+  }, [isPausedLabel, isRitualScene]);
   const isOpeningScene =
     hud.scene === sceneCopy.zh.boot || hud.scene === sceneCopy.en.boot;
 
@@ -1015,14 +1115,21 @@ export function GameShell() {
         clearInterval(interval);
       }
     }, 20);
+    typingIntervalRef.current = interval;
 
     return () => {
       clearInterval(interval);
+      typingIntervalRef.current = null;
     };
   }, [parsedDialogue.message, hud.settings.reduceMotion]);
 
   const handleDialogueClick = () => {
     if (isTyping) {
+      // Stop the ticker too, or it keeps re-truncating the skipped text.
+      if (typingIntervalRef.current !== null) {
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
       if (dialogueTextRef.current) {
         dialogueTextRef.current.textContent = parsedDialogue.message;
       }
@@ -1139,7 +1246,7 @@ export function GameShell() {
               title={paused ? ui.resume : ui.pause}
               onClick={togglePause}
             >
-              <Pause size={18} />
+              {paused ? <Play size={18} /> : <Pause size={18} />}
             </button>
             <button
               className="icon-button"
@@ -1241,8 +1348,15 @@ export function GameShell() {
               ? "hud-hidden-in-puzzle"
               : ""
           } ${isTyping ? "is-typing" : ""}`}
+          role="button"
+          tabIndex={0}
           onClick={handleDialogueClick}
-          aria-live="polite"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleDialogueClick();
+            }
+          }}
         >
           {parsedDialogue.speaker ? (
             <span className="dialogue-speaker">
@@ -1253,6 +1367,12 @@ export function GameShell() {
           <p ref={dialogueTextRef} />
           <span className="dialogue-hint-key">SPACE</span>
         </section>
+        {/* Announce the complete line once instead of every typewriter tick. */}
+        <p className="sr-only" aria-live="polite">
+          {parsedDialogue.speaker
+            ? `${parsedDialogue.speaker}: ${parsedDialogue.message}`
+            : parsedDialogue.message}
+        </p>
 
         {updateReady ? (
           <aside className="update-banner" role="status">
@@ -1315,7 +1435,7 @@ export function GameShell() {
         </p>
 
         {resetConfirm ? (
-          <section className="modal-backdrop" role="dialog" aria-label={ui.resetAria}>
+          <section ref={resetPanelRef} className="modal-backdrop" role="dialog" aria-modal="true" aria-label={ui.resetAria}>
             <div className="confirm-panel">
               <p>{ui.resetWarning}</p>
               <div className="panel-actions">
@@ -1333,7 +1453,7 @@ export function GameShell() {
         ) : null}
 
         {importOpen ? (
-          <section className="modal-backdrop" role="dialog" aria-label={ui.importSave}>
+          <section ref={importPanelRef} className="modal-backdrop" role="dialog" aria-modal="true" aria-label={ui.importSave}>
             <div className="confirm-panel">
               <p>{ui.saveImportPrompt}</p>
               <textarea
@@ -1369,7 +1489,7 @@ export function GameShell() {
         ) : null}
 
         {settingsOpen ? (
-          <section className="settings-panel" role="dialog" aria-label={ui.settings}>
+          <section ref={settingsPanelRef} className="settings-panel" role="dialog" aria-modal="true" aria-label={ui.settings}>
             <header>
               <h2>{ui.settings}</h2>
               <button type="button" aria-label={ui.closeSettings} onClick={() => setSettingsOpen(false)}>
@@ -1622,7 +1742,7 @@ export function GameShell() {
           const lockedEntriesCount = totalCount - unlockedCount;
 
           return (
-            <section className="codex-panel" role="dialog" aria-label={ui.codex}>
+            <section ref={codexPanelRef} className="codex-panel" role="dialog" aria-modal="true" aria-label={ui.codex}>
               <header>
                 <h2>{ui.codex}</h2>
                 <button type="button" aria-label={ui.closeCodex} onClick={() => {
@@ -1731,6 +1851,12 @@ export function GameShell() {
                 type="button"
                 aria-label={`${keyLabel(code)} ${ui.lane}`}
                 onPointerDown={() => sendRhythmLane(lane)}
+                onKeyDown={(event) => {
+                  if (!event.repeat && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault();
+                    sendRhythmLane(lane);
+                  }
+                }}
               >
                 {keyLabel(code)}
               </button>

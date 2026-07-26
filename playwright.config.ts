@@ -13,8 +13,9 @@ export default defineConfig({
   retries: isCi ? 2 : 0,
   fullyParallel: true,
   // Each test boots a WebGL Phaser instance; more concurrent browsers than
-  // this starve the GPU/audio device and produce timeout flakes.
-  workers: 4,
+  // this starve the GPU/audio device and produce timeout flakes. CI runners
+  // have only 2 cores, so cap lower there.
+  workers: isCi ? 2 : 4,
   reporter: isCi ? "line" : "list",
   expect: {
     timeout: 15000

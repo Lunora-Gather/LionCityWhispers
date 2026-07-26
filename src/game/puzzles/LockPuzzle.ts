@@ -20,6 +20,7 @@ export class LockPuzzle extends Phaser.Scene {
   private timer?: Phaser.Time.TimerEvent;
   private returnTimer?: Phaser.Time.TimerEvent;
   private keyHandler?: (event: KeyboardEvent) => void;
+  private done = false;
 
   constructor() {
     super("LockPuzzle");
@@ -30,6 +31,7 @@ export class LockPuzzle extends Phaser.Scene {
     const config = puzzles.lock as LockConfig;
     this.selected = [];
     this.sequenceSlots = [];
+    this.done = false;
     this.returnTimer?.remove(false);
     this.returnTimer = undefined;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -173,7 +175,7 @@ export class LockPuzzle extends Phaser.Scene {
   }
 
   private choose(label: string, config: LockConfig, x?: number, y?: number, color?: number) {
-    if (isUiLocked()) {
+    if (this.done || isUiLocked()) {
       return;
     }
     playUiClick();
@@ -203,10 +205,13 @@ export class LockPuzzle extends Phaser.Scene {
     this.timerText.setText(`${this.secondsLeft}s`);
     gameState.dialogue = message;
     emitGameState("lock");
-    this.cameras.main.shake(120, 0.003);
+    if (!gameState.settings.reduceMotion) {
+      this.cameras.main.shake(120, 0.003);
+    }
   }
 
   private complete() {
+    this.done = true;
     this.timer?.remove();
     gameState.flags.lock = true;
     addArtifact("harbor-seal");

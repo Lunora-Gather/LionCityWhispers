@@ -1,5 +1,6 @@
 import { inflateSync } from "node:zlib";
 import { expect, type Page, test } from "@playwright/test";
+import { openScene, seedCompletedSave } from "./helpers";
 
 type Rect = {
   left: number;
@@ -9,23 +10,6 @@ type Rect = {
   width: number;
   height: number;
 };
-
-async function openScene(page: Page, scene: string, label: string) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.evaluate((target) => {
-      window.dispatchEvent(new CustomEvent("lcw:chapter", { detail: target }));
-    }, scene);
-    try {
-      await page.getByLabel("进度").getByText(label).waitFor({ state: "visible", timeout: 2500 });
-      await page.waitForTimeout(300);
-      return;
-    } catch {
-      await page.waitForTimeout(250);
-    }
-  }
-  await expect(page.getByLabel("进度").getByText(label)).toBeVisible({ timeout: 15000 });
-  await page.waitForTimeout(300);
-}
 
 async function screenshotVisualStats(page: Page) {
   const image = await page.locator("canvas").screenshot();
@@ -240,20 +224,7 @@ test("keeps polished ritual, puzzle, and museum scenes stable", async ({ page })
   });
   page.on("pageerror", (error) => errors.push(error.message));
 
-  await page.addInitScript(() => {
-    window.localStorage.setItem(
-      "lcw:save:v2",
-      JSON.stringify({
-        version: 2,
-        inventoryIds: ["badang-stone", "rune-plaque", "harbor-seal", "spirit-chime"],
-        flags: { jigsaw: true, runes: true, lock: true, rhythm: true },
-        museum: { placements: {}, visitors: 0, complete: false },
-        dialogue: "四件文物已经备齐，等待入柜。",
-        easyMode: true,
-        settings: { muted: true, volume: 0.4, reduceMotion: true, locale: "zh" }
-      })
-    );
-  });
+  await seedCompletedSave(page);
 
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
@@ -279,20 +250,7 @@ test("keeps polished ritual, puzzle, and museum scenes stable", async ({ page })
 
 test("keeps key canvas scenes visually nonblank", async ({ page }) => {
   test.setTimeout(90000);
-  await page.addInitScript(() => {
-    window.localStorage.setItem(
-      "lcw:save:v2",
-      JSON.stringify({
-        version: 2,
-        inventoryIds: ["badang-stone", "rune-plaque", "harbor-seal", "spirit-chime"],
-        flags: { jigsaw: true, runes: true, lock: true, rhythm: true },
-        museum: { placements: {}, visitors: 0, complete: false },
-        dialogue: "四件文物已经备齐，等待入柜。",
-        easyMode: true,
-        settings: { muted: true, volume: 0.4, reduceMotion: true, locale: "zh" }
-      })
-    );
-  });
+  await seedCompletedSave(page);
 
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();

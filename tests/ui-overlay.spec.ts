@@ -1,18 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
+import { openScene } from "./helpers";
 
 async function openChapter(page: Page, target: string, label: string) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.evaluate((scene) => {
-      window.dispatchEvent(new CustomEvent("lcw:chapter", { detail: scene }));
-    }, target);
-    try {
-      await page.getByLabel("进度").getByText(label).waitFor({ state: "visible", timeout: 2500 });
-      return;
-    } catch {
-      await page.waitForTimeout(250);
-    }
-  }
-  await expect(page.getByLabel("进度").getByText(label)).toBeVisible({ timeout: 15000 });
+  await openScene(page, target, label, 0);
 }
 
 test("settings overlay blocks world hotkeys until it is closed", async ({ page }) => {

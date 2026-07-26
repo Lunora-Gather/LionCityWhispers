@@ -124,7 +124,12 @@ export class MainScene extends Phaser.Scene {
       btnGlow.setStrokeStyle(2, 0xd1a95d, 0);
     });
 
+    let starting = false;
     btnBg.on("pointerdown", () => {
+      if (starting) {
+        return;
+      }
+      starting = true;
       // Audio trigger - simple chime
       window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: 2 }));
       
@@ -176,11 +181,7 @@ export class MainScene extends Phaser.Scene {
         duration: Phaser.Math.Between(4000, 7000),
         ease: "Sine.easeInOut",
         yoyo: true,
-        repeat: -1,
-        onRepeat: () => {
-          firefly.x = Phaser.Math.Between(50, 1230);
-          firefly.y = Phaser.Math.Between(500, 720);
-        }
+        repeat: -1
       });
     }
   }

@@ -96,7 +96,7 @@ export class JigsawPuzzle extends Phaser.Scene {
     this.add.circle(x + 44, y + 31, 2.5, 0xd1a95d, 0.2);
     target.setInteractive();
     target.on("pointerdown", () => {
-      if (!this.selectedPieceId) {
+      if (isUiLocked() || !this.selectedPieceId) {
         return;
       }
       const selected = (puzzles.jigsaw.pieces as PieceConfig[]).find(
@@ -108,7 +108,9 @@ export class JigsawPuzzle extends Phaser.Scene {
       }
       if (selected.id !== piece.id) {
         playMiss();
-        this.cameras.main.shake(80, 0.002);
+        if (!gameState.settings.reduceMotion) {
+          this.cameras.main.shake(80, 0.002);
+        }
         return;
       }
       this.placePiece(selected, container);
@@ -148,7 +150,7 @@ export class JigsawPuzzle extends Phaser.Scene {
     this.input.setDraggable(container);
 
     container.on("pointerdown", () => {
-      if (this.locked.has(piece.id)) {
+      if (isUiLocked() || this.locked.has(piece.id)) {
         return;
       }
       this.selectPiece(piece.id);
@@ -156,7 +158,7 @@ export class JigsawPuzzle extends Phaser.Scene {
     });
 
     container.on("drag", (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      if (this.locked.has(piece.id)) {
+      if (isUiLocked() || this.locked.has(piece.id)) {
         return;
       }
       container.setPosition(dragX, dragY);
@@ -179,10 +181,12 @@ export class JigsawPuzzle extends Phaser.Scene {
       if (targetFrame) {
         targetFrame.setStrokeStyle(2, 0xd1a95d, 0.46);
       }
-      if (Phaser.Math.Distance.Between(container.x, container.y, targetX, targetY) < 62) {
+      if (!isUiLocked() && Phaser.Math.Distance.Between(container.x, container.y, targetX, targetY) < 62) {
         this.placePiece(piece, container);
       } else {
-        playMiss();
+        if (!isUiLocked()) {
+          playMiss();
+        }
         this.tweens.add({
           targets: container,
           x: x,

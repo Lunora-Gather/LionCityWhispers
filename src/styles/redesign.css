@@ -33,10 +33,6 @@ body::after {
   padding: 16px;
 }
 
-.shell::before {
-  display: none;
-}
-
 .stage {
   width: min(calc(100vw - 32px), calc((100dvh - 32px) * 16 / 9));
   max-width: none;
@@ -67,12 +63,9 @@ body::after {
   border: 0;
   background: none;
   box-shadow: none;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   pointer-events: none;
-}
-
-.hud-top::before {
-  display: none;
 }
 
 .brand,
@@ -115,10 +108,6 @@ body::after {
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.36);
   animation: none;
-}
-
-.brand-mark::after {
-  display: none;
 }
 
 .brand h1 {
@@ -515,6 +504,7 @@ body::after {
     border: 1px solid var(--lcw-line);
     background: var(--lcw-surface);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
+    -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
   }
 
@@ -894,5 +884,31 @@ body::after {
   .route-connector,
   .dialogue-hint-key {
     animation: none !important;
+  }
+}
+
+/* Small screens run the weakest GPUs, and every blurred surface forces
+   per-frame compositing readback over the live WebGL canvas. The HUD panels
+   already sit on 0.82-0.96 alpha backgrounds, so dropping the blur there is
+   visually negligible but saves real frame time. Desktop keeps the design. */
+@media (max-width: 860px) {
+  .hud-top,
+  .progress-strip span,
+  .route-rail,
+  .inventory-dock,
+  .artifact-pill,
+  .dialogue-bar,
+  .touch-action,
+  .rhythm-controls button,
+  .settings-panel,
+  .codex-panel,
+  .confirm-panel,
+  .modal-backdrop,
+  .toast-notification,
+  .update-banner,
+  .ritual-pause-banner,
+  .completion-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
   }
 }

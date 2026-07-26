@@ -96,7 +96,7 @@ test("uses custom rhythm lane bindings during the ritual", async ({ page }) => {
   await expect(page.locator(".rhythm-controls button")).toHaveText(["J", "K", "L", ";"]);
   await page.evaluate(() => {
     const codes = ["KeyJ", "KeyK", "KeyL", "Semicolon"];
-    for (let time = 900; time <= 20200; time += 120) {
+    for (let time = 900; time <= 22800; time += 120) {
       for (const code of codes) {
         window.setTimeout(() => {
           window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
@@ -105,6 +105,6 @@ test("uses custom rhythm lane bindings during the ritual", async ({ page }) => {
     }
   });
   await expect(page.getByLabel("背包").getByText("灵界清音")).toBeVisible({
-    timeout: 26000
+    timeout: 30000
   });
 });

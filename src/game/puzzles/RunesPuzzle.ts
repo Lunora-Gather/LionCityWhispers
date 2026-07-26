@@ -17,6 +17,7 @@ export class RunesPuzzle extends Phaser.Scene {
   private progressSlots: Phaser.GameObjects.Rectangle[] = [];
   private timers: Phaser.Time.TimerEvent[] = [];
   private keyHandler?: (event: KeyboardEvent) => void;
+  private done = false;
 
   constructor() {
     super("RunesPuzzle");
@@ -25,6 +26,7 @@ export class RunesPuzzle extends Phaser.Scene {
   create() {
     const copy = puzzleCopy[gameState.settings.locale];
     this.selected = [];
+    this.done = false;
     this.timers.forEach((timer) => timer.remove(false));
     this.timers = [];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -143,7 +145,7 @@ export class RunesPuzzle extends Phaser.Scene {
   }
 
   private choose(rune: string, config: RuneConfig, x?: number, y?: number) {
-    if (isUiLocked()) {
+    if (this.done || isUiLocked()) {
       return;
     }
     playUiClick();
@@ -231,6 +233,7 @@ export class RunesPuzzle extends Phaser.Scene {
   }
 
   private complete() {
+    this.done = true;
     gameState.flags.runes = true;
     addArtifact("rune-plaque");
     const copy = puzzleCopy[gameState.settings.locale];

@@ -1,55 +1,11 @@
-import { expect, type Page, test } from "@playwright/test";
-
-async function gamePoint(page: Page, gameX: number, gameY: number) {
-  const canvas = page.locator("canvas");
-  const box = await canvas.boundingBox();
-  if (!box) {
-    throw new Error("Game canvas is not visible");
-  }
-  return {
-    x: box.x + (box.width * gameX) / 1280,
-    y: box.y + (box.height * gameY) / 720
-  };
-}
-
-async function clickGame(page: Page, gameX: number, gameY: number) {
-  const point = await gamePoint(page, gameX, gameY);
-  await page.mouse.click(point.x, point.y);
-}
-
-async function dragGame(page: Page, fromX: number, fromY: number, toX: number, toY: number) {
-  const from = await gamePoint(page, fromX, fromY);
-  const to = await gamePoint(page, toX, toY);
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: 12 });
-  await page.mouse.up();
-}
-
-async function expectScene(page: Page, name: string) {
-  await expect(page.getByLabel("进度").getByText(name)).toBeVisible({ timeout: 30000 });
-}
-
-async function clickUntilScene(page: Page, gameX: number, gameY: number, name: string) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await clickGame(page, gameX, gameY);
-    try {
-      await page.getByLabel("进度").getByText(name).waitFor({ state: "visible", timeout: 2500 });
-      return;
-    } catch {
-      await page.waitForTimeout(300);
-    }
-  }
-  await expectScene(page, name);
-}
-
-async function waitForGameSettled(page: Page) {
-  await page.waitForFunction(() => {
-    const box = document.querySelector("canvas")?.getBoundingClientRect();
-    return Boolean(box && box.width > 600 && box.height > 300);
-  });
-  await page.waitForTimeout(1000);
-}
+import { expect, test } from "@playwright/test";
+import {
+  clickGame,
+  clickUntilScene,
+  dragGame,
+  expectScene,
+  waitForGameSettled
+} from "./helpers";
 
 test("plays through the full prototype loop", async ({ page }) => {
   test.slow();
@@ -113,7 +69,7 @@ test("plays through the full prototype loop", async ({ page }) => {
 
   await clickUntilScene(page, 1092, 282, "仪式");
   await page.evaluate(() => {
-    for (let time = 900; time <= 20200; time += 120) {
+    for (let time = 900; time <= 22800; time += 120) {
       for (let lane = 0; lane < 4; lane += 1) {
         window.setTimeout(() => {
           window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: lane }));
@@ -122,7 +78,7 @@ test("plays through the full prototype loop", async ({ page }) => {
     }
   });
   await expect(page.getByLabel("背包").getByText("灵界清音")).toBeVisible({
-    timeout: 26000
+    timeout: 30000
   });
   await expectScene(page, "河岸");
   await waitForGameSettled(page);

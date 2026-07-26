@@ -31,7 +31,6 @@ export function text(copy: TextByLocale, locale: Locale) {
 export const shellCopy = {
   zh: {
     brand: "狮城秘语",
-    brandMark: "狮",
     subtitle: "Lion City Whispers",
     gameAria: "狮城秘语游戏",
     gameTitleAria: "游戏标题",
@@ -68,7 +67,6 @@ export const shellCopy = {
     language: "语言",
     zh: "中文",
     en: "English",
-    volume: "音量",
     masterVolume: "主音量",
     effectsVolume: "音效",
     ambientVolume: "环境声",
@@ -78,8 +76,6 @@ export const shellCopy = {
     inputLatency: "本地响应",
     worstInputLatency: "最差响应",
     longFrames: "长帧",
-    keyBindings: "键位",
-    setKey: "设置",
     waitingKey: "按一个键",
     resetKeys: "恢复默认键位",
     moveUpBinding: "上移",
@@ -88,7 +84,6 @@ export const shellCopy = {
     moveRightBinding: "右移",
     actionBinding: "交互",
     rhythmBinding: "节奏",
-    chapter: "回访",
     river: "河岸",
     gallery: "展厅",
     ritual: "仪式",
@@ -99,10 +94,6 @@ export const shellCopy = {
     achievements: "成就",
     touchControls: "触控操作",
     rhythmControls: "节奏触控",
-    moveUp: "上移",
-    moveLeft: "左移",
-    moveDown: "下移",
-    moveRight: "右移",
     interact: "交互",
     lane: "轨",
     achievementLabels: {
@@ -112,7 +103,6 @@ export const shellCopy = {
       fullSet: "全套文物"
     },
     loading: "载入狮城展线",
-    loadingReady: "准备进入",
     guidance: {
       start: "先靠近河岸中段的巨石碎片，修复第一件文物。",
       runes: "前往古文字碑，把碑文排回能读通的顺序。",
@@ -177,7 +167,6 @@ export const shellCopy = {
   },
   en: {
     brand: "Lion City Whispers",
-    brandMark: "LC",
     subtitle: "狮城秘语",
     gameAria: "Lion City Whispers game",
     gameTitleAria: "Game title",
@@ -214,7 +203,6 @@ export const shellCopy = {
     language: "Language",
     zh: "中文",
     en: "English",
-    volume: "Volume",
     masterVolume: "Master",
     effectsVolume: "Effects",
     ambientVolume: "Ambience",
@@ -224,8 +212,6 @@ export const shellCopy = {
     inputLatency: "Local Response",
     worstInputLatency: "Worst Response",
     longFrames: "Long Frames",
-    keyBindings: "Keys",
-    setKey: "Set",
     waitingKey: "Press a key",
     resetKeys: "Reset Keys",
     moveUpBinding: "Move Up",
@@ -234,7 +220,6 @@ export const shellCopy = {
     moveRightBinding: "Move Right",
     actionBinding: "Interact",
     rhythmBinding: "Rhythm",
-    chapter: "Revisit",
     river: "River",
     gallery: "Gallery",
     ritual: "Ritual",
@@ -245,10 +230,6 @@ export const shellCopy = {
     achievements: "Achievements",
     touchControls: "Touch Controls",
     rhythmControls: "Rhythm Controls",
-    moveUp: "Move Up",
-    moveLeft: "Move Left",
-    moveDown: "Move Down",
-    moveRight: "Move Right",
     interact: "Interact",
     lane: "lane",
     achievementLabels: {
@@ -258,7 +239,6 @@ export const shellCopy = {
       fullSet: "Complete Set"
     },
     loading: "Loading exhibition route",
-    loadingReady: "Ready",
     guidance: {
       start: "Begin at the stone shards near the middle of the riverbank.",
       runes: "Move to the ancient plaque and rebuild a readable inscription.",

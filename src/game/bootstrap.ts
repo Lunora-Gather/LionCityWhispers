@@ -102,14 +102,16 @@ export function startGame(parent: string) {
   const performanceTimer = window.setInterval(() => {
     const now = performance.now();
     const elapsed = Math.max(1, now - windowStart);
-    updatePerformanceStats({
+    const changed = updatePerformanceStats({
       fps: Math.round((frameCount * 1000) / elapsed),
       longFrames,
       inputLatency: Math.round(inputLatency),
       worstInputLatency: Math.round(worstInputLatency),
       interactionSamples
     });
-    emitGameState();
+    if (changed) {
+      emitGameState();
+    }
     frameCount = 0;
     longFrames = 0;
     inputLatency = 0;

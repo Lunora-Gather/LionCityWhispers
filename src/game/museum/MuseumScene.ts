@@ -248,7 +248,6 @@ export class MuseumScene extends Phaser.Scene {
       wordWrap: { width: 114 }
     });
     token.add([shadow, card, innerBorder, colorRail, sheen, icon, label, detailText]);
-    token.setData("home", { x, y });
     this.tokens.set(id, token);
     token.setInteractive(new Phaser.Geom.Rectangle(-86, -38, 172, 86), Phaser.Geom.Rectangle.Contains);
     this.input.setDraggable(token);
@@ -275,15 +274,15 @@ export class MuseumScene extends Phaser.Scene {
       token.setPosition(dragX, dragY);
     });
     token.on("dragend", () => {
-      if (isUiLocked()) {
-        return;
-      }
       this.tweens.add({ targets: token, scale: 1, duration: gameState.settings.reduceMotion ? 0 : 120 });
-      const slot = this.nearestFreeSlot(token.x, token.y, id);
+      // Even when a UI lock engages mid-drag, snap the token somewhere valid.
+      const slot = isUiLocked() ? undefined : this.nearestFreeSlot(token.x, token.y, id);
       if (slot) {
         this.placeArtifact(id, slot);
       } else {
-        playMiss();
+        if (!isUiLocked()) {
+          playMiss();
+        }
         const ownSlot = gameState.museum.placements[id];
         if (ownSlot !== undefined) {
           token.setPosition(this.slots[ownSlot].x, this.slots[ownSlot].y - 64);
