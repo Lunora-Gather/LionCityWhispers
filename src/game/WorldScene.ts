@@ -5,59 +5,32 @@ import { startPuzzle, transitionTo } from "./PuzzleManager";
 import { playUiClick } from "./audio";
 import { completedPuzzleCount, emitGameState, gameState, isUiLocked } from "./state";
 import { worldCopy } from "@/data/i18n";
-
-function formatBinding(code: string) {
-  const namedKeys: Record<string, string> = {
-    Semicolon: ";",
-    Quote: "'",
-    Comma: ",",
-    Period: ".",
-    Slash: "/",
-    Backslash: "\\",
-    Minus: "-",
-    Equal: "=",
-    BracketLeft: "[",
-    BracketRight: "]"
-  };
-  if (namedKeys[code]) {
-    return namedKeys[code];
-  }
-  if (code === "Space") {
-    return "Space";
-  }
-  if (code.startsWith("Key")) {
-    return code.slice(3);
-  }
-  if (code.startsWith("Digit")) {
-    return code.slice(5);
-  }
-  if (code.startsWith("Arrow")) {
-    return code.replace("Arrow", "");
-  }
-  if (code.startsWith("Numpad")) {
-    return `Num ${code.slice(6)}`;
-  }
-  return code;
-}
+import { bindSceneHint, pulseSceneHint } from "./hints";
+import { formatBinding } from "./bindings";
+import { onSceneTeardown } from "./sceneCleanup";
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private onboardingContainer?: Phaser.GameObjects.Container;
+  private hasMoved = false;
   private interactables: NPC[] = [];
   private prompt!: Phaser.GameObjects.Container;
   private promptText!: Phaser.GameObjects.Text;
   private activeDialogue: {
     lines: string[];
     index: number;
-    box: Phaser.GameObjects.Container;
   } | null = null;
   private nearestId = "";
+  private promptBindingCode = "";
   private virtualMove = { x: 0, y: 0 };
+  private moveInput = { left: false, right: false, up: false, down: false };
   private virtualMoveHandler?: (event: Event) => void;
   private virtualActionHandler?: () => void;
   private pressedCodes = new Set<string>();
   private keyDownHandler?: (event: KeyboardEvent) => void;
   private keyUpHandler?: (event: KeyboardEvent) => void;
+  private dialogueHandler?: () => void;
   private guideTargetId = "__unset";
 
   constructor() {
@@ -73,15 +46,62 @@ export class WorldScene extends Phaser.Scene {
     this.bindKeyboard();
     this.bindVirtualControls();
     this.bindPointerInteractions();
+    bindSceneHint(this, () => {
+      const targetId = this.getGuidedInteractableId();
+      const target = this.interactables.find((item) => item.config.id === targetId);
+      if (target) {
+        target.setGuided(true);
+        pulseSceneHint(this, target.config.x, target.config.y, target.config.color);
+      }
+    });
+
+    if (!this.hasMoved) {
+      this.createOnboardingGuide();
+    }
 
     emitGameState("world");
   }
 
-  update(_time: number, delta: number) {
+  override update(_time: number, delta: number) {
+    if (this.onboardingContainer && !this.hasMoved) {
+      const moving =
+        this.cursors.left.isDown ||
+        this.cursors.right.isDown ||
+        this.cursors.up.isDown ||
+        this.cursors.down.isDown ||
+        this.pressedCodes.has(gameState.settings.bindings.moveLeft) ||
+        this.pressedCodes.has(gameState.settings.bindings.moveRight) ||
+        this.pressedCodes.has(gameState.settings.bindings.moveUp) ||
+        this.pressedCodes.has(gameState.settings.bindings.moveDown) ||
+        this.virtualMove.x !== 0 ||
+        this.virtualMove.y !== 0;
+
+      if (moving) {
+        this.hasMoved = true;
+        const target = this.onboardingContainer;
+        this.onboardingContainer = undefined;
+        this.tweens.add({
+          targets: target,
+          alpha: 0,
+          y: target.y - 15,
+          duration: 350,
+          ease: "Sine.easeIn",
+          onComplete: () => target.destroy()
+        });
+      }
+    }
+
+    // Reuse the same input object every frame instead of allocating literals.
+    const move = this.moveInput;
     if (isUiLocked()) {
       this.pressedCodes.clear();
-      this.virtualMove = { x: 0, y: 0 };
-      this.player.update({ left: false, right: false, up: false, down: false }, delta);
+      this.virtualMove.x = 0;
+      this.virtualMove.y = 0;
+      move.left = false;
+      move.right = false;
+      move.up = false;
+      move.down = false;
+      this.player.update(move, delta);
       return;
     }
 
@@ -89,27 +109,16 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    this.player.update(
-      {
-        left:
-          this.cursors.left.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveLeft) ||
-          this.virtualMove.x < 0,
-        right:
-          this.cursors.right.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveRight) ||
-          this.virtualMove.x > 0,
-        up:
-          this.cursors.up.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveUp) ||
-          this.virtualMove.y < 0,
-        down:
-          this.cursors.down.isDown ||
-          this.pressedCodes.has(gameState.settings.bindings.moveDown) ||
-          this.virtualMove.y > 0
-      },
-      delta
-    );
+    const bindings = gameState.settings.bindings;
+    move.left =
+      this.cursors.left.isDown || this.pressedCodes.has(bindings.moveLeft) || this.virtualMove.x < 0;
+    move.right =
+      this.cursors.right.isDown || this.pressedCodes.has(bindings.moveRight) || this.virtualMove.x > 0;
+    move.up =
+      this.cursors.up.isDown || this.pressedCodes.has(bindings.moveUp) || this.virtualMove.y < 0;
+    move.down =
+      this.cursors.down.isDown || this.pressedCodes.has(bindings.moveDown) || this.virtualMove.y > 0;
+    this.player.update(move, delta);
 
     const nearest = this.getNearest();
     this.updateGuidedInteractable();
@@ -118,10 +127,12 @@ export class WorldScene extends Phaser.Scene {
     }
 
     if (nearest) {
-      this.nearestId = nearest.config.id;
-      this.promptText.setText(
-        `${nearest.config.label}  /  ${formatBinding(gameState.settings.bindings.action)}`
-      );
+      // Only rebuild the label when the target or binding actually changes.
+      if (nearest.config.id !== this.nearestId || bindings.action !== this.promptBindingCode) {
+        this.nearestId = nearest.config.id;
+        this.promptBindingCode = bindings.action;
+        this.promptText.setText(`${nearest.config.label}  /  ${formatBinding(bindings.action)}`);
+      }
       this.prompt.setAlpha(1);
     } else {
       this.nearestId = "";
@@ -133,6 +144,9 @@ export class WorldScene extends Phaser.Scene {
     this.keyDownHandler = (event: KeyboardEvent) => {
       if (isUiLocked()) {
         this.pressedCodes.clear();
+        return;
+      }
+      if (gameState.paused) {
         return;
       }
       this.pressedCodes.add(event.code);
@@ -152,15 +166,24 @@ export class WorldScene extends Phaser.Scene {
     this.keyUpHandler = (event: KeyboardEvent) => {
       this.pressedCodes.delete(event.code);
     };
+    this.dialogueHandler = () => {
+      if (this.activeDialogue) {
+        this.advanceDialogue();
+      }
+    };
     window.addEventListener("keydown", this.keyDownHandler);
     window.addEventListener("keyup", this.keyUpHandler);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    window.addEventListener("lcw:advance-dialogue", this.dialogueHandler);
+    onSceneTeardown(this, () => {
       this.pressedCodes.clear();
       if (this.keyDownHandler) {
         window.removeEventListener("keydown", this.keyDownHandler);
       }
       if (this.keyUpHandler) {
         window.removeEventListener("keyup", this.keyUpHandler);
+      }
+      if (this.dialogueHandler) {
+        window.removeEventListener("lcw:advance-dialogue", this.dialogueHandler);
       }
     });
   }
@@ -212,35 +235,106 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
-    const gateAura = this.add.circle(1085, 269, 128, 0x2bc7ab, 0.07).setDepth(4);
-    const gateRing = this.add.circle(1085, 269, 116, 0x2bc7ab, 0).setDepth(6);
-    gateRing.setStrokeStyle(2, 0x5ed6c0, 0.36);
-    const innerRing = this.add.circle(1085, 269, 82, 0x2bc7ab, 0).setDepth(6);
-    innerRing.setStrokeStyle(1, 0xf8edd2, 0.22);
+    // River paper lanterns
+    const lanterns = [
+      { x: 420, y: 310, scale: 0.8, delay: 0 },
+      { x: 580, y: 320, scale: 0.6, delay: 500 },
+      { x: 740, y: 305, scale: 0.7, delay: 1000 },
+      { x: 890, y: 315, scale: 0.5, delay: 1500 }
+    ];
+    for (const lat of lanterns) {
+      const lanternGlow = this.add.circle(lat.x, lat.y, 10, 0xffad33, 0.42).setDepth(4);
+      const lanternBody = this.add.rectangle(lat.x, lat.y, 12, 12, 0xd1a95d, 0.8).setDepth(4);
+      lanternBody.setStrokeStyle(1.5, 0xb9402f, 0.7);
+      
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: [lanternGlow, lanternBody],
+          x: lat.x - 30,
+          y: lat.y + Math.random() * 4 - 2,
+          duration: 3500 + Math.random() * 1500,
+          delay: lat.delay,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+        this.tweens.add({
+          targets: lanternGlow,
+          alpha: { from: 0.2, to: 0.6 },
+          scale: { from: 0.8, to: 1.25 },
+          duration: 1000 + Math.random() * 800,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
+    }
+
+    // Ink-fog particles (only if ritual is not complete)
+    if (!gameState.flags.rhythm) {
+      const fogColors = [0x050f0d, 0x081512];
+      for (let i = 0; i < 6; i++) {
+        const x = 120 + i * 200 + Math.random() * 60;
+        const y = 200 + Math.random() * 320;
+        const width = 160 + Math.random() * 100;
+        const height = 80 + Math.random() * 60;
+        const fog = this.add.ellipse(x, y, width, height, fogColors[i % 2], 0.08).setDepth(15);
+        if (!gameState.settings.reduceMotion) {
+          this.tweens.add({
+            targets: fog,
+            x: x + Math.random() * 40 - 20,
+            y: y + Math.random() * 30 - 15,
+            alpha: { from: 0.04, to: 0.12 },
+            duration: 4000 + Math.random() * 2000,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+          });
+        }
+      }
+    }
+
+    const gateAura = this.add.circle(1085, 269, 112, 0x2bc7ab, 0.025).setDepth(4);
+    const gateRing = this.add.circle(1085, 269, 103, 0x2bc7ab, 0).setDepth(6);
+    gateRing.setStrokeStyle(1, 0x5ed6c0, 0.22);
+    const innerRing = this.add.circle(1085, 269, 74, 0x2bc7ab, 0).setDepth(6);
+    innerRing.setStrokeStyle(1, 0xf8edd2, 0.12);
     if (!gameState.settings.reduceMotion) {
       this.tweens.add({
         targets: [gateAura, gateRing, innerRing],
-        alpha: { from: 0.55, to: 1 },
-        scale: { from: 0.985, to: 1.02 },
-        duration: 2100,
+        alpha: { from: 0.6, to: 1 },
+        scale: { from: 0.99, to: 1.01 },
+        duration: 2500,
         yoyo: true,
         repeat: -1,
         ease: "Sine.easeInOut"
       });
     }
 
-    fx.lineStyle(1, 0x5ed6c0, 0.22);
-    fx.strokeCircle(1085, 269, 118);
-    fx.strokeCircle(1085, 269, 82);
-    fx.lineStyle(1, 0xd1a95d, 0.2);
-    for (let index = 0; index < 18; index += 1) {
-      const angle = (Math.PI * 2 * index) / 18;
-      fx.lineBetween(
-        1085 + Math.cos(angle) * 91,
-        269 + Math.sin(angle) * 91,
-        1085 + Math.cos(angle) * 120,
-        269 + Math.sin(angle) * 120
+    // Dynamic rotating ritual magic circle
+    const portalDecors = this.add.graphics().setDepth(5);
+    portalDecors.setPosition(1085, 269);
+    portalDecors.lineStyle(1, 0x5ed6c0, 0.16);
+    portalDecors.strokeCircle(0, 0, 104);
+    portalDecors.strokeCircle(0, 0, 74);
+    portalDecors.lineStyle(1, 0xd1a95d, 0.12);
+    for (let index = 0; index < 12; index += 1) {
+      const angle = (Math.PI * 2 * index) / 12;
+      portalDecors.lineBetween(
+        Math.cos(angle) * 82,
+        Math.sin(angle) * 82,
+        Math.cos(angle) * 105,
+        Math.sin(angle) * 105
       );
+    }
+    if (!gameState.settings.reduceMotion) {
+      this.tweens.add({
+        targets: portalDecors,
+        angle: 360,
+        duration: 40000,
+        repeat: -1,
+        ease: "Linear"
+      });
     }
 
     const lamps = [
@@ -275,7 +369,17 @@ export class WorldScene extends Phaser.Scene {
         radius: 96,
         label: copy.curator,
         color: 0x1f8f82,
-        onInteract: () => this.showDialogue(this.getCuratorLines())
+        onInteract: () => this.showDialogue(this.getNpcLines("curator"))
+      },
+      {
+        id: "boatman",
+        kind: "npc",
+        x: 720,
+        y: 480,
+        radius: 96,
+        label: copy.boatman,
+        color: 0xd1a95d,
+        onInteract: () => this.showDialogue(this.getNpcLines("boatman"))
       },
       {
         id: "jigsaw",
@@ -372,34 +476,36 @@ export class WorldScene extends Phaser.Scene {
     this.prompt = this.add.container(640, 548, [panel, this.promptText]).setDepth(40).setAlpha(0);
   }
 
-  private getCuratorLines() {
+  private getNpcLines(role: "curator" | "boatman") {
     const copy = worldCopy[gameState.settings.locale];
     if (gameState.museum.complete) {
-      return copy.curatorMuseumDone;
+      return copy[`${role}MuseumDone`];
     }
     if (gameState.flags.rhythm) {
-      return copy.curatorRitualDone;
+      return copy[`${role}RitualDone`];
     }
     if (completedPuzzleCount() >= 2) {
-      return copy.curatorReadyRitual;
+      return copy[`${role}ReadyRitual`];
     }
     if (completedPuzzleCount() === 1) {
-      return copy.curatorOnePuzzle;
+      return copy[`${role}OnePuzzle`];
     }
-    return copy.curatorStart;
+    return copy[`${role}Start`];
   }
 
   private bindVirtualControls() {
     this.virtualMoveHandler = (event: Event) => {
       if (isUiLocked()) {
-        this.virtualMove = { x: 0, y: 0 };
+        this.virtualMove.x = 0;
+        this.virtualMove.y = 0;
         return;
       }
       const detail = (event as CustomEvent<{ x: number; y: number }>).detail;
-      this.virtualMove = detail ?? { x: 0, y: 0 };
+      this.virtualMove.x = detail?.x ?? 0;
+      this.virtualMove.y = detail?.y ?? 0;
     };
     this.virtualActionHandler = () => {
-      if (isUiLocked()) {
+      if (isUiLocked() || gameState.paused) {
         return;
       }
       if (this.activeDialogue) {
@@ -410,7 +516,7 @@ export class WorldScene extends Phaser.Scene {
     };
     window.addEventListener("lcw:virtual-move", this.virtualMoveHandler);
     window.addEventListener("lcw:virtual-action", this.virtualActionHandler);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    onSceneTeardown(this, () => {
       if (this.virtualMoveHandler) {
         window.removeEventListener("lcw:virtual-move", this.virtualMoveHandler);
       }
@@ -452,7 +558,25 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private getNearest() {
-    return this.interactables.find((item) => item.isNear(this.player.x, this.player.y));
+    // Pick the closest in-range interactable so keyboard and click targeting agree.
+    let best: NPC | undefined;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const item of this.interactables) {
+      if (!item.isNear(this.player.x, this.player.y)) {
+        continue;
+      }
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        item.config.x,
+        item.config.y
+      );
+      if (distance < bestDistance) {
+        best = item;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 
   private getGuidedInteractableId() {
@@ -501,82 +625,23 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private showDialogue(lines: string[]) {
-    const copy = worldCopy[gameState.settings.locale];
-    const hasPortrait = lines[0]?.startsWith(`${copy.curator}:`);
     this.activeDialogue = {
       lines,
-      index: 0,
-      box: this.createDialogueBox(lines[0], hasPortrait)
+      index: 0
     };
+    // update() stops running while dialogue is open, so clear the focus
+    // highlights and interaction prompt here or they linger under the box.
+    this.prompt.setAlpha(0);
+    this.nearestId = "";
+    for (const item of this.interactables) {
+      item.setFocus(false);
+    }
+    if (this.onboardingContainer) {
+      this.onboardingContainer.setVisible(false);
+    }
+    // Set first dialogue line
     gameState.dialogue = lines[0];
     emitGameState("dialogue");
-  }
-
-  private createDialogueBox(text: string, hasPortrait: boolean) {
-    const box = this.add.container(640, 578).setDepth(50);
-    const panel = this.add.rectangle(0, 0, 900, 118, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6);
-    const innerBorder = this.add.rectangle(0, 0, 894, 112, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24);
-
-    const match = text.match(/^([^：:]+)[：:]([\s\S]+)$/);
-    let speakerText = "";
-    let messageText = text;
-    if (match) {
-      speakerText = match[1].trim();
-      messageText = match[2].trim();
-    }
-
-    const lineX = hasPortrait ? -310 : -410;
-    const wrapWidth = hasPortrait ? 690 : 820;
-    const line = this.add.text(lineX, -28, messageText, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "21px",
-      color: "#fff4d6",
-      wordWrap: { width: wrapWidth }
-    });
-
-    const hint = this.add.text(410, 34, formatBinding(gameState.settings.bindings.action), {
-      fontFamily: "Georgia, serif",
-      fontSize: "15px",
-      color: "#d1a95d"
-    }).setOrigin(1, 0.5);
-
-    const badgeLabel = this.add.text(0, 0, "", {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "14px",
-      fontStyle: "bold",
-      color: "#ffd685"
-    }).setOrigin(0.5);
-    const badgeBg = this.add.rectangle(0, 0, 90, 26, 0x091412, 0.95).setStrokeStyle(1.5, 0xd1a95d, 0.68);
-    const badgeContainer = this.add.container(0, 0, [badgeBg, badgeLabel]).setAlpha(0);
-
-    if (speakerText) {
-      badgeLabel.setText(speakerText);
-      const badgeWidth = Math.max(90, badgeLabel.width + 24);
-      badgeBg.setSize(badgeWidth, 26);
-      badgeContainer.setPosition(-450 + badgeWidth / 2 + 16, -59);
-      badgeContainer.setAlpha(1);
-    }
-
-    if (hasPortrait) {
-      const portraitFrame = this.add.rectangle(-390, 0, 86, 86, 0x111817, 0.86);
-      portraitFrame.setStrokeStyle(1, 0xd1a95d, 0.48);
-      const portrait = this.add.image(-390, 0, "curator-lin").setDisplaySize(78, 78);
-      box.add([panel, innerBorder, portraitFrame, portrait, line, hint, badgeContainer]);
-    } else {
-      box.add([panel, innerBorder, line, hint, badgeContainer]);
-    }
-
-    box.setData("line", line);
-    box.setData("badgeLabel", badgeLabel);
-    box.setData("badgeBg", badgeBg);
-    box.setData("badgeContainer", badgeContainer);
-
-    box.setInteractive(
-      new Phaser.Geom.Rectangle(-450, -59, 900, 118),
-      Phaser.Geom.Rectangle.Contains
-    );
-    box.on("pointerdown", () => this.advanceDialogue());
-    return box;
   }
 
   private advanceDialogue() {
@@ -590,42 +655,55 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     const text = this.activeDialogue.lines[this.activeDialogue.index];
-
-    // Parse speaker name
-    const match = text.match(/^([^：:]+)[：:]([\s\S]+)$/);
-    let speakerText = "";
-    let messageText = text;
-    if (match) {
-      speakerText = match[1].trim();
-      messageText = match[2].trim();
-    }
-
-    const line = this.activeDialogue.box.getData("line") as Phaser.GameObjects.Text;
-    line.setText(messageText);
-
-    const badgeLabel = this.activeDialogue.box.getData("badgeLabel") as Phaser.GameObjects.Text | undefined;
-    const badgeBg = this.activeDialogue.box.getData("badgeBg") as Phaser.GameObjects.Rectangle | undefined;
-    const badgeContainer = this.activeDialogue.box.getData("badgeContainer") as Phaser.GameObjects.Container | undefined;
-
-    if (badgeLabel && badgeBg && badgeContainer) {
-      if (speakerText) {
-        badgeLabel.setText(speakerText);
-        const badgeWidth = Math.max(90, badgeLabel.width + 24);
-        badgeBg.setSize(badgeWidth, 26);
-        badgeContainer.setPosition(-450 + badgeWidth / 2 + 16, -59);
-        badgeContainer.setAlpha(1);
-      } else {
-        badgeContainer.setAlpha(0);
-      }
-    }
-
     gameState.dialogue = text;
     emitGameState("dialogue");
   }
 
   private closeDialogue() {
-    this.activeDialogue?.box.destroy();
     this.activeDialogue = null;
+    if (this.onboardingContainer) {
+      this.onboardingContainer.setVisible(true);
+    }
+    // Clear dialogue so React dialogue box fades out cleanly
+    gameState.dialogue = "";
     emitGameState("world");
+  }
+
+  private createOnboardingGuide() {
+    const isTouch = this.sys.game.device.os.android || this.sys.game.device.os.iOS || ('ontouchstart' in window);
+    const locale = gameState.settings.locale;
+    const textStr = isTouch
+      ? (locale === "en" ? "Drag Joystick to Move • Tap to Interact" : "滑动摇杆移动 • 点击角色/物品交互")
+      : (locale === "en" ? "WASD / ➔ to Move • Space / Click to Interact" : "WASD / 方向键 移动 • 空格 / 点击 交互");
+
+    const container = this.add.container(230, 485).setDepth(35);
+    
+    const bg = this.add.rectangle(0, 0, locale === "en" ? 340 : 290, 36, 0x0c1b18, 0.92)
+      .setStrokeStyle(1.5, 0xd1a95d, 0.72);
+    
+    const arrow = this.add.triangle(0, 23, -6, -6, 6, -6, 0, 0, 0x0c1b18, 0.92)
+      .setStrokeStyle(1.5, 0xd1a95d, 0.72);
+    const cover = this.add.rectangle(0, 17, 10, 2, 0x0c1b18, 1);
+
+    const text = this.add.text(0, 0, textStr, {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "12px",
+      fontStyle: "bold",
+      color: "#fff4d6"
+    }).setOrigin(0.5);
+
+    container.add([bg, arrow, cover, text]);
+    this.onboardingContainer = container;
+
+    if (!gameState.settings.reduceMotion) {
+      this.tweens.add({
+        targets: container,
+        y: 477,
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+    }
   }
 }

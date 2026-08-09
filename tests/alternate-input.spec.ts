@@ -1,53 +1,13 @@
-import { expect, type Page, test } from "@playwright/test";
-
-async function gamePoint(page: Page, gameX: number, gameY: number) {
-  const box = await page.locator("canvas").boundingBox();
-  if (!box) {
-    throw new Error("Game canvas is not visible");
-  }
-  return {
-    x: box.x + (box.width * gameX) / 1280,
-    y: box.y + (box.height * gameY) / 720
-  };
-}
-
-async function clickGame(page: Page, gameX: number, gameY: number) {
-  const point = await gamePoint(page, gameX, gameY);
-  await page.mouse.click(point.x, point.y);
-}
-
-async function clickUntilScene(page: Page, gameX: number, gameY: number, name: string) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await clickGame(page, gameX, gameY);
-    try {
-      await page.getByLabel("进度").getByText(name).waitFor({ state: "visible", timeout: 2500 });
-      return;
-    } catch {
-      await page.waitForTimeout(300);
-    }
-  }
-  await expect(page.getByLabel("进度").getByText(name)).toBeVisible();
-}
+import { expect, test } from "@playwright/test";
+import { clickGame, clickUntilScene, seedCompletedSave } from "./helpers";
 
 test("places museum artifacts without drag input", async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem(
-      "lcw:save:v2",
-      JSON.stringify({
-        version: 2,
-        inventoryIds: ["badang-stone", "rune-plaque", "harbor-seal", "spirit-chime"],
-        flags: { jigsaw: true, runes: true, lock: true, rhythm: true },
-        museum: { placements: {}, visitors: 0, complete: false },
-        dialogue: "四件文物已经备齐，等待入柜。",
-        easyMode: true,
-        settings: { muted: true, volume: 0.4, reduceMotion: true, locale: "zh" }
-      })
-    );
-  });
+  test.slow();
+  await seedCompletedSave(page);
 
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
-  await expect(page.locator(".artifact-pill")).toHaveCount(4);
+  await expect(page.locator(".artifact-pill")).toHaveCount(4, { timeout: 15000 });
   await page.waitForTimeout(1000);
 
   await clickUntilScene(page, 185, 330, "博物馆");

@@ -1,21 +1,20 @@
 import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
   BookOpen,
   Check,
   Circle,
   Gauge,
+  Lightbulb,
   Pause,
+  Play,
   RotateCcw,
   Settings,
+  Share2,
   Trash2,
   Volume2,
   VolumeX,
   X
 } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { getCodexEntries, getEndingCopy } from "@/data/codex";
 import { formatCopy, objectiveCopy, sceneName, sceneCopy, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
@@ -235,6 +234,26 @@ function guidanceFor(hud: HudState, ui: ShellUi) {
   return ui.guidance.lock;
 }
 
+function hintFor(hud: HudState, ui: ShellUi) {
+  const scene = hud.scene;
+  if (scene === sceneCopy.zh.jigsaw || scene === sceneCopy.en.jigsaw) {
+    return ui.hints.jigsaw;
+  }
+  if (scene === sceneCopy.zh.runes || scene === sceneCopy.en.runes) {
+    return ui.hints.runes;
+  }
+  if (scene === sceneCopy.zh.lock || scene === sceneCopy.en.lock) {
+    return ui.hints.lock;
+  }
+  if (scene === sceneCopy.zh.rhythm || scene === sceneCopy.en.rhythm) {
+    return ui.hints.rhythm;
+  }
+  if (scene === sceneCopy.zh.museum || scene === sceneCopy.en.museum) {
+    return ui.hints.museum;
+  }
+  return guidanceFor(hud, ui);
+}
+
 function isLocalSecureOrigin() {
   return window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
 }
@@ -252,6 +271,48 @@ function isDevPwaOptIn() {
 
 function shouldUseServiceWorker() {
   return process.env.NODE_ENV === "production" || isDevPwaOptIn();
+}
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Trap keyboard focus inside an open dialog: focus its first control on open,
+// cycle Tab within it, and hand focus back to the opener on close.
+function useModalFocus(open: boolean, containerRef: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!open || !container) {
+      return;
+    }
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusables = () => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+    focusables()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") {
+        return;
+      }
+      const items = focusables();
+      if (items.length === 0) {
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const inside = active instanceof HTMLElement && container.contains(active);
+      if (event.shiftKey && (active === first || !inside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !inside)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    container.addEventListener("keydown", onKeyDown);
+    return () => {
+      container.removeEventListener("keydown", onKeyDown);
+      previous?.focus();
+    };
+  }, [open, containerRef]);
 }
 
 async function loadGameBootstrap() {
@@ -291,31 +352,341 @@ async function clearDevServiceWorkers() {
   return hadController;
 }
 
+const TouchJoystick = memo(function TouchJoystick({ onMove, onEnd }: { onMove: (x: number, y: number) => void; onEnd: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+  // Drag state lives in refs and the handle moves via direct style writes, so
+  // a 60-120 Hz touchmove stream never re-renders the component.
+  const touchStateRef = useRef({ active: false, startX: 0, startY: 0 });
+
+  const setHandleOffset = (x: number, y: number) => {
+    if (handleRef.current) {
+      handleRef.current.style.transform = `translate(${x}px, ${y}px)`;
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    touchStateRef.current = { active: true, startX: centerX, startY: centerY };
+    setHandleOffset(touch.clientX - centerX, touch.clientY - centerY);
+    updateMove(touch.clientX - centerX, touch.clientY - centerY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touchState = touchStateRef.current;
+    if (!touchState.active) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchState.startX;
+    const dy = touch.clientY - touchState.startY;
+
+    const maxRadius = 45;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    let clampedX = dx;
+    let clampedY = dy;
+    if (distance > maxRadius) {
+      clampedX = (dx / distance) * maxRadius;
+      clampedY = (dy / distance) * maxRadius;
+    }
+
+    setHandleOffset(clampedX, clampedY);
+    updateMove(clampedX, clampedY);
+  };
+
+  const handleTouchEnd = () => {
+    touchStateRef.current = { active: false, startX: 0, startY: 0 };
+    setHandleOffset(0, 0);
+    onEnd();
+  };
+
+  const updateMove = (dx: number, dy: number) => {
+    const threshold = 12;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < threshold) {
+      onMove(0, 0);
+      return;
+    }
+    let vx = 0;
+    let vy = 0;
+    
+    const angle = Math.atan2(dy, dx);
+    const deg = (angle * 180) / Math.PI;
+    
+    if (deg >= -22.5 && deg < 22.5) {
+      vx = 1;
+    } else if (deg >= 22.5 && deg < 67.5) {
+      vx = 1;
+      vy = 1;
+    } else if (deg >= 67.5 && deg < 112.5) {
+      vy = 1;
+    } else if (deg >= 112.5 && deg < 157.5) {
+      vx = -1;
+      vy = 1;
+    } else if (deg >= 157.5 || deg < -157.5) {
+      vx = -1;
+    } else if (deg >= -157.5 && deg < -112.5) {
+      vx = -1;
+      vy = -1;
+    } else if (deg >= -112.5 && deg < -67.5) {
+      vy = -1;
+    } else if (deg >= -67.5 && deg < -22.5) {
+      vx = 1;
+      vy = -1;
+    }
+    
+    onMove(vx, vy);
+  };
+
+  return (
+    <div
+      className="joystick-container"
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
+      <div className="joystick-base">
+        <div className="joystick-handle" ref={handleRef} />
+      </div>
+    </div>
+  );
+});
+
+const hostId = "lion-city-game-host";
+
+const stageStyle = {
+  "--lcw-loading-bg": `url("${assetPath("/assets/images/lion-city-ink-bg.webp")}")`,
+  "--lcw-artifact-sheet": `url("${assetPath("/assets/images/artifact-sheet.webp")}")`
+} as CSSProperties;
+
 export function GameShell() {
-  const hostId = useMemo(() => "lion-city-game-host", []);
   const gameRef = useRef<{ destroy: () => void } | null>(null);
   const [hud, setHud] = useState<HudState>(initialHud);
   const [paused, setPaused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [codexOpen, setCodexOpen] = useState(false);
+  const [codexSearch, setCodexSearch] = useState("");
+  const [codexFilter, setCodexFilter] = useState<"all" | "unlocked" | "locked">("all");
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
   const [loading, setLoading] = useState({ ready: false, progress: minimumLoadingProgress });
   const [listeningBinding, setListeningBinding] = useState<ControlBindingId | null>(null);
   const [bindingNotice, setBindingNotice] = useState("");
   const [updateReady, setUpdateReady] = useState(false);
+  const swRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const ui = shellCopy[hud.settings.locale];
-  const uiLocked = settingsOpen || codexOpen || resetConfirm || listeningBinding !== null;
-  const stageStyle = {
-    "--lcw-loading-bg": `url("${assetPath("/assets/images/lion-city-ink-bg.webp")}")`,
-    "--lcw-artifact-sheet": `url("${assetPath("/assets/images/artifact-sheet.webp")}")`
-  } as CSSProperties;
+
+  const [isTyping, setIsTyping] = useState(false);
+  // The typewriter writes straight into this node; routing the 50 Hz tick
+  // through state would re-render the whole shell for every character.
+  const dialogueTextRef = useRef<HTMLParagraphElement | null>(null);
+  const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const settingsPanelRef = useRef<HTMLElement | null>(null);
+  const codexPanelRef = useRef<HTMLElement | null>(null);
+  const resetPanelRef = useRef<HTMLElement | null>(null);
+  const importPanelRef = useRef<HTMLElement | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string; visible: boolean; isAchievement?: boolean }>({
+    message: "",
+    visible: false,
+    isAchievement: false
+  });
+
+  // Queue toasts so simultaneous unlocks display one after another instead of
+  // the later one clobbering the earlier one.
+  const toastQueueRef = useRef<Array<{ message: string; isAchievement: boolean }>>([]);
+  const [toastTick, setToastTick] = useState(0);
+
+  const enqueueToast = (message: string, isAchievement: boolean) => {
+    toastQueueRef.current.push({ message, isAchievement });
+    setToastTick((tick) => tick + 1);
+  };
+
+  const triggerToast = (message: string) => {
+    enqueueToast(message, false);
+  };
+
+  const triggerAchievementToast = (message: string) => {
+    enqueueToast(message, true);
+  };
+
+  const earnedAchievementsRef = useRef<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!loading.ready) return;
+
+    const currentAchievements = {
+      repaired: hud.museumComplete,
+      perfect: hud.visitors >= 200,
+      ritual: hud.ritualComplete,
+      fullSet: hud.inventory.length >= 4
+    };
+
+    const isFirstRun = Object.keys(earnedAchievementsRef.current).length === 0;
+
+    for (const [key, active] of Object.entries(currentAchievements)) {
+      if (active) {
+        if (!isFirstRun && !earnedAchievementsRef.current[key]) {
+          let label = "";
+          if (key === "repaired") label = ui.achievementLabels.repaired;
+          else if (key === "perfect") label = ui.achievementLabels.perfect;
+          else if (key === "ritual") label = ui.achievementLabels.ritual;
+          else if (key === "fullSet") label = ui.achievementLabels.fullSet;
+          triggerAchievementToast(label);
+        }
+        earnedAchievementsRef.current[key] = true;
+      } else {
+        earnedAchievementsRef.current[key] = false;
+      }
+    }
+  }, [loading.ready, hud.museumComplete, hud.visitors, hud.ritualComplete, hud.inventory.length, ui]);
+
+  useEffect(() => {
+    if (toast.visible) return;
+    const next = toastQueueRef.current.shift();
+    if (next) {
+      if (next.isAchievement) {
+        window.dispatchEvent(new CustomEvent("lcw:audio-achievement"));
+      }
+      setToast({ ...next, visible: true });
+    }
+  }, [toastTick, toast.visible]);
+
+  useEffect(() => {
+    if (!toast.visible) return;
+    const timer = setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [toast.visible, toast.message]);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredPrompt(event);
+    };
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      triggerToast(ui.installSuccess);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, [ui.installSuccess]);
+
+  const resumeAudioContext = () => {
+    window.dispatchEvent(new CustomEvent("lcw:audio-resume"));
+  };
+
+  const handleExportSave = async () => {
+    resumeAudioContext();
+    try {
+      const raw = window.localStorage.getItem("lcw:save:v2");
+      if (!raw) {
+        triggerToast(ui.saveImportInvalid);
+        return;
+      }
+      const base64 = window.btoa(encodeURIComponent(raw));
+      await navigator.clipboard.writeText(base64);
+      triggerToast(ui.saveExported);
+    } catch {
+      triggerToast(
+        hud.settings.locale === "zh" ? "复制失败，请重试" : "Copy failed, please try again"
+      );
+    }
+  };
+
+  const handleImportSave = () => {
+    resumeAudioContext();
+    if (!importText.trim()) {
+      triggerToast(ui.saveImportInvalid);
+      return;
+    }
+    window.dispatchEvent(new CustomEvent("lcw:save-import", { detail: importText.trim() }));
+  };
+
+  useEffect(() => {
+    const handleImportResult = (event: Event) => {
+      const success = (event as CustomEvent<boolean>).detail;
+      if (success) {
+        triggerToast(ui.saveImported);
+        setImportOpen(false);
+        setImportText("");
+      } else {
+        triggerToast(ui.saveImportInvalid);
+      }
+    };
+    window.addEventListener("lcw:save-import-result", handleImportResult);
+    return () => {
+      window.removeEventListener("lcw:save-import-result", handleImportResult);
+    };
+  }, [ui]);
+
+  const handleInstallGame = async () => {
+    if (!deferredPrompt) return;
+    // beforeinstallprompt events are single-use: clear it up front so a
+    // second click can't call prompt() again and throw.
+    const prompt = deferredPrompt;
+    setDeferredPrompt(null);
+    try {
+      prompt.prompt();
+      await prompt.userChoice;
+    } catch {
+      // Prompt already consumed or blocked; nothing to recover.
+    }
+  };
+
+  const handleShareExhibition = async () => {
+    resumeAudioContext();
+    const isZh = hud.settings.locale === "zh";
+    const title = isZh ? "🎮 《狮城秘语 | Lion City Whispers》策展成就报告 🎮" : "🎮 *Lion City Whispers* Curation Exhibition Report 🎮";
+    const content = isZh
+      ? `我成功完成了新加坡博物馆展览策划！\n✨ 修复文物: ${hud.completedPuzzles}/3\n🌟 吸引游客: ${hud.visitors} 人\n🔮 灵界仪式: 已圆满净化\n🏆 获得称号: ${hud.visitors >= 200 ? "特级策展人" : "资深馆长"}\n快来加入我的修复与解谜之旅，唤醒狮城的古老记忆吧！\n👉 游玩链接: https://lunora-gather.github.io/LionCityWhispers/`
+      : `I have successfully curated the exhibition at the Singapore Museum!\n✨ Artifacts Restored: ${hud.completedPuzzles}/3\n🌟 Visitors Attracted: ${hud.visitors}\n🔮 Spiritual Rite: Barrier Purified\n🏆 Curation Level: ${hud.visitors >= 200 ? "Grand Curator" : "Master Curator"}\nJoin my journey of restoration and narrative puzzles to revive the Lion City's memories!\n👉 Play Now: https://lunora-gather.github.io/LionCityWhispers/`;
+
+    const shareText = `${title}\n\n${content}`;
+    try {
+      await navigator.clipboard.writeText(shareText);
+      triggerToast(ui.shareCopied);
+    } catch {
+      triggerToast(isZh ? "复制失败，请手动分享" : "Failed to copy, please share manually");
+    }
+  };
+  const uiLocked =
+    settingsOpen || codexOpen || resetConfirm || importOpen || listeningBinding !== null;
+
+  useModalFocus(settingsOpen, settingsPanelRef);
+  useModalFocus(codexOpen, codexPanelRef);
+  useModalFocus(resetConfirm, resetPanelRef);
+  useModalFocus(importOpen, importPanelRef);
 
   useEffect(() => {
     let active = true;
 
     const onState = (event: Event) => {
       const custom = event as CustomEvent<HudState>;
-      setHud((current) => ({ ...current, ...custom.detail }));
+      setHud((current) => {
+        // The emitter keeps object identities stable when nothing changed, so
+        // a shallow comparison lets idle heartbeat emits skip the re-render.
+        const detail = custom.detail;
+        for (const key of Object.keys(detail) as Array<keyof HudState>) {
+          if (detail[key] !== current[key]) {
+            return { ...current, ...detail };
+          }
+        }
+        return current;
+      });
     };
     const onLoading = (event: Event) => {
       const detail = (event as CustomEvent<{ ready?: boolean; progress?: number }>).detail ?? {};
@@ -362,7 +733,7 @@ export function GameShell() {
       gameRef.current?.destroy();
       gameRef.current = null;
     };
-  }, [hostId]);
+  }, []);
 
   useEffect(() => {
     const closePanels = (event: KeyboardEvent) => {
@@ -370,7 +741,11 @@ export function GameShell() {
         setListeningBinding(null);
         setSettingsOpen(false);
         setCodexOpen(false);
+        setCodexSearch("");
+        setCodexFilter("all");
         setResetConfirm(false);
+        setImportOpen(false);
+        setImportText("");
       }
     };
     window.addEventListener("keydown", closePanels);
@@ -379,10 +754,15 @@ export function GameShell() {
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("lcw:ui-lock", { detail: uiLocked }));
+  }, [uiLocked]);
+
+  useEffect(() => {
+    // Release the lock only on true unmount; a per-change cleanup would emit a
+    // spurious `false` before every real value and flap the Phaser side.
     return () => {
       window.dispatchEvent(new CustomEvent("lcw:ui-lock", { detail: false }));
     };
-  }, [uiLocked]);
+  }, []);
 
   useEffect(() => {
     if (!listeningBinding) {
@@ -394,6 +774,10 @@ export function GameShell() {
       const code = event.code || event.key;
       if (!code || code === "Escape") {
         setListeningBinding(null);
+        return;
+      }
+      // Bare modifiers and Tab make unusable bindings; keep listening instead.
+      if (/^(Shift|Control|Alt|Meta)(Left|Right)?$/.test(code) || code === "Tab") {
         return;
       }
       const group = listeningBinding.startsWith("rhythm") ? rhythmBindingOrder : movementBindingOrder;
@@ -452,39 +836,69 @@ export function GameShell() {
         urls: [window.location.href, ...urls]
       });
     };
+    let active = true;
+    const warmTimers: number[] = [];
+    const scheduleWarm = () => {
+      warmTimers.push(window.setTimeout(() => {
+        if (active) {
+          warmRuntimeCache();
+        }
+      }, 800));
+    };
     let hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshing = false;
     const onControllerChange = () => {
       if (hadController) {
-        setUpdateReady(true);
+        // The waiting worker only activates after the user accepts the update
+        // prompt (SKIP_WAITING), so reload once to pick up the new assets.
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+        return;
       }
       hadController = true;
-      window.setTimeout(warmRuntimeCache, 800);
+      scheduleWarm();
+    };
+    const onUpdateFound = () => {
+      const registration = swRegistrationRef.current;
+      const worker = registration?.installing;
+      worker?.addEventListener("statechange", () => {
+        if (active && worker.state === "installed" && navigator.serviceWorker.controller) {
+          setUpdateReady(true);
+        }
+      });
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
     navigator.serviceWorker.register(assetPath("/sw.js")).then((registration) => {
-      registration.addEventListener("updatefound", () => {
-        const worker = registration.installing;
-        worker?.addEventListener("statechange", () => {
-          if (worker.state === "installed" && navigator.serviceWorker.controller) {
-            setUpdateReady(true);
-          }
-        });
+      if (!active) {
+        return;
+      }
+      swRegistrationRef.current = registration;
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        setUpdateReady(true);
+      }
+      registration.addEventListener("updatefound", onUpdateFound);
+      navigator.serviceWorker.ready.then(() => {
+        if (active) {
+          scheduleWarm();
+        }
       });
-      navigator.serviceWorker.ready.then(() => window.setTimeout(warmRuntimeCache, 800));
     }).catch(() => {
       // Offline caching is optional; the game remains playable when registration is blocked.
     });
-    return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+    return () => {
+      active = false;
+      warmTimers.forEach((id) => window.clearTimeout(id));
+      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+      swRegistrationRef.current?.removeEventListener("updatefound", onUpdateFound);
+    };
   }, []);
 
   useEffect(() => {
     const nextTitle =
       hud.settings.locale === "zh" ? `${ui.brand} | ${ui.subtitle}` : ui.brand;
     document.title = nextTitle;
-    const titleTimer = window.setTimeout(() => {
-      document.title = nextTitle;
-    }, 0);
-    return () => window.clearTimeout(titleTimer);
   }, [hud.settings.locale, ui.brand, ui.subtitle]);
 
   const togglePause = () => {
@@ -493,9 +907,10 @@ export function GameShell() {
     window.dispatchEvent(new CustomEvent("lcw:pause", { detail: next }));
   };
 
-  const sendMove = (x: number, y: number) => {
+  // Stable identities so the memo'd TouchJoystick never re-renders with the shell.
+  const sendMove = useCallback((x: number, y: number) => {
     window.dispatchEvent(new CustomEvent("lcw:virtual-move", { detail: { x, y } }));
-  };
+  }, []);
 
   const sendAction = () => {
     window.dispatchEvent(new CustomEvent("lcw:virtual-action"));
@@ -505,21 +920,33 @@ export function GameShell() {
     window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: lane }));
   };
 
-  const clearMove = () => sendMove(0, 0);
+  const clearMove = useCallback(() => sendMove(0, 0), [sendMove]);
   const toggleAudio = () => {
+    resumeAudioContext();
     window.dispatchEvent(new CustomEvent("lcw:audio-toggle"));
   };
 
   const updateSettings = (detail: Partial<HudState["settings"]>) => {
+    resumeAudioContext();
     window.dispatchEvent(new CustomEvent("lcw:settings", { detail }));
   };
 
   const resetBindings = () => updateSettings({ bindings: defaultBindings });
-  const applyUpdate = () => window.location.reload();
+  const applyUpdate = () => {
+    const waiting = swRegistrationRef.current?.waiting;
+    if (waiting) {
+      // The controllerchange listener reloads once the new worker takes over.
+      waiting.postMessage({ type: "SKIP_WAITING" });
+      return;
+    }
+    window.location.reload();
+  };
 
   const resetGame = () => {
+    resumeAudioContext();
     setPaused(false);
     setResetConfirm(false);
+    earnedAchievementsRef.current = {};
     window.dispatchEvent(new CustomEvent("lcw:reset"));
   };
 
@@ -529,6 +956,30 @@ export function GameShell() {
   );
   const endingCopy = useMemo(() => getEndingCopy(hud.settings.locale), [hud.settings.locale]);
   const unlockedIds = useMemo(() => new Set(hud.inventory.map((item) => item.id)), [hud.inventory]);
+  const filteredEntries = useMemo(() => {
+    const query = codexSearch.trim().toLowerCase();
+    return codexEntries.filter((entry) => {
+      const unlocked = unlockedIds.has(entry.id);
+      
+      if (codexFilter === "unlocked" && !unlocked) return false;
+      if (codexFilter === "locked" && unlocked) return false;
+      
+      if (query) {
+        const nameMatch = unlocked && entry.name ? entry.name.toLowerCase().includes(query) : false;
+        const eraMatch = unlocked && entry.era ? entry.era.toLowerCase().includes(query) : false;
+        const clueMatch = entry.clue ? entry.clue.toLowerCase().includes(query) : false;
+        const historyMatch = unlocked && entry.history ? entry.history.toLowerCase().includes(query) : false;
+        
+        const lockedNameMatch = !unlocked && ui.lockedArtifact.toLowerCase().includes(query);
+        const lockedEraMatch = !unlocked && ui.lockedEra.toLowerCase().includes(query);
+        const lockedClueMatch = !unlocked && ui.lockedClue.toLowerCase().includes(query);
+        
+        return nameMatch || eraMatch || clueMatch || historyMatch || lockedNameMatch || lockedEraMatch || lockedClueMatch;
+      }
+      
+      return true;
+    });
+  }, [codexEntries, unlockedIds, codexFilter, codexSearch, ui]);
   const routeNodes = useMemo(() => {
     const hasBadangStone = unlockedIds.has("badang-stone");
     const hasRunePlaque = unlockedIds.has("rune-plaque");
@@ -586,12 +1037,23 @@ export function GameShell() {
     { id: "moveRight", label: ui.moveRightBinding },
     { id: "action", label: ui.actionBinding }
   ];
-  const isRitualScene =
-    hud.scene === shellCopy.zh.ritual || hud.scene === shellCopy.en.ritual;
-
-  const isDialogueActive = useMemo(() => {
-    return hud.scene === sceneCopy.zh.dialogue || hud.scene === sceneCopy.en.dialogue;
-  }, [hud.scene]);
+  // hud.scene comes from sceneCopy (sceneName), so compare against sceneCopy —
+  // matching shellCopy.ritual only worked while the two strings coincided.
+  // While paused the label becomes "paused"; keep the last real answer so the
+  // rhythm touch pads don't swap to the joystick mid-ritual.
+  const isPausedLabel =
+    hud.scene === sceneCopy.zh.paused || hud.scene === sceneCopy.en.paused;
+  const wasRitualSceneRef = useRef(false);
+  const isRitualScene = isPausedLabel
+    ? wasRitualSceneRef.current
+    : hud.scene === sceneCopy.zh.rhythm || hud.scene === sceneCopy.en.rhythm;
+  useEffect(() => {
+    if (!isPausedLabel) {
+      wasRitualSceneRef.current = isRitualScene;
+    }
+  }, [isPausedLabel, isRitualScene]);
+  const isOpeningScene =
+    hud.scene === sceneCopy.zh.boot || hud.scene === sceneCopy.en.boot;
 
   const isPuzzleOrRitualActive = useMemo(() => {
     const s = hud.scene;
@@ -603,11 +1065,14 @@ export function GameShell() {
       s === sceneCopy.zh.lock ||
       s === sceneCopy.en.lock ||
       s === sceneCopy.zh.rhythm ||
-      s === sceneCopy.en.rhythm
+      s === sceneCopy.en.rhythm ||
+      s === sceneCopy.zh.museum ||
+      s === sceneCopy.en.museum
     );
   }, [hud.scene]);
 
   const currentGuidance = guidanceFor(hud, ui);
+  const currentHint = hintFor(hud, ui);
   const parsedDialogue = useMemo(() => {
     if (!hud.dialogue) return { speaker: "", message: "" };
     const match = hud.dialogue.match(/^([^：:]+)[：:]([\s\S]+)$/);
@@ -616,6 +1081,63 @@ export function GameShell() {
     }
     return { speaker: "", message: hud.dialogue };
   }, [hud.dialogue]);
+
+  // Typewriter effect for dialogue messages
+  useEffect(() => {
+    const setText = (value: string) => {
+      if (dialogueTextRef.current) {
+        dialogueTextRef.current.textContent = value;
+      }
+    };
+    const msg = parsedDialogue.message;
+    if (!msg) {
+      setText("");
+      setIsTyping(false);
+      return;
+    }
+
+    const isFast = hud.settings.reduceMotion || (typeof window !== "undefined" && window.navigator.webdriver);
+    if (isFast) {
+      setText(msg);
+      setIsTyping(false);
+      return;
+    }
+
+    setText("");
+    setIsTyping(true);
+
+    let index = 0;
+    const interval = setInterval(() => {
+      index += 1;
+      setText(msg.slice(0, index));
+      if (index >= msg.length) {
+        setIsTyping(false);
+        clearInterval(interval);
+      }
+    }, 20);
+    typingIntervalRef.current = interval;
+
+    return () => {
+      clearInterval(interval);
+      typingIntervalRef.current = null;
+    };
+  }, [parsedDialogue.message, hud.settings.reduceMotion]);
+
+  const handleDialogueClick = () => {
+    if (isTyping) {
+      // Stop the ticker too, or it keeps re-truncating the skipped text.
+      if (typingIntervalRef.current !== null) {
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
+      if (dialogueTextRef.current) {
+        dialogueTextRef.current.textContent = parsedDialogue.message;
+      }
+      setIsTyping(false);
+    } else {
+      window.dispatchEvent(new CustomEvent("lcw:advance-dialogue"));
+    }
+  };
 
   const bindingLabel = (id: ControlBindingId) => {
     const movement = movementBindings.find((binding) => binding.id === id);
@@ -632,7 +1154,11 @@ export function GameShell() {
   };
 
   return (
-    <div className={`shell ${hud.settings.reduceMotion ? "reduced-motion" : ""}`}>
+    <div
+      className={`shell ${isOpeningScene ? "is-opening" : "is-playing"} ${
+        hud.settings.reduceMotion ? "reduced-motion" : ""
+      }`}
+    >
       <main className="stage" aria-label={ui.gameAria} style={stageStyle}>
         <div id={hostId} className="game-host" />
         {!loading.ready ? (
@@ -661,6 +1187,20 @@ export function GameShell() {
           <section className="objective" aria-live="polite">
             <span>{ui.currentObjective}</span>
             <p>{hud.objective}</p>
+            <button
+              className="hint-button"
+              type="button"
+              aria-label={ui.hintAria}
+              title={ui.hintAria}
+              onClick={() => {
+                resumeAudioContext();
+                triggerToast(currentHint);
+                window.dispatchEvent(new CustomEvent("lcw:hint"));
+              }}
+            >
+              <Lightbulb size={15} />
+              <span>{ui.hint}</span>
+            </button>
             <small>
               <b>{ui.nextStep}</b>
               {currentGuidance}
@@ -674,6 +1214,7 @@ export function GameShell() {
               aria-label={ui.codex}
               title={ui.codex}
               onClick={() => {
+                resumeAudioContext();
                 setCodexOpen(true);
                 setSettingsOpen(false);
               }}
@@ -705,14 +1246,17 @@ export function GameShell() {
               title={paused ? ui.resume : ui.pause}
               onClick={togglePause}
             >
-              <Pause size={18} />
+              {paused ? <Play size={18} /> : <Pause size={18} />}
             </button>
             <button
               className="icon-button"
               type="button"
               aria-label={ui.restart}
               title={ui.restart}
-              onClick={() => setResetConfirm(true)}
+              onClick={() => {
+                resumeAudioContext();
+                setResetConfirm(true);
+              }}
             >
               <RotateCcw size={18} />
             </button>
@@ -722,6 +1266,7 @@ export function GameShell() {
               aria-label={ui.settings}
               title={ui.settings}
               onClick={() => {
+                resumeAudioContext();
                 setSettingsOpen((current) => !current);
                 setCodexOpen(false);
               }}
@@ -799,17 +1344,35 @@ export function GameShell() {
 
         <section
           className={`hud dialogue-bar ${
-            isPuzzleOrRitualActive || isDialogueActive || !hud.dialogue
+            isPuzzleOrRitualActive || !hud.dialogue
               ? "hud-hidden-in-puzzle"
               : ""
-          }`}
-          aria-live="polite"
+          } ${isTyping ? "is-typing" : ""}`}
+          role="button"
+          tabIndex={0}
+          onClick={handleDialogueClick}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleDialogueClick();
+            }
+          }}
         >
           {parsedDialogue.speaker ? (
-            <span className="dialogue-speaker">{parsedDialogue.speaker}</span>
+            <span className="dialogue-speaker">
+              <span className="speaker-decoration"></span>
+              {parsedDialogue.speaker}
+            </span>
           ) : null}
-          <p>{parsedDialogue.message}</p>
+          <p ref={dialogueTextRef} />
+          <span className="dialogue-hint-key">SPACE</span>
         </section>
+        {/* Announce the complete line once instead of every typewriter tick. */}
+        <p className="sr-only" aria-live="polite">
+          {parsedDialogue.speaker
+            ? `${parsedDialogue.speaker}: ${parsedDialogue.message}`
+            : parsedDialogue.message}
+        </p>
 
         {updateReady ? (
           <aside className="update-banner" role="status">
@@ -830,7 +1393,40 @@ export function GameShell() {
           <aside className="completion-card" aria-label={ui.endingTitle}>
             <strong>{ui.endingTitle}</strong>
             <span>{ui.endingSummary}</span>
+            <button
+              type="button"
+              className="share-button"
+              onClick={handleShareExhibition}
+              style={{
+                marginTop: "12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                width: "100%",
+                padding: "8px 12px",
+                background: "rgba(209, 169, 93, 0.18)",
+                border: "1px solid rgba(209, 169, 93, 0.46)",
+                borderRadius: "4px",
+                color: "#fff4d6",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: "bold",
+                transition: "background 0.2s, border-color 0.2s"
+              }}
+            >
+              <Share2 size={14} />
+              {ui.shareExhibition}
+            </button>
           </aside>
+        ) : null}
+
+        {toast.visible ? (
+          <div className={`toast-notification${toast.isAchievement ? " achievement-toast" : ""}`} role="status" aria-live="polite">
+            {toast.isAchievement
+              ? `🏆 ${hud.settings.locale === "en" ? "Achievement Unlocked" : "获得新成就"}: ${toast.message}`
+              : toast.message}
+          </div>
         ) : null}
 
         <p className="sr-only" aria-live="polite">
@@ -839,7 +1435,7 @@ export function GameShell() {
         </p>
 
         {resetConfirm ? (
-          <section className="modal-backdrop" role="dialog" aria-label={ui.resetAria}>
+          <section ref={resetPanelRef} className="modal-backdrop" role="dialog" aria-modal="true" aria-label={ui.resetAria}>
             <div className="confirm-panel">
               <p>{ui.resetWarning}</p>
               <div className="panel-actions">
@@ -856,8 +1452,44 @@ export function GameShell() {
           </section>
         ) : null}
 
+        {importOpen ? (
+          <section ref={importPanelRef} className="modal-backdrop" role="dialog" aria-modal="true" aria-label={ui.importSave}>
+            <div className="confirm-panel">
+              <p>{ui.saveImportPrompt}</p>
+              <textarea
+                value={importText}
+                onChange={(event) => setImportText(event.target.value)}
+                placeholder="Paste save code here..."
+                style={{
+                  width: "100%",
+                  height: "80px",
+                  background: "rgba(7, 16, 15, 0.82)",
+                  border: "1px solid rgba(208, 168, 76, 0.48)",
+                  borderRadius: "4px",
+                  color: "#fff4d6",
+                  padding: "8px",
+                  fontSize: "12px",
+                  fontFamily: "monospace",
+                  resize: "none",
+                  marginBottom: "12px"
+                }}
+              />
+              <div className="panel-actions">
+                <button type="button" onClick={() => { resumeAudioContext(); setImportOpen(false); setImportText(""); }}>
+                  <X size={16} />
+                  {ui.cancel}
+                </button>
+                <button type="button" className="confirm-action" onClick={handleImportSave}>
+                  <Check size={16} />
+                  {ui.confirm}
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {settingsOpen ? (
-          <section className="settings-panel" role="dialog" aria-label={ui.settings}>
+          <section ref={settingsPanelRef} className="settings-panel" role="dialog" aria-modal="true" aria-label={ui.settings}>
             <header>
               <h2>{ui.settings}</h2>
               <button type="button" aria-label={ui.closeSettings} onClick={() => setSettingsOpen(false)}>
@@ -951,6 +1583,75 @@ export function GameShell() {
               </label>
             </div>
             <div className="settings-section">
+              <h3>{ui.dataManagement}</h3>
+              <div className="setting-row" style={{ gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={handleExportSave}
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    background: "rgba(209, 169, 93, 0.16)",
+                    border: "1px solid rgba(209, 169, 93, 0.46)",
+                    borderRadius: "4px",
+                    color: "#fff4d6",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    fontSize: "13px"
+                  }}
+                >
+                  {ui.exportSave}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resumeAudioContext();
+                    setImportOpen(true);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    background: "rgba(61, 224, 200, 0.16)",
+                    border: "1px solid rgba(61, 224, 200, 0.46)",
+                    borderRadius: "4px",
+                    color: "#cfe6df",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    fontSize: "13px"
+                  }}
+                >
+                  {ui.importSave}
+                </button>
+              </div>
+            </div>
+            {deferredPrompt ? (
+              <div className="settings-section">
+                <h3>{ui.installGame}</h3>
+                <div className="setting-row" style={{ flexDirection: "column", alignItems: "flex-start", gap: "8px" }}>
+                  <span style={{ fontSize: "12px", color: "rgba(248, 237, 210, 0.7)" }}>
+                    {ui.installGamePrompt}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleInstallGame}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      background: "rgba(61, 224, 200, 0.16)",
+                      border: "1px solid rgba(61, 224, 200, 0.46)",
+                      borderRadius: "4px",
+                      color: "#cfe6df",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      fontSize: "13px"
+                    }}
+                  >
+                    {ui.installGame}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            <div className="settings-section">
               <h3>{ui.settingsSections.performance}</h3>
               <div className="setting-row">
                 <span>{ui.performance}</span>
@@ -1034,45 +1735,113 @@ export function GameShell() {
           </section>
         ) : null}
 
-        {codexOpen ? (
-          <section className="codex-panel" role="dialog" aria-label={ui.codex}>
-            <header>
-              <h2>{ui.codex}</h2>
-              <button type="button" aria-label={ui.closeCodex} onClick={() => setCodexOpen(false)}>
-                <X size={16} />
-              </button>
-            </header>
-            <div className="codex-list">
-              {codexEntries.map((entry) => {
-                const unlocked = unlockedIds.has(entry.id);
-                return (
-                  <article className={unlocked ? "codex-entry" : "codex-entry locked"} key={entry.id}>
-                    {unlocked ? <span className={`codex-art codex-art-${entry.id}`} /> : null}
-                    <div>
-                      <h3>{unlocked ? entry.name : ui.lockedArtifact}</h3>
-                      <small>{unlocked ? entry.era : ui.lockedEra}</small>
-                      <p>{unlocked ? entry.clue : ui.lockedClue}</p>
-                      {unlocked ? <p>{entry.exhibit}</p> : null}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            <div className="achievement-list" aria-label={ui.achievements}>
-              {achievements.map((achievement) => (
-                <span className={achievement.active ? "earned" : ""} key={achievement.label}>
-                  {achievement.label}
-                </span>
-              ))}
-            </div>
-            {hud.museumComplete ? (
-              <footer className="ending-note">
-                <Check size={16} />
-                <p>{hud.visitors >= 200 ? endingCopy.perfect : endingCopy.repaired}</p>
-              </footer>
-            ) : null}
-          </section>
-        ) : null}
+        {codexOpen ? (() => {
+          const totalCount = codexEntries.length;
+          const unlockedCount = codexEntries.filter((entry) => unlockedIds.has(entry.id)).length;
+          const percentCollected = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+          const lockedEntriesCount = totalCount - unlockedCount;
+
+          return (
+            <section ref={codexPanelRef} className="codex-panel" role="dialog" aria-modal="true" aria-label={ui.codex}>
+              <header>
+                <h2>{ui.codex}</h2>
+                <button type="button" aria-label={ui.closeCodex} onClick={() => {
+                  setCodexOpen(false);
+                  setCodexSearch("");
+                  setCodexFilter("all");
+                }}>
+                  <X size={16} />
+                </button>
+              </header>
+
+              {/* Progress bar */}
+              <div className="codex-progress-wrapper">
+                <div className="codex-progress-label">
+                  <span>{ui.codexProgress}</span>
+                  <strong>{unlockedCount} / {totalCount} ({percentCollected}%)</strong>
+                </div>
+                <div className="codex-progress-track">
+                  <div className="codex-progress-fill" style={{ width: `${percentCollected}%` }} />
+                </div>
+              </div>
+
+              {/* Search & Tabs */}
+              <div className="codex-controls">
+                <input
+                  type="text"
+                  className="codex-search-input"
+                  placeholder={ui.searchCodex}
+                  value={codexSearch}
+                  onChange={(e) => setCodexSearch(e.target.value)}
+                />
+                <div className="codex-filter-tabs">
+                  <button
+                    type="button"
+                    className={codexFilter === "all" ? "active" : ""}
+                    onClick={() => setCodexFilter("all")}
+                  >
+                    {ui.codexFilterAll} ({totalCount})
+                  </button>
+                  <button
+                    type="button"
+                    className={codexFilter === "unlocked" ? "active" : ""}
+                    onClick={() => setCodexFilter("unlocked")}
+                  >
+                    {ui.codexFilterUnlocked} ({unlockedCount})
+                  </button>
+                  <button
+                    type="button"
+                    className={codexFilter === "locked" ? "active" : ""}
+                    onClick={() => setCodexFilter("locked")}
+                  >
+                    {ui.codexFilterLocked} ({lockedEntriesCount})
+                  </button>
+                </div>
+              </div>
+
+              <div className="codex-list">
+                {filteredEntries.length > 0 ? (
+                  filteredEntries.map((entry) => {
+                    const unlocked = unlockedIds.has(entry.id);
+                    return (
+                      <article className={unlocked ? "codex-entry" : "codex-entry locked"} key={entry.id}>
+                        {unlocked ? <span className={`codex-art codex-art-${entry.id}`} /> : null}
+                        <div>
+                          <h3>{unlocked ? entry.name : ui.lockedArtifact}</h3>
+                          <small>{unlocked ? entry.era : ui.lockedEra}</small>
+                          <p>{unlocked ? entry.clue : ui.lockedClue}</p>
+                          {unlocked ? <p style={{ marginTop: "4px", fontStyle: "italic", opacity: 0.88 }}>{entry.exhibit}</p> : null}
+                          {unlocked && entry.history ? (
+                            <p style={{ marginTop: "8px", fontSize: "12px", borderTop: "1px dashed rgba(209, 169, 93, 0.18)", paddingTop: "6px", color: "#a8c0ba" }}>
+                              {entry.history}
+                            </p>
+                          ) : null}
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="codex-empty-state">
+                    <p>{ui.codexNoResults}</p>
+                  </div>
+                )}
+              </div>
+              <div className="achievement-list" aria-label={ui.achievements}>
+                {achievements.map((achievement) => (
+                  <span className={achievement.active ? "earned" : ""} key={achievement.label}>
+                    {achievement.label}
+                  </span>
+                ))}
+              </div>
+              {hud.museumComplete ? (
+                <footer className="ending-note">
+                  <Check size={16} />
+                  <p>{hud.visitors >= 200 ? endingCopy.perfect : endingCopy.repaired}</p>
+                </footer>
+              ) : null}
+            </section>
+          );
+        })() : null}
 
         {isRitualScene ? (
           <nav className="touch-controls rhythm-controls" aria-label={ui.rhythmControls}>
@@ -1082,6 +1851,12 @@ export function GameShell() {
                 type="button"
                 aria-label={`${keyLabel(code)} ${ui.lane}`}
                 onPointerDown={() => sendRhythmLane(lane)}
+                onKeyDown={(event) => {
+                  if (!event.repeat && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault();
+                    sendRhythmLane(lane);
+                  }
+                }}
               >
                 {keyLabel(code)}
               </button>
@@ -1089,48 +1864,7 @@ export function GameShell() {
           </nav>
         ) : (
           <nav className="touch-controls" aria-label={ui.touchControls}>
-            <div className="touch-pad">
-              <button
-                type="button"
-                aria-label={ui.moveUp}
-                onPointerDown={() => sendMove(0, -1)}
-                onPointerUp={clearMove}
-                onPointerCancel={clearMove}
-                onPointerLeave={clearMove}
-              >
-                <ArrowUp size={17} />
-              </button>
-              <button
-                type="button"
-                aria-label={ui.moveLeft}
-                onPointerDown={() => sendMove(-1, 0)}
-                onPointerUp={clearMove}
-                onPointerCancel={clearMove}
-                onPointerLeave={clearMove}
-              >
-                <ArrowLeft size={17} />
-              </button>
-              <button
-                type="button"
-                aria-label={ui.moveDown}
-                onPointerDown={() => sendMove(0, 1)}
-                onPointerUp={clearMove}
-                onPointerCancel={clearMove}
-                onPointerLeave={clearMove}
-              >
-                <ArrowDown size={17} />
-              </button>
-              <button
-                type="button"
-                aria-label={ui.moveRight}
-                onPointerDown={() => sendMove(1, 0)}
-                onPointerUp={clearMove}
-                onPointerCancel={clearMove}
-                onPointerLeave={clearMove}
-              >
-                <ArrowRight size={17} />
-              </button>
-            </div>
+            <TouchJoystick onMove={sendMove} onEnd={clearMove} />
             <button className="touch-action" type="button" aria-label={ui.interact} onClick={sendAction}>
               <Circle size={18} />
             </button>

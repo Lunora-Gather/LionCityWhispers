@@ -61,6 +61,7 @@ test("uses the full stage in mobile landscape", async ({ browser }) => {
       progressTop: progress?.top ?? 0,
       toolbarBottom: toolbar?.bottom ?? 0,
       inventoryTop: inventory?.top ?? 0,
+      routeVisible: Boolean(route && route.height > 0),
       routeBottom: route?.bottom ?? 0,
       touchControlsTop: touchControls?.top ?? 0,
       touchControlsBottom: touchControls?.bottom ?? 0,
@@ -73,7 +74,9 @@ test("uses the full stage in mobile landscape", async ({ browser }) => {
   expect(metrics.canvasHeight).toBeGreaterThan(320);
   expect(metrics.objectiveBottom).toBeLessThanOrEqual(metrics.progressTop - 1);
   expect(metrics.toolbarBottom).toBeLessThanOrEqual(metrics.inventoryTop - 1);
-  expect(metrics.routeBottom).toBeLessThanOrEqual(metrics.touchControlsTop - 1);
+  if (metrics.routeVisible) {
+    expect(metrics.routeBottom).toBeLessThanOrEqual(metrics.touchControlsTop - 1);
+  }
   expect(metrics.touchControlsBottom).toBeLessThanOrEqual(metrics.dialogueTop - 1);
   await page.close();
 });

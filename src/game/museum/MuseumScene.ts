@@ -3,12 +3,15 @@ import { ArtifactId, emitGameState, gameState, isUiLocked } from "../state";
 import { playMiss, playSnap, playSuccess, playUiClick } from "../audio";
 import { artifactColors, burst, drawArtifactIcon } from "../visuals";
 import { formatCopy, localizedArtifact, puzzleCopy } from "@/data/i18n";
+import { bindSceneHint, pulseSceneHint } from "../hints";
 
 type CaseSlot = {
   index: number;
   x: number;
   y: number;
 };
+
+const REACTION_EMOJIS = ["😊", "😮", "👏", "👍", "📝", "💖", "✨"];
 
 export class MuseumScene extends Phaser.Scene {
   private slots: CaseSlot[] = [
@@ -25,7 +28,9 @@ export class MuseumScene extends Phaser.Scene {
   private slotHalos = new Map<number, Phaser.GameObjects.Arc>();
   private selectedArtifactId?: ArtifactId;
   private completionBanner?: Phaser.GameObjects.Container;
+  private completionTimers: Phaser.Time.TimerEvent[] = [];
   private keyHandler?: (event: KeyboardEvent) => void;
+  private lanternTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
     super("MuseumScene");
@@ -35,24 +40,101 @@ export class MuseumScene extends Phaser.Scene {
     const copy = puzzleCopy[gameState.settings.locale];
     this.tokens.clear();
     this.slotFrames.clear();
+    this.slotIndicators.clear();
+    this.slotHalos.clear();
     this.selectedArtifactId = undefined;
     this.completionBanner = undefined;
+    this.completionTimers = [];
+    this.lanternTimer = undefined;
+    // Registered here (not in bindKeyboard) so it also runs on keyboard-less
+    // devices; otherwise a stale lanternTimer blocks lanterns on re-entry.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.lanternTimer?.remove(false);
+      this.lanternTimer = undefined;
+      this.clearCompletionTimers();
+    });
     this.drawGallery(copy);
     this.drawSlots();
     this.drawInventory();
     this.createBackButton();
     this.bindKeyboard();
+    bindSceneHint(this, () => {
+      const storyOrder: ArtifactId[] = [
+        "badang-stone",
+        "rune-plaque",
+        "harbor-seal",
+        "spirit-chime"
+      ];
+      const artifactId =
+        this.selectedArtifactId ??
+        storyOrder.find((id) => gameState.museum.placements[id] === undefined);
+      if (!artifactId) {
+        return;
+      }
+      const targetIndex = storyOrder.indexOf(artifactId);
+      const targetSlot = this.slots[targetIndex];
+      const token = this.tokens.get(artifactId);
+      if (token) {
+        pulseSceneHint(this, token.x, token.y, 0xd1a95d);
+      }
+      if (targetSlot) {
+        pulseSceneHint(this, targetSlot.x, targetSlot.y - 64, 0x3de0c8);
+      }
+    });
     this.updateStatus();
+    this.spawnWalkers();
   }
+
+  private spawnWalkers() {
+    if (gameState.settings.reduceMotion) return;
+
+    const spawnWalker = () => {
+      if (!this.sys.isActive()) return;
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      const startX = direction === 1 ? -50 : 1330;
+      const endX = direction === 1 ? 1330 : -50;
+      const walkerY = 600 + Math.random() * 45;
+
+      const walker = this.add.container(startX, walkerY).setDepth(20);
+      const head = this.add.circle(0, -18, 9, 0x050909, 0.4);
+      const body = this.add.rectangle(0, 10, 18, 38, 0x050909, 0.35);
+      walker.add([head, body]);
+
+      this.tweens.add({
+        targets: walker,
+        y: walkerY - 4,
+        duration: 250,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+
+      this.tweens.add({
+        targets: walker,
+        x: endX,
+        duration: 15000 + Math.random() * 8000,
+        onComplete: () => {
+          // Kill the infinite bob tween too; destroy() alone leaves it ticking.
+          this.tweens.killTweensOf(walker);
+          walker.destroy();
+          this.time.delayedCall(4000 + Math.random() * 4000, spawnWalker);
+        }
+      });
+    };
+
+    this.time.delayedCall(2000, spawnWalker);
+    this.time.delayedCall(7000, spawnWalker);
+  }
+
 
   private drawGallery(copy: (typeof puzzleCopy)[keyof typeof puzzleCopy]) {
     this.add.rectangle(640, 360, 1280, 720, 0x101817);
     const bg = this.add.image(640, 360, "museum-gallery");
     const scale = Math.max(1280 / bg.width, 720 / bg.height);
     bg.setScale(scale);
-    this.add.rectangle(640, 360, 1280, 720, 0x050909, 0.08);
+    this.add.rectangle(640, 360, 1280, 720, 0x050909, 0.14);
     const lights = this.add.graphics();
-    lights.fillStyle(0xfff4d6, 0.08);
+      lights.fillStyle(0xfff4d6, 0.055);
     for (const slot of this.slots) {
       lights.fillTriangle(slot.x - 48, 106, slot.x + 48, 106, slot.x + 104, 508);
       lights.fillTriangle(slot.x - 48, 106, slot.x + 48, 106, slot.x - 104, 508);
@@ -61,8 +143,8 @@ export class MuseumScene extends Phaser.Scene {
     for (let index = 0; index < 7; index += 1) {
       lights.lineBetween(210 + index * 126, 536, 260 + index * 116, 654);
     }
-    this.add.rectangle(640, 68, 1280, 136, 0x090f0f, 0.38);
-    this.add.rectangle(640, 665, 1280, 110, 0x090f0f, 0.4);
+    this.add.rectangle(640, 68, 1280, 136, 0x090f0f, 0.46);
+    this.add.rectangle(640, 665, 1280, 110, 0x090f0f, 0.48);
     this.add.rectangle(640, 520, 980, 2, 0xfff4d6, 0.12);
     this.add.rectangle(640, 548, 980, 1, 0xd1a95d, 0.14);
     this.add.text(78, 198, copy.museumTitle, {
@@ -75,13 +157,12 @@ export class MuseumScene extends Phaser.Scene {
       fontSize: "18px",
       color: "#d8c8a3"
     });
-    this.add.rectangle(640, 516, 560, 52, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6);
-    this.add.rectangle(640, 516, 554, 46, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24);
+    this.add.rectangle(640, 516, 520, 46, 0x091412, 0.8).setStrokeStyle(1, 0x2bc7ab, 0.42);
     this.status = this.add.text(640, 528, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "20px",
       color: "#fff4d6",
-      shadow: { offsetX: 0, offsetY: 0, color: "#ffffff", blur: 4, fill: true }
+      shadow: { offsetX: 0, offsetY: 1, color: "#050909", blur: 3, fill: true }
     }).setOrigin(0.5);
     this.visitorFeedback = this.add.text(640, 502, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
@@ -107,7 +188,7 @@ export class MuseumScene extends Phaser.Scene {
       
       const dotColor = occupied ? 0x2bc7ab : 0xd1a95d;
       const indicator = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 1);
-      const halo = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 0.38);
+      const halo = this.add.circle(slot.x, slot.y - 64, 5, dotColor, 0.24);
       this.slotIndicators.set(slot.index, indicator);
       this.slotHalos.set(slot.index, halo);
       if (!gameState.settings.reduceMotion) {
@@ -145,11 +226,11 @@ export class MuseumScene extends Phaser.Scene {
   private createArtifactToken(id: ArtifactId, name: string, detail: string, x: number, y: number) {
     const token = this.add.container(x, y).setDepth(24);
     const color = artifactColors[id];
-    const shadow = this.add.rectangle(6, 7, 174, 62, 0x020504, 0.4);
-    const card = this.add.rectangle(0, 0, 172, 58, 0x0c1b18, 0.9).setStrokeStyle(1.5, 0xd1a95d, 0.76);
-    const innerBorder = this.add.rectangle(0, 0, 166, 52, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.28);
-    const colorRail = this.add.rectangle(-78, 0, 8, 48, color, 0.88);
-    const sheen = this.add.rectangle(22, -22, 110, 2, 0xffffff, 0.16);
+    const shadow = this.add.rectangle(5, 6, 168, 58, 0x020504, 0.34);
+    const card = this.add.rectangle(0, 0, 166, 56, 0x0c1b18, 0.88).setStrokeStyle(1, 0xd1a95d, 0.58);
+    const innerBorder = this.add.rectangle(0, 0, 160, 50, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.18);
+    const colorRail = this.add.rectangle(-76, 0, 5, 44, color, 0.72);
+    const sheen = this.add.rectangle(20, -20, 104, 1, 0xffffff, 0.12);
     const icon = drawArtifactIcon(this, id, -54, 0, 42);
     const label = this.add.text(-24, -18, name, {
       fontFamily: "Microsoft YaHei, sans-serif",
@@ -167,7 +248,6 @@ export class MuseumScene extends Phaser.Scene {
       wordWrap: { width: 114 }
     });
     token.add([shadow, card, innerBorder, colorRail, sheen, icon, label, detailText]);
-    token.setData("home", { x, y });
     this.tokens.set(id, token);
     token.setInteractive(new Phaser.Geom.Rectangle(-86, -38, 172, 86), Phaser.Geom.Rectangle.Contains);
     this.input.setDraggable(token);
@@ -194,15 +274,15 @@ export class MuseumScene extends Phaser.Scene {
       token.setPosition(dragX, dragY);
     });
     token.on("dragend", () => {
-      if (isUiLocked()) {
-        return;
-      }
       this.tweens.add({ targets: token, scale: 1, duration: gameState.settings.reduceMotion ? 0 : 120 });
-      const slot = this.nearestFreeSlot(token.x, token.y, id);
+      // Even when a UI lock engages mid-drag, snap the token somewhere valid.
+      const slot = isUiLocked() ? undefined : this.nearestFreeSlot(token.x, token.y, id);
       if (slot) {
         this.placeArtifact(id, slot);
       } else {
-        playMiss();
+        if (!isUiLocked()) {
+          playMiss();
+        }
         const ownSlot = gameState.museum.placements[id];
         if (ownSlot !== undefined) {
           token.setPosition(this.slots[ownSlot].x, this.slots[ownSlot].y - 64);
@@ -324,7 +404,15 @@ export class MuseumScene extends Phaser.Scene {
     }
   }
 
+  private clearCompletionTimers() {
+    for (const timer of this.completionTimers) {
+      timer.remove(false);
+    }
+    this.completionTimers = [];
+  }
+
   private showCompletionMoment(copy: (typeof puzzleCopy)[keyof typeof puzzleCopy], animated: boolean) {
+    this.clearCompletionTimers();
     this.completionBanner?.destroy();
     const banner = this.add.container(640, 208).setDepth(92);
     const rayLeft = this.add.triangle(-260, 18, -46, -74, 20, -74, 96, 92, 0xfff4d6, 0.12);
@@ -353,6 +441,40 @@ export class MuseumScene extends Phaser.Scene {
         this.add.rectangle(0, 6, 14, 26, 0x050909, 0.36)
       ]);
       banner.add(visitor);
+
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: visitor,
+          y: 74 + Math.random() * 4 - 2,
+          duration: 600 + Math.random() * 400,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay: index * 100
+        });
+
+        this.completionTimers.push(this.time.addEvent({
+          delay: 2000 + Math.random() * 4000,
+          callback: () => {
+            if (!this.sys.isActive() || !banner.active) return;
+            const emoji = REACTION_EMOJIS[Math.floor(Math.random() * REACTION_EMOJIS.length)];
+            const bubble = this.add.text(visitor.x, visitor.y - 32, emoji, {
+              fontSize: "16px"
+            }).setOrigin(0.5).setDepth(99);
+            banner.add(bubble);
+
+            this.tweens.add({
+              targets: bubble,
+              y: visitor.y - 64,
+              alpha: 0,
+              scale: 1.2,
+              duration: 1500,
+              onComplete: () => bubble.destroy()
+            });
+          },
+          loop: true
+        }));
+      }
     }
     this.completionBanner = banner;
     if (animated && !gameState.settings.reduceMotion) {
@@ -362,9 +484,10 @@ export class MuseumScene extends Phaser.Scene {
         alpha: 1,
         scale: 1,
         duration: 260,
-        ease: "Sine.easeOut"
+        ease: "Back.easeOut"
       });
     }
+    this.spawnRisingLanterns();
   }
 
   private createBackButton() {
@@ -439,6 +562,67 @@ export class MuseumScene extends Phaser.Scene {
         this.input.keyboard?.off("keydown", this.keyHandler);
         this.keyHandler = undefined;
       }
+    });
+  }
+
+  private spawnRisingLanterns() {
+    if (this.lanternTimer) {
+      return;
+    }
+    for (let i = 0; i < 3; i++) {
+      this.time.delayedCall(i * 400, () => this.createSingleLantern());
+    }
+    this.lanternTimer = this.time.addEvent({
+      delay: 1800,
+      callback: () => {
+        if (!this.sys.isActive() || !gameState.museum.complete) return;
+        this.createSingleLantern();
+      },
+      loop: true
+    });
+  }
+
+  private createSingleLantern() {
+    if (!this.sys.isActive()) return;
+    const x = Phaser.Math.Between(100, 1180);
+    const y = 740;
+    const scale = Phaser.Math.FloatBetween(0.4, 0.72);
+    
+    const lantern = this.add.container(x, y).setDepth(5).setScale(scale);
+    
+    const glow = this.add.circle(0, 0, 24, 0xffa040, 0.22);
+    const body = this.add.polygon(0, 0, [
+      -12, -18,
+      12, -18,
+      16, 12,
+      -16, 12
+    ], 0xff7c25, 0.82).setStrokeStyle(1.5, 0xffd080, 0.55);
+    const flame = this.add.circle(0, 10, 4, 0xffffff, 0.95);
+    
+    lantern.add([glow, body, flame]);
+    
+    this.tweens.add({
+      targets: lantern,
+      y: -100,
+      x: x + Phaser.Math.Between(-60, 60),
+      scale: scale * 0.45,
+      alpha: { from: 0.9, to: 0.1 },
+      duration: Phaser.Math.Between(7500, 11000),
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        // Kill the infinite sway tween before destroying, or it leaks.
+        this.tweens.killTweensOf(lantern);
+        lantern.destroy();
+      }
+    });
+    
+    this.tweens.add({
+      targets: lantern,
+      angle: Phaser.Math.Between(-8, 8),
+      duration: Phaser.Math.Between(2000, 3200),
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut"
     });
   }
 }

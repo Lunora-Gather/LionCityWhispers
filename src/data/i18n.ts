@@ -31,12 +31,13 @@ export function text(copy: TextByLocale, locale: Locale) {
 export const shellCopy = {
   zh: {
     brand: "狮城秘语",
-    brandMark: "狮",
     subtitle: "Lion City Whispers",
     gameAria: "狮城秘语游戏",
     gameTitleAria: "游戏标题",
     currentObjective: "当前目标",
     nextStep: "下一步",
+    hint: "提示",
+    hintAria: "获取当前任务提示",
     controls: "游戏控制",
     codex: "线索册",
     difficultyEasy: "舒缓节奏",
@@ -66,7 +67,6 @@ export const shellCopy = {
     language: "语言",
     zh: "中文",
     en: "English",
-    volume: "音量",
     masterVolume: "主音量",
     effectsVolume: "音效",
     ambientVolume: "环境声",
@@ -76,8 +76,6 @@ export const shellCopy = {
     inputLatency: "本地响应",
     worstInputLatency: "最差响应",
     longFrames: "长帧",
-    keyBindings: "键位",
-    setKey: "设置",
     waitingKey: "按一个键",
     resetKeys: "恢复默认键位",
     moveUpBinding: "上移",
@@ -86,7 +84,6 @@ export const shellCopy = {
     moveRightBinding: "右移",
     actionBinding: "交互",
     rhythmBinding: "节奏",
-    chapter: "回访",
     river: "河岸",
     gallery: "展厅",
     ritual: "仪式",
@@ -97,10 +94,6 @@ export const shellCopy = {
     achievements: "成就",
     touchControls: "触控操作",
     rhythmControls: "节奏触控",
-    moveUp: "上移",
-    moveLeft: "左移",
-    moveDown: "下移",
-    moveRight: "右移",
     interact: "交互",
     lane: "轨",
     achievementLabels: {
@@ -110,7 +103,6 @@ export const shellCopy = {
       fullSet: "全套文物"
     },
     loading: "载入狮城展线",
-    loadingReady: "准备进入",
     guidance: {
       start: "先靠近河岸中段的巨石碎片，修复第一件文物。",
       runes: "前往古文字碑，把碑文排回能读通的顺序。",
@@ -118,6 +110,13 @@ export const shellCopy = {
       ritual: "线索足够后进入灵界入口，完成竹铃仪式。",
       museum: "回到博物馆，把四件文物放入展柜形成展线。",
       complete: "展览已开幕，可在线索册查看完整修复成果。"
+    },
+    hints: {
+      jigsaw: "先点选一块石纹，再拖到相同文字的浅色轮廓；提示光环会标出对应位置。",
+      runes: "从碑脚诗句寻找顺序。提示光环只会标出下一枚应尝试的符文。",
+      lock: "观察朱、金、青、墨的色温变化；提示光环会标出下一道色印。",
+      rhythm: "看准音符与发光判定线重合的一刻，再按对应轨道。",
+      museum: "按巨石、碑文、海门、清音的故事顺序，从左到右布置展柜。"
     },
     route: {
       aria: "修复路线",
@@ -144,16 +143,37 @@ export const shellCopy = {
     updateReady: "新版本已缓存",
     updateNow: "立即刷新",
     endingTitle: "展览开幕",
-    endingSummary: "文物、仪式和展线已经闭环。"
+    endingSummary: "文物、仪式和展线已经闭环。",
+    dataManagement: "数据管理",
+    exportSave: "导出存档",
+    importSave: "导入存档",
+    saveExported: "存档代码已复制到剪贴板！",
+    saveImported: "存档导入成功！",
+    saveImportInvalid: "无效的存档码！",
+    saveImportPrompt: "请粘贴您的存档码：",
+    confirm: "确认",
+    installGame: "安装游戏",
+    installGamePrompt: "安装游戏到桌面或手机以获得原生应用体验。",
+    installSuccess: "安装成功！",
+    shareExhibition: "分享展览",
+    shareCopied: "展览分享链接已复制到剪贴板！",
+    searchCodex: "搜索文物...",
+    codexFilterAll: "全部",
+    codexFilterUnlocked: "已解锁",
+    codexFilterLocked: "未解锁",
+    codexProgress: "搜集进度",
+    codexNoResults: "未找到相关线索...",
+    startExploring: "开始探索"
   },
   en: {
     brand: "Lion City Whispers",
-    brandMark: "LC",
     subtitle: "狮城秘语",
     gameAria: "Lion City Whispers game",
     gameTitleAria: "Game title",
     currentObjective: "Current Objective",
     nextStep: "Next Step",
+    hint: "Hint",
+    hintAria: "Get a hint for the current objective",
     controls: "Game Controls",
     codex: "Codex",
     difficultyEasy: "Relaxed Tempo",
@@ -183,7 +203,6 @@ export const shellCopy = {
     language: "Language",
     zh: "中文",
     en: "English",
-    volume: "Volume",
     masterVolume: "Master",
     effectsVolume: "Effects",
     ambientVolume: "Ambience",
@@ -193,8 +212,6 @@ export const shellCopy = {
     inputLatency: "Local Response",
     worstInputLatency: "Worst Response",
     longFrames: "Long Frames",
-    keyBindings: "Keys",
-    setKey: "Set",
     waitingKey: "Press a key",
     resetKeys: "Reset Keys",
     moveUpBinding: "Move Up",
@@ -203,7 +220,6 @@ export const shellCopy = {
     moveRightBinding: "Move Right",
     actionBinding: "Interact",
     rhythmBinding: "Rhythm",
-    chapter: "Revisit",
     river: "River",
     gallery: "Gallery",
     ritual: "Ritual",
@@ -214,10 +230,6 @@ export const shellCopy = {
     achievements: "Achievements",
     touchControls: "Touch Controls",
     rhythmControls: "Rhythm Controls",
-    moveUp: "Move Up",
-    moveLeft: "Move Left",
-    moveDown: "Move Down",
-    moveRight: "Move Right",
     interact: "Interact",
     lane: "lane",
     achievementLabels: {
@@ -227,7 +239,6 @@ export const shellCopy = {
       fullSet: "Complete Set"
     },
     loading: "Loading exhibition route",
-    loadingReady: "Ready",
     guidance: {
       start: "Begin at the stone shards near the middle of the riverbank.",
       runes: "Move to the ancient plaque and rebuild a readable inscription.",
@@ -235,6 +246,13 @@ export const shellCopy = {
       ritual: "When enough clues are restored, enter the spirit gate for the chime rite.",
       museum: "Return to the museum and place all four artifacts into the cases.",
       complete: "The exhibition is open. Review the restored route in the codex."
+    },
+    hints: {
+      jigsaw: "Select a stone mark, then move it to the pale outline with the same glyph. The hint ring marks its target.",
+      runes: "Read the inscription at the foot of the plaque. The hint ring marks only the next glyph to try.",
+      lock: "Follow the seals from heat to light, then into blue-green and ink. The ring marks the next seal.",
+      rhythm: "Press the matching lane exactly as a chime reaches the glowing judgment line.",
+      museum: "Build the story from left to right: stone, inscription, harbor gate, then spirit chime."
     },
     route: {
       aria: "Restoration Route",
@@ -261,7 +279,27 @@ export const shellCopy = {
     updateReady: "New version cached",
     updateNow: "Refresh",
     endingTitle: "Exhibition Open",
-    endingSummary: "Artifacts, rite, and gallery route are now complete."
+    endingSummary: "Artifacts, rite, and gallery route are now complete.",
+    dataManagement: "Data",
+    exportSave: "Export Save",
+    importSave: "Import Save",
+    saveExported: "Save code copied to clipboard!",
+    saveImported: "Save imported successfully!",
+    saveImportInvalid: "Invalid save code!",
+    saveImportPrompt: "Please paste your save code:",
+    confirm: "Confirm",
+    installGame: "Install Game",
+    installGamePrompt: "Install game to desktop or mobile for a native-like experience.",
+    installSuccess: "Installed successfully!",
+    shareExhibition: "Share Exhibition",
+    shareCopied: "Exhibition link copied to clipboard!",
+    searchCodex: "Search artifacts...",
+    codexFilterAll: "All",
+    codexFilterUnlocked: "Unlocked",
+    codexFilterLocked: "Locked",
+    codexProgress: "Collection Progress",
+    codexNoResults: "No matching clues found...",
+    startExploring: "START EXPLORING"
   }
 } satisfies Record<Locale, Record<string, unknown>>;
 
@@ -425,6 +463,7 @@ export const objectiveCopy = {
 export const worldCopy = {
   zh: {
     curator: "林馆长",
+    boatman: "老船夫",
     jigsawPending: "巨石碎片",
     jigsawDone: "石片已复原",
     runesPending: "古文字碑",
@@ -459,10 +498,30 @@ export const worldCopy = {
     curatorStart: [
       "林馆长：昨夜河岸送来三段异响，像是旧传说在敲展柜。",
       "林馆长：先从巨石碎片开始，找到第一件能放进展线的文物。"
+    ],
+    boatmanStart: [
+      "老船夫：小伙子，听说你在找河底那块巨石？当年巴当力大无比，扔下了它震慑风浪。",
+      "老船夫：要修复它，得把‘力’、‘石’、‘潮’这三股力道纹路拼凑完整才行。"
+    ],
+    boatmanOnePuzzle: [
+      "老船夫：好身手，巨石已经归位了！不过听说前面的古碑上还刻着话呢。",
+      "老船夫：古训说‘潮来见狮，月照开门’，依我看，碑文得按‘海、狮、门、月’的顺序理顺。"
+    ],
+    boatmanReadyRitual: [
+      "老船夫：海门关上的机关亮了，四种颜色分别是朱、金、青、墨。",
+      "老船夫：热火朱，光芒金，深水青，沉夜墨。按这个顺序（朱、金、青、墨）转动，海门就会打开！"
+    ],
+    boatmanRitualDone: [
+      "老船夫：你听，河面上吹来的风都带着清脆的竹铃声，那真是令人安心的声音啊。",
+      "老船夫：快把净化后的灵界清音带回博物馆吧，我们要有一场精彩的展览了！"
+    ],
+    boatmanMuseumDone: [
+      "老船夫：新加坡河重归平静，历史也没有被遗忘。谢谢你，年轻的馆长。"
     ]
   },
   en: {
     curator: "Curator Lin",
+    boatman: "Old Boatman",
     jigsawPending: "Stone Shards",
     jigsawDone: "Stone Restored",
     runesPending: "Ancient Plaque",
@@ -477,7 +536,7 @@ export const worldCopy = {
     runesDoneLine: "Sea, lion, gate, and moon now read as a clear inscription.",
     lockDoneLine: "Only warm gold dust remains in the lock. The key pattern is in your inventory.",
     ritualLockedLine: "Ink fog still covers the gate. Restore at least two clues before the rite will answer.",
-    ritualDoneLine: "The bamboo chime still rings at the gate. The barrier has retreated beyond the river.",
+    ritualDoneLine: "The chime still rings at the gate. The barrier has retreated beyond the river.",
     curatorMuseumDone: [
       "Curator Lin: The exhibition is open. Visitors see not only artifacts, but the order between them.",
       "Curator Lin: The real restoration was not just finding fragments. It was making the legend readable again."
@@ -497,6 +556,25 @@ export const worldCopy = {
     curatorStart: [
       "Curator Lin: Three echoes came from the river last night, like an old legend tapping on the cases.",
       "Curator Lin: Start with the stone shards. Find the first artifact that can anchor the exhibition."
+    ],
+    boatmanStart: [
+      "Old Boatman: Hello there, looking for the legendary stone in the river? Long ago, the mighty Badang threw it to calm the storms.",
+      "Old Boatman: To restore it, the three patterns of 'Strength', 'Stone', and 'Tide' must be aligned."
+    ],
+    boatmanOnePuzzle: [
+      "Old Boatman: Great job restoring the stone! But they say the ancient plaque up ahead holds a secret.",
+      "Old Boatman: The proverb goes 'Tide brings the lion, moon lights the gate'. In my view, the inscription must flow as 'Sea, Lion, Gate, Moon'."
+    ],
+    boatmanReadyRitual: [
+      "Old Boatman: The color seals on the harbor lock are glowing: Cinnabar, Gold, Blue-Green, and Ink.",
+      "Old Boatman: Cinnabar for fire, Gold for light, Blue-Green for sea, and Ink for night. Turn them in that order (Cinnabar, Gold, Blue-Green, Ink) to open it!"
+    ],
+    boatmanRitualDone: [
+      "Old Boatman: Listen! The wind blowing over the river carries the clear ring of bamboo chimes. Such a peaceful sound.",
+      "Old Boatman: Take the purified spirit chime back to the museum. We are going to have a wonderful exhibition!"
+    ],
+    boatmanMuseumDone: [
+      "Old Boatman: The Singapore River is peaceful again, and history is not forgotten. Thank you, young curator."
     ]
   }
 };
@@ -519,6 +597,7 @@ export const puzzleCopy = {
     lockTitle: "海门机关",
     lockSubtitle: "门环上留着四道色印：朱、金、青、墨。",
     lockHint: "按色印从热到亮再入青墨：朱、金、青、墨。",
+    lockTimeLeft: "剩余时间",
     lockTimeout: "机关沉入水声中，色印重新亮起。",
     lockWrong: "色印没有咬合，机关退回第一道。",
     lockComplete: "海门打开一线，朱金青墨合成了钥纹。",
@@ -560,6 +639,7 @@ export const puzzleCopy = {
     lockTitle: "Harbor Lock",
     lockSubtitle: "Four seal colors remain on the ring: cinnabar, gold, blue-green, ink.",
     lockHint: "Press the seals from heat to light, then into blue-green and ink.",
+    lockTimeLeft: "TIME LEFT",
     lockTimeout: "The lock sinks back into the water sound, and the seals light up again.",
     lockWrong: "The seals fail to catch, and the lock returns to the first mark.",
     lockComplete: "The harbor gate opens a crack, fusing the four colors into a key pattern.",

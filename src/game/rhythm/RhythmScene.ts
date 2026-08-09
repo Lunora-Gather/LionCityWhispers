@@ -5,47 +5,20 @@ import { Note } from "./Note";
 import { playMiss, playRitualHit, playSuccess } from "../audio";
 import { burst, drawPuzzleBackdrop, showRewardBanner } from "../visuals";
 import { formatCopy, puzzleCopy } from "@/data/i18n";
-
-function formatBinding(code: string) {
-  const namedKeys: Record<string, string> = {
-    Semicolon: ";",
-    Quote: "'",
-    Comma: ",",
-    Period: ".",
-    Slash: "/",
-    Backslash: "\\",
-    Minus: "-",
-    Equal: "=",
-    BracketLeft: "[",
-    BracketRight: "]"
-  };
-  if (namedKeys[code]) {
-    return namedKeys[code];
-  }
-  if (code === "Space") {
-    return "Space";
-  }
-  if (code.startsWith("Key")) {
-    return code.slice(3);
-  }
-  if (code.startsWith("Digit")) {
-    return code.slice(5);
-  }
-  if (code.startsWith("Arrow")) {
-    return code.replace("Arrow", "");
-  }
-  if (code.startsWith("Numpad")) {
-    return `Num ${code.slice(6)}`;
-  }
-  return code;
-}
+import { bindSceneHint, pulseSceneHint } from "../hints";
+import { formatBinding } from "../bindings";
+import { onSceneTeardown } from "../sceneCleanup";
 
 const laneColors = [0xd1a95d, 0xc6523d, 0x2bc7ab, 0x6f7772];
 
 export class RhythmScene extends Phaser.Scene {
   private notes: Note[] = [];
-  private startTime = -1;
-  private currentTime = 0;
+  // Song clock accumulated from wall-clock gaps between unblocked frames.
+  // Phaser's smoothed `delta` is clamped on slow frames (~200ms cap), so a
+  // delta sum falls behind real time on weak machines and desyncs the chart;
+  // raw timestamp differences keep pace while still excluding pause/UI-lock.
+  private songTime = -600;
+  private lastTickTime = -1;
   private score = 0;
   private scoreText!: Phaser.GameObjects.Text;
   private feedback!: Phaser.GameObjects.Text;
@@ -56,12 +29,9 @@ export class RhythmScene extends Phaser.Scene {
   private domKeyHandler?: (event: KeyboardEvent) => void;
   private virtualLaneHandler?: (event: Event) => void;
   private combo = 0;
-  private previousMissed = 0;
   private perfectHits = 0;
   private goodHits = 0;
-  private assistHits = 0;
   private misses = 0;
-  private maxCombo = 0;
   private returnTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
@@ -74,41 +44,44 @@ export class RhythmScene extends Phaser.Scene {
     this.finished = false;
     this.score = 0;
     this.combo = 0;
-    this.previousMissed = 0;
     this.perfectHits = 0;
     this.goodHits = 0;
-    this.assistHits = 0;
     this.misses = 0;
-    this.maxCombo = 0;
     this.returnTimer?.remove(false);
     this.returnTimer = undefined;
-    this.startTime = -1;
-    this.currentTime = 0;
     this.laneFlashes = [];
     this.progressFill = undefined;
     const laneXs = this.drawRitualStage(copy);
 
     this.scoreText = this.add.text(1010, 198, "0", {
       fontFamily: "Georgia, serif",
-      fontSize: "38px",
-      color: "#3de0c8",
-      shadow: { offsetX: 0, offsetY: 0, color: "#3de0c8", blur: 8, stroke: true, fill: true }
+      fontSize: "32px",
+      color: "#d8eee8"
     }).setOrigin(0.5).setDepth(25);
     this.feedback = this.add.text(640, 282, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
       fontSize: "24px",
       fontStyle: "bold",
       color: "#fff4d6",
-      shadow: { offsetX: 0, offsetY: 0, color: "#ffffff", blur: 6, fill: true }
+      shadow: { offsetX: 0, offsetY: 1, color: "#07110f", blur: 3, fill: true }
     }).setOrigin(0.5).setDepth(45);
     this.comboText = this.add.text(1010, 240, "COMBO 0", {
       fontFamily: "Georgia, serif",
       fontSize: "16px",
       color: "#ffd685",
-      shadow: { offsetX: 0, offsetY: 0, color: "#ffd685", blur: 4, stroke: true, fill: true }
     }).setOrigin(0.5).setDepth(25);
 
     const travel = gameState.easyMode ? 3300 : 2500;
+    // Lead in long enough for the first note to enter from the top of its lane
+    // instead of popping in mid-travel.
+    const firstNoteTime = chart.notes.reduce((min, note) => Math.min(min, note.time), Infinity);
+    this.songTime = -Math.max(600, travel - firstNoteTime + 200);
+    this.lastTickTime = -1;
+    // scene.pause() halts update entirely, so the tick anchor goes stale
+    // across a pause; drop it on resume to exclude the paused span.
+    this.events.on(Phaser.Scenes.Events.RESUME, () => {
+      this.lastTickTime = -1;
+    });
     this.notes = chart.notes.map(
       (note) =>
         new Note(
@@ -124,7 +97,7 @@ export class RhythmScene extends Phaser.Scene {
     );
 
     this.domKeyHandler = (event: KeyboardEvent) => {
-      if (isUiLocked()) {
+      if (event.repeat || gameState.paused || isUiLocked()) {
         return;
       }
       const lane = gameState.settings.bindings.rhythm.findIndex((code) => code === event.code);
@@ -133,7 +106,7 @@ export class RhythmScene extends Phaser.Scene {
       }
     };
     this.virtualLaneHandler = (event: Event) => {
-      if (isUiLocked()) {
+      if (gameState.paused || isUiLocked()) {
         return;
       }
       const lane = Number((event as CustomEvent<number>).detail);
@@ -143,7 +116,7 @@ export class RhythmScene extends Phaser.Scene {
     };
     window.addEventListener("keydown", this.domKeyHandler);
     window.addEventListener("lcw:rhythm-hit", this.virtualLaneHandler);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    onSceneTeardown(this, () => {
       if (this.domKeyHandler) {
         window.removeEventListener("keydown", this.domKeyHandler);
         this.domKeyHandler = undefined;
@@ -155,33 +128,42 @@ export class RhythmScene extends Phaser.Scene {
       this.returnTimer?.remove(false);
       this.returnTimer = undefined;
     });
+    bindSceneHint(this, () => {
+      pulseSceneHint(this, 640, 535, 0x3de0c8);
+      this.laneFlashes.forEach((_flash, lane) => this.flashLane(lane, laneColors[lane]));
+    });
   }
 
-  update(time: number) {
-    if (this.finished || gameState.paused || isUiLocked()) {
+  override update(time: number) {
+    if (this.finished) {
+      return;
+    }
+    if (gameState.paused || isUiLocked()) {
+      this.lastTickTime = -1;
       return;
     }
 
-    this.currentTime = time;
-    if (this.startTime < 0) {
-      this.startTime = time + 600;
+    if (this.lastTickTime >= 0) {
+      this.songTime += time - this.lastTickTime;
     }
-    const elapsed = time - this.startTime;
+    this.lastTickTime = time;
+    const elapsed = this.songTime;
     this.updateProgress(elapsed);
+    let newlyMissed = 0;
     for (const note of this.notes) {
-      note.update(elapsed);
+      if (note.update(elapsed)) {
+        newlyMissed += 1;
+      }
     }
 
-    const missed = this.notes.filter((note) => note.missed).length;
-    if (missed > this.previousMissed) {
-      this.misses += missed - this.previousMissed;
+    if (newlyMissed > 0) {
+      this.misses += newlyMissed;
       this.combo = 0;
       this.comboText.setText("COMBO 0");
       this.feedback.setText("MISS");
       this.feedback.setColor("#ff4d4d");
       playMiss();
     }
-    this.previousMissed = missed;
 
     if (elapsed > chart.duration) {
       this.finish();
@@ -189,16 +171,22 @@ export class RhythmScene extends Phaser.Scene {
   }
 
   private hitLane(lane: number) {
-    if (this.finished || isUiLocked()) {
+    if (this.finished || gameState.paused || isUiLocked()) {
       return;
     }
-    if (this.startTime < 0) {
-      return;
+    const elapsed = this.songTime;
+    let candidate: Note | undefined;
+    let candidateDiff = Number.POSITIVE_INFINITY;
+    for (const note of this.notes) {
+      if (note.lane !== lane || note.hit || note.missed) {
+        continue;
+      }
+      const noteDiff = note.diff(elapsed);
+      if (noteDiff < candidateDiff) {
+        candidateDiff = noteDiff;
+        candidate = note;
+      }
     }
-    const elapsed = this.currentTime - this.startTime;
-    const candidate = this.notes
-      .filter((note) => note.lane === lane && !note.hit && !note.missed)
-      .sort((a, b) => a.diff(elapsed) - b.diff(elapsed))[0];
 
     if (!candidate) {
       this.combo = 0;
@@ -210,15 +198,17 @@ export class RhythmScene extends Phaser.Scene {
       return;
     }
 
-    const diff = candidate.diff(elapsed);
+    const diff = candidateDiff;
     if (diff <= 180) {
       this.score += 120;
       candidate.markHit();
       this.feedback.setText("PERFECT");
       this.combo += 1;
       this.perfectHits += 1;
-      this.maxCombo = Math.max(this.maxCombo, this.combo);
-      playRitualHit(true);
+      playRitualHit(true, lane);
+      if (!gameState.settings.reduceMotion) {
+        this.cameras.main.shake(60, 0.001);
+      }
       this.feedback.setColor("#3de0c8");
       this.flashLane(lane, 0x2bc7ab);
       this.pulseFeedback(0x2bc7ab);
@@ -229,8 +219,7 @@ export class RhythmScene extends Phaser.Scene {
       this.feedback.setText("GOOD");
       this.combo += 1;
       this.goodHits += 1;
-      this.maxCombo = Math.max(this.maxCombo, this.combo);
-      playRitualHit(false);
+      playRitualHit(false, lane);
       this.feedback.setColor("#ffd685");
       this.flashLane(lane, 0xd1a95d);
       this.pulseFeedback(0xd1a95d);
@@ -239,9 +228,8 @@ export class RhythmScene extends Phaser.Scene {
       this.score += 25;
       candidate.markHit();
       this.feedback.setText("ASSIST");
-      this.assistHits += 1;
       this.combo = 0;
-      playRitualHit(false);
+      playRitualHit(false, lane);
       this.feedback.setColor("#a8c0ba");
       this.flashLane(lane, 0xd1a95d);
     } else {
@@ -254,6 +242,15 @@ export class RhythmScene extends Phaser.Scene {
     }
     this.scoreText.setText(String(this.score));
     this.comboText.setText(`COMBO ${this.combo}`);
+    if (this.combo > 0 && !gameState.settings.reduceMotion) {
+      this.comboText.setScale(1.15);
+      this.tweens.add({
+        targets: this.comboText,
+        scale: 1,
+        duration: 160,
+        ease: "Back.easeOut"
+      });
+    }
   }
 
   private finish() {
@@ -270,7 +267,55 @@ export class RhythmScene extends Phaser.Scene {
       this.updateProgress(chart.duration);
       burst(this, 640, 320, 0x2bc7ab);
       showRewardBanner(this, formatCopy(copy.rhythmReward, { grade }), 0x1f8f82);
-      this.returnTimer = this.time.delayedCall(1400, () => this.scene.start("WorldScene"));
+
+      // Draw a premium rating badge in the center
+      const gradeColors: Record<string, number> = { S: 0x3de0c8, A: 0xffd685, B: 0xa8c0ba, C: 0xff4d4d };
+      const gradeColor = gradeColors[grade] || 0xffffff;
+      const gradeCSSColors: Record<string, string> = { S: "#3de0c8", A: "#ffd685", B: "#a8c0ba", C: "#ff4d4d" };
+      const gradeCSSColor = gradeCSSColors[grade] || "#ffffff";
+      
+      const badgeContainer = this.add.container(640, 320).setDepth(85);
+      const badgeGlow = this.add.circle(0, 0, 80, gradeColor, 0.16);
+      const badgeRing = this.add.circle(0, 0, 64, 0x0c1b18, 0.92).setStrokeStyle(3, gradeColor, 0.85);
+      const badgeText = this.add.text(0, 0, grade, {
+        fontFamily: "Georgia, serif",
+        fontSize: "72px",
+        fontStyle: "bold",
+        color: "#fffcf2"
+      }).setOrigin(0.5);
+      
+      badgeText.setShadow(0, 0, gradeCSSColor, 16, true, true);
+      badgeContainer.add([badgeGlow, badgeRing, badgeText]);
+      
+      if (!gameState.settings.reduceMotion) {
+        badgeContainer.setScale(0.2).setAlpha(0);
+        this.tweens.add({
+          targets: badgeContainer,
+          scale: 1,
+          alpha: 1,
+          duration: 450,
+          ease: "Back.easeOut"
+        });
+        
+        // Emit some nice sparks around the badge
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2;
+          const spark = this.add.circle(Math.cos(angle) * 64, Math.sin(angle) * 64, 4, gradeColor, 0.8).setDepth(86);
+          badgeContainer.add(spark);
+          this.tweens.add({
+            targets: spark,
+            x: Math.cos(angle) * 120,
+            y: Math.sin(angle) * 120,
+            alpha: 0,
+            scale: 0.2,
+            duration: 800,
+            ease: "Quad.easeOut",
+            onComplete: () => spark.destroy()
+          });
+        }
+      }
+
+      this.returnTimer = this.time.delayedCall(2500, () => this.scene.start("WorldScene"));
     } else {
       gameState.dialogue = copy.rhythmFail;
       emitGameState("rhythm");
@@ -300,40 +345,34 @@ export class RhythmScene extends Phaser.Scene {
       backgroundAlpha: 0.28,
       overlayAlpha: 0.54
     });
-    this.add.circle(640, 370, 246, 0x2bc7ab, 0.07).setStrokeStyle(2, 0x2bc7ab, 0.18);
-    this.add.circle(640, 370, 184, 0x111817, 0.06).setStrokeStyle(1, 0xd1a95d, 0.16);
-    this.add.rectangle(640, 380, 688, 438, 0x07100f, 0.08).setStrokeStyle(1, 0x2bc7ab, 0.14);
+    this.add.circle(640, 370, 208, 0x2bc7ab, 0.035).setStrokeStyle(1, 0x2bc7ab, 0.1);
+    this.add.circle(640, 370, 154, 0x111817, 0.035).setStrokeStyle(1, 0xd1a95d, 0.1);
+    this.add.rectangle(640, 380, 620, 420, 0x07100f, 0.06).setStrokeStyle(1, 0x2bc7ab, 0.1);
 
-    // Glassmorphic HUD feedback panel
-    this.add.rectangle(640, 282, 340, 54, 0x091412, 0.88).setStrokeStyle(1.5, 0x2bc7ab, 0.6).setDepth(20);
-    this.add.rectangle(640, 282, 334, 48, 0x000000, 0).setStrokeStyle(1, 0xd1a95d, 0.24).setDepth(20);
+    this.add.rectangle(640, 282, 296, 48, 0x091412, 0.76).setStrokeStyle(1, 0x2bc7ab, 0.38).setDepth(20);
 
-    // Glassmorphic HUD score/combo panel
-    this.add.rectangle(1010, 218, 150, 112, 0x091412, 0.88).setStrokeStyle(1.5, 0xd1a95d, 0.6).setDepth(20);
-    this.add.rectangle(1010, 218, 144, 106, 0x000000, 0).setStrokeStyle(1, 0x2bc7ab, 0.24).setDepth(20);
+    this.add.rectangle(1010, 218, 132, 98, 0x091412, 0.78).setStrokeStyle(1, 0xd1a95d, 0.42).setDepth(20);
 
     const laneXs = [435, 570, 705, 840];
     laneXs.forEach((x, lane) => {
       const color = laneColors[lane];
-      this.add.rectangle(x + 5, 366, 104, 424, 0x020504, 0.1);
-      this.add.rectangle(x, 360, 98, 416, 0x0b1514, 0.1).setStrokeStyle(1, color, 0.22);
-      this.add.rectangle(x, 535, 110, 72, 0x111817, 0.12).setStrokeStyle(1, color, 0.28);
-      this.add.line(x, 360, 0, -184, 0, 184, color, 0.18);
-      this.add.circle(x, 535, 33, color, 0.1).setStrokeStyle(2, color, 0.28);
-      this.add.circle(x, 535, 18, 0xfff4d6, 0.16);
-      const flash = this.add.rectangle(x, 360, 98, 416, color, 0).setDepth(15);
+      this.add.rectangle(x + 4, 370, 84, 404, 0x020504, 0.08);
+      this.add.rectangle(x, 366, 80, 398, 0x0b1514, 0.08).setStrokeStyle(1, color, 0.14);
+      this.add.rectangle(x, 535, 88, 62, 0x111817, 0.1).setStrokeStyle(1, color, 0.22);
+      this.add.line(x, 366, 0, -176, 0, 176, color, 0.12);
+      this.add.circle(x, 535, 28, color, 0.07).setStrokeStyle(1.5, color, 0.24);
+      this.add.circle(x, 535, 14, 0xfff4d6, 0.12);
+      const flash = this.add.rectangle(x, 366, 80, 398, color, 0).setDepth(15);
       this.laneFlashes.push(flash);
       this.add.text(x, 586, formatBinding(gameState.settings.bindings.rhythm[lane]), {
         fontFamily: "Georgia, serif",
-        fontSize: "30px",
+        fontSize: "24px",
         color: "#fff4d6",
-        shadow: { offsetX: 0, offsetY: 0, color: "#ffd685", blur: 6, stroke: true, fill: true }
+        shadow: { offsetX: 0, offsetY: 1, color: "#07110f", blur: 3, fill: true }
       }).setOrigin(0.5).setDepth(20);
     });
-    // Glowing cyan/jade hit laser line
-    this.add.rectangle(640, 535, 642, 4, 0xffffff, 0.95).setDepth(18);
-    this.add.rectangle(640, 535, 646, 8, 0x3de0c8, 0.6).setDepth(17);
-    this.add.rectangle(640, 535, 650, 18, 0x2bc7ab, 0.2).setDepth(16);
+    this.add.rectangle(640, 535, 560, 2, 0xfff4d6, 0.62).setDepth(18);
+    this.add.rectangle(640, 535, 566, 8, 0x2bc7ab, 0.12).setDepth(17);
     this.add.rectangle(640, 154, 620, 6, 0x111817, 0.1).setStrokeStyle(1, 0x2bc7ab, 0.16);
     this.progressFill = this.add.rectangle(330, 154, 1, 6, 0x2bc7ab, 0.78).setOrigin(0, 0.5);
     return laneXs;
@@ -385,13 +424,15 @@ export class RhythmScene extends Phaser.Scene {
   }
 
   private gradeRun() {
-    if (this.perfectHits >= 10 && this.misses === 0 && this.maxCombo >= 10) {
+    const totalNotes = chart.notes.length;
+    const totalHits = this.perfectHits + this.goodHits;
+    if (this.perfectHits >= Math.ceil(totalNotes * 0.73) && this.misses === 0) {
       return "S";
     }
-    if (this.perfectHits + this.goodHits >= 11 && this.misses <= 2) {
+    if (totalHits >= Math.ceil(totalNotes * 0.66) && this.misses <= 4) {
       return "A";
     }
-    if (this.score >= chart.targetScore) {
+    if (this.score >= 500) {
       return "B";
     }
     return "C";

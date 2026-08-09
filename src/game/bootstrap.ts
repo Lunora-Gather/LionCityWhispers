@@ -8,7 +8,10 @@ import { RhythmScene } from "./rhythm/RhythmScene";
 import { WorldScene } from "./WorldScene";
 import {
   applyAudioSettings,
+  closeAudioContext,
+  playAchievementFanfare,
   preloadAudioAssets,
+  resumeAudioContext,
   setAudioPageSuspended,
   setAudioPaused
 } from "./audio";
@@ -16,6 +19,7 @@ import {
   clearSavedGame,
   emitGameState,
   gameState,
+  importSaveString,
   initializeGameState,
   resetGameState,
   setPaused,
@@ -75,7 +79,8 @@ export function startGame(parent: string) {
     },
     render: {
       antialias: true,
-      pixelArt: false
+      pixelArt: false,
+      powerPreference: "high-performance"
     }
   };
 
@@ -85,30 +90,28 @@ export function startGame(parent: string) {
   let inputLatency = 0;
   let worstInputLatency = 0;
   let interactionSamples = 0;
-  let lastFrame = performance.now();
-  let windowStart = lastFrame;
-  let rafId = 0;
-  const tick = (time: number) => {
-    const delta = time - lastFrame;
-    lastFrame = time;
+  let windowStart = performance.now();
+  // Piggyback on Phaser's own game loop instead of running a second rAF loop.
+  const onPostStep = (_time: number, delta: number) => {
     frameCount += 1;
     if (delta > 80) {
       longFrames += 1;
     }
-    rafId = window.requestAnimationFrame(tick);
   };
-  rafId = window.requestAnimationFrame(tick);
+  game.events.on(Phaser.Core.Events.POST_STEP, onPostStep);
   const performanceTimer = window.setInterval(() => {
     const now = performance.now();
     const elapsed = Math.max(1, now - windowStart);
-    updatePerformanceStats({
+    const changed = updatePerformanceStats({
       fps: Math.round((frameCount * 1000) / elapsed),
       longFrames,
       inputLatency: Math.round(inputLatency),
       worstInputLatency: Math.round(worstInputLatency),
       interactionSamples
     });
-    emitGameState();
+    if (changed) {
+      emitGameState();
+    }
     frameCount = 0;
     longFrames = 0;
     inputLatency = 0;
@@ -131,7 +134,7 @@ export function startGame(parent: string) {
     const key = managedScenes.find(
       (sceneKey) => game.scene.isActive(sceneKey) || game.scene.isPaused(sceneKey)
     );
-    return key ? sceneLabels[key] : "world";
+    return (key && sceneLabels[key]) || "world";
   };
 
   const onPause = (event: Event) => {
@@ -206,6 +209,20 @@ export function startGame(parent: string) {
     setUiLocked(Boolean((event as CustomEvent<boolean>).detail));
   };
 
+  const onAudioResume = () => {
+    resumeAudioContext();
+  };
+
+  const onAchievement = () => {
+    playAchievementFanfare();
+  };
+
+  const onSaveImport = (event: Event) => {
+    const saveStr = (event as CustomEvent<string>).detail;
+    const success = importSaveString(saveStr);
+    window.dispatchEvent(new CustomEvent("lcw:save-import-result", { detail: success }));
+  };
+
   const onVisibilityChange = () => {
     setAudioPageSuspended(document.hidden);
   };
@@ -220,6 +237,9 @@ export function startGame(parent: string) {
   window.addEventListener("lcw:settings", onSettings);
   window.addEventListener("lcw:chapter", onChapter);
   window.addEventListener("lcw:ui-lock", onUiLock);
+  window.addEventListener("lcw:audio-resume", onAudioResume);
+  window.addEventListener("lcw:save-import", onSaveImport);
+  window.addEventListener("lcw:audio-achievement", onAchievement);
   window.addEventListener("pointerdown", trackInteraction, { passive: true });
   window.addEventListener("keydown", trackInteraction);
   document.addEventListener("visibilitychange", onVisibilityChange);
@@ -235,14 +255,20 @@ export function startGame(parent: string) {
       window.removeEventListener("lcw:settings", onSettings);
       window.removeEventListener("lcw:chapter", onChapter);
       window.removeEventListener("lcw:ui-lock", onUiLock);
+      window.removeEventListener("lcw:audio-resume", onAudioResume);
+      window.removeEventListener("lcw:save-import", onSaveImport);
+      window.removeEventListener("lcw:audio-achievement", onAchievement);
       window.removeEventListener("pointerdown", trackInteraction);
       window.removeEventListener("keydown", trackInteraction);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", onFocus);
-      window.cancelAnimationFrame(rafId);
       window.clearInterval(performanceTimer);
+      game.events.off(Phaser.Core.Events.POST_STEP, onPostStep);
       game.destroy(true);
+      // The Phaser game owns no audio nodes; the ambient soundscape lives on a
+      // module-level AudioContext that must be shut down explicitly.
+      closeAudioContext();
     }
   };
 }

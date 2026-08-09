@@ -1,6 +1,8 @@
 import { assetPath } from "@/utils/assetPath";
 
 let context: AudioContext | null = null;
+let contextClosed = false;
+const sequenceTimers = new Set<number>();
 let muted = false;
 let masterVolume = 0.78;
 let effectsVolume = 0.78;
@@ -28,13 +30,24 @@ type AudioAssetKey = keyof typeof audioAssetSources;
 const audioPools = new Map<AudioAssetKey, HTMLAudioElement[]>();
 
 function getContext() {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || contextClosed) {
     return null;
   }
   if (!context) {
     context = new AudioContext();
   }
   return context;
+}
+
+export function resumeAudioContext() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const ctx = getContext();
+  if (ctx && ctx.state === "suspended") {
+    void ctx.resume();
+  }
+  startAmbient();
 }
 
 export function setAudioMuted(next: boolean) {
@@ -110,6 +123,8 @@ export function applyAudioSettings(settings: {
 }
 
 export function preloadAudioAssets() {
+  // A new game session may follow a previous teardown; allow audio again.
+  contextClosed = false;
   if (typeof window === "undefined" || audioPools.size > 0) {
     return;
   }
@@ -143,6 +158,74 @@ function playAudioAsset(key: AudioAssetKey, fallback: () => void) {
   void audio.play().catch(fallback);
 }
 
+let generativeTimer: number | null = null;
+let pendingToneTimers: number[] = [];
+const pentatonicScale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+let noiseSource: AudioBufferSourceNode | null = null;
+let waveLfo: OscillatorNode | null = null;
+let noiseBuffer: AudioBuffer | null = null;
+
+function createNoiseNode(ctx: AudioContext) {
+  // Filling ~2s of samples is a visible main-thread hitch, so generate the
+  // buffer once and reuse it across every ambient restart (mute/pause/focus).
+  if (!noiseBuffer || noiseBuffer.sampleRate !== ctx.sampleRate) {
+    const bufferSize = 2 * ctx.sampleRate;
+    noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+  }
+  const source = ctx.createBufferSource();
+  source.buffer = noiseBuffer;
+  source.loop = true;
+  return source;
+}
+
+function startGenerativeMusic() {
+  if (generativeTimer || typeof window === "undefined") return;
+  const ctx = getContext();
+  if (!ctx) return;
+  
+  const scheduleNext = () => {
+    const delay = 8000 + Math.random() * 8000;
+    generativeTimer = window.setTimeout(() => {
+      if (muted || pageSuspended || !ambientAllowed) {
+        scheduleNext();
+        return;
+      }
+      const noteCount = 2 + Math.floor(Math.random() * 2);
+      let arpeggioDelay = 0;
+      for (let i = 0; i < noteCount; i++) {
+        const freqIndex = Math.floor(Math.random() * pentatonicScale.length);
+        const freq = pentatonicScale[freqIndex];
+        pendingToneTimers.push(
+          window.setTimeout(() => {
+            if (ambientAllowed) {
+              playTone(freq, 1.2, "sine", 0.008);
+            }
+          }, arpeggioDelay)
+        );
+        arpeggioDelay += 280 + Math.random() * 180;
+      }
+      pendingToneTimers = pendingToneTimers.slice(-8);
+      scheduleNext();
+    }, delay);
+  };
+  scheduleNext();
+}
+
+function stopGenerativeMusic() {
+  if (generativeTimer) {
+    window.clearTimeout(generativeTimer);
+    generativeTimer = null;
+  }
+  for (const timer of pendingToneTimers) {
+    window.clearTimeout(timer);
+  }
+  pendingToneTimers = [];
+}
+
 export function startAmbient() {
   if (muted || pageSuspended || !ambientAllowed || ambient || typeof window === "undefined") {
     return;
@@ -157,6 +240,7 @@ export function startAmbient() {
   const gain = ctx.createGain();
   gain.gain.value = masterVolume * ambientVolume * 0.014;
   gain.connect(ctx.destination);
+  
   const low = ctx.createOscillator();
   const high = ctx.createOscillator();
   low.type = "sine";
@@ -167,19 +251,91 @@ export function startAmbient() {
   high.connect(gain);
   low.start();
   high.start();
+  
+  try {
+    noiseSource = createNoiseNode(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 320;
+    filter.Q.value = 0.8;
+
+    const waveGain = ctx.createGain();
+    waveGain.gain.value = 0.08;
+
+    waveLfo = ctx.createOscillator();
+    waveLfo.type = "sine";
+    waveLfo.frequency.value = 0.18;
+
+    const waveLfoGain = ctx.createGain();
+    waveLfoGain.gain.value = 0.05;
+
+    waveLfo.connect(waveLfoGain);
+    waveLfoGain.connect(waveGain.gain);
+    noiseSource.connect(filter);
+    filter.connect(waveGain);
+    waveGain.connect(gain);
+
+    noiseSource.start();
+    waveLfo.start();
+  } catch (err) {
+    // Leave both null so the next startAmbient() can retry cleanly.
+    noiseSource = null;
+    waveLfo = null;
+  }
+
   ambient = { oscillators: [low, high], gain };
+  startGenerativeMusic();
 }
 
 export function stopAmbient() {
+  stopGenerativeMusic();
+  // Tear down each node independently so one throw can't strand the other.
+  if (noiseSource) {
+    try {
+      noiseSource.stop();
+      noiseSource.disconnect();
+    } catch (err) {}
+    noiseSource = null;
+  }
+  if (waveLfo) {
+    try {
+      waveLfo.stop();
+      waveLfo.disconnect();
+    } catch (err) {}
+    waveLfo = null;
+  }
+
   if (!ambient) {
     return;
   }
   for (const oscillator of ambient.oscillators) {
-    oscillator.stop();
-    oscillator.disconnect();
+    try {
+      oscillator.stop();
+      oscillator.disconnect();
+    } catch (e) {}
   }
-  ambient.gain.disconnect();
+  try {
+    ambient.gain.disconnect();
+  } catch (e) {}
   ambient = null;
+}
+
+export function closeAudioContext() {
+  // Cancel queued sequence notes so a late setTimeout can't lazily rebuild
+  // a fresh AudioContext after teardown.
+  for (const timer of sequenceTimers) {
+    window.clearTimeout(timer);
+  }
+  sequenceTimers.clear();
+  contextClosed = true;
+  stopAmbient();
+  if (context) {
+    void context.close().catch(() => {
+      // The context may already be closed by the browser.
+    });
+    context = null;
+  }
+  noiseBuffer = null;
 }
 
 export function playTone(
@@ -218,7 +374,11 @@ export function playTone(
 export function playSequence(notes: Array<[number, number]>, type: OscillatorType = "sine") {
   let delay = 0;
   for (const [frequency, duration] of notes) {
-    window.setTimeout(() => playTone(frequency, duration, type), delay);
+    const timer = window.setTimeout(() => {
+      sequenceTimers.delete(timer);
+      playTone(frequency, duration, type);
+    }, delay);
+    sequenceTimers.add(timer);
     delay += duration * 1000 * 0.72;
   }
 }
@@ -256,8 +416,31 @@ export function playMiss() {
   playAudioAsset("miss", () => playTone(150, 0.18, "sawtooth", 0.025));
 }
 
-export function playRitualHit(perfect: boolean) {
-  playAudioAsset(perfect ? "ritualPerfect" : "ritualGood", () =>
-    playTone(perfect ? 880 : 660, perfect ? 0.09 : 0.07, "sine", perfect ? 0.042 : 0.03)
-  );
+export function playAchievementFanfare() {
+  playSequence([
+    [523.25, 0.08],
+    [659.25, 0.08],
+    [783.99, 0.08],
+    [1046.50, 0.24]
+  ], "sine");
+}
+
+export function playRitualHit(perfect: boolean, lane?: number) {
+  playAudioAsset(perfect ? "ritualPerfect" : "ritualGood", () => {
+    const vol = perfect ? 0.022 : 0.014;
+    const dur = perfect ? 0.45 : 0.32;
+    if (lane !== undefined && lane >= 0 && lane <= 3) {
+      const freqs = [
+        [261.63, 392.00, 523.25], // Lane 0: C4-G4-C5
+        [293.66, 440.00, 587.33], // Lane 1: D4-A4-D5
+        [329.63, 493.88, 659.25], // Lane 2: E4-B4-E5
+        [392.00, 587.33, 783.99]  // Lane 3: G4-D5-G5
+      ][lane];
+      for (const freq of freqs) {
+        playTone(freq, dur, "sine", vol);
+      }
+    } else {
+      playTone(perfect ? 880 : 660, perfect ? 0.09 : 0.07, "sine", perfect ? 0.042 : 0.03);
+    }
+  });
 }

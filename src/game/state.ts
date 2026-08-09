@@ -110,7 +110,7 @@ export const artifacts: Record<ArtifactId, Artifact> = {
   "spirit-chime": localizedArtifact("spirit-chime", "zh")
 };
 
-function createDefaultState(): GameState {
+function createDefaultState(locale: Locale = "zh"): GameState {
   return {
     inventory: [],
     flags: {
@@ -124,7 +124,7 @@ function createDefaultState(): GameState {
       visitors: 0,
       complete: false
     },
-    dialogue: text(stateCopy.opening, "zh"),
+    dialogue: text(stateCopy.opening, locale),
     paused: false,
     easyMode: true,
     settings: createDefaultSettings(),
@@ -314,7 +314,8 @@ function loadPersistedState() {
     if (parsed.version !== SAVE_VERSION) {
       return null;
     }
-    const defaults = createDefaultState();
+    const settings = sanitizeSettings(parsed.settings, createDefaultSettings());
+    const defaults = createDefaultState(settings.locale);
     return {
       ...defaults,
       inventory: (parsed.inventoryIds ?? [])
@@ -327,7 +328,7 @@ function loadPersistedState() {
           ? parsed.dialogue
           : defaults.dialogue,
       easyMode: typeof parsed.easyMode === "boolean" ? parsed.easyMode : defaults.easyMode,
-      settings: sanitizeSettings(parsed.settings, defaults.settings)
+      settings
     } satisfies GameState;
   } catch {
     return null;
@@ -343,7 +344,7 @@ export function initializeGameState() {
 
 export function resetGameState() {
   const currentSettings = gameState.settings;
-  applyState({ ...createDefaultState(), settings: currentSettings });
+  applyState({ ...createDefaultState(currentSettings.locale), settings: currentSettings });
   uiLocked = false;
   emitGameState("world");
 }
@@ -390,7 +391,8 @@ export function updateSettings(settings: Partial<GameSettings>) {
 }
 
 export function toggleMuted() {
-  gameState.settings.muted = !gameState.settings.muted;
+  // Replace the settings object so React listeners comparing by identity re-render.
+  gameState.settings = { ...gameState.settings, muted: !gameState.settings.muted };
   return gameState.settings.muted;
 }
 
@@ -401,8 +403,8 @@ export function addArtifact(id: ArtifactId) {
 }
 
 export function completedPuzzleCount() {
-  return [gameState.flags.jigsaw, gameState.flags.runes, gameState.flags.lock].filter(Boolean)
-    .length;
+  // Called from WorldScene.update every frame; keep it allocation-free.
+  return (gameState.flags.jigsaw ? 1 : 0) + (gameState.flags.runes ? 1 : 0) + (gameState.flags.lock ? 1 : 0);
 }
 
 export function getObjective() {
@@ -433,6 +435,22 @@ export function getObjective() {
   return text(objectiveCopy.continueRiver, gameState.settings.locale);
 }
 
+// Reuse the localized inventory array across emits while its contents are
+// unchanged, so React listeners can bail out on identity comparisons.
+let localizedInventoryKey = "";
+let localizedInventory: Artifact[] = [];
+
+function getLocalizedInventory() {
+  const key = `${gameState.settings.locale}:${gameState.inventory.map((item) => item.id).join(",")}`;
+  if (key !== localizedInventoryKey) {
+    localizedInventoryKey = key;
+    localizedInventory = gameState.inventory.map((item) =>
+      localizedArtifact(item.id, gameState.settings.locale)
+    );
+  }
+  return localizedInventory;
+}
+
 export function emitGameState(scene?: string) {
   if (typeof window === "undefined") {
     return;
@@ -445,9 +463,7 @@ export function emitGameState(scene?: string) {
     new CustomEvent("lcw:state", {
       detail: {
         objective: getObjective(),
-        inventory: gameState.inventory.map((item) =>
-          localizedArtifact(item.id, gameState.settings.locale)
-        ),
+        inventory: getLocalizedInventory(),
         visitors: gameState.museum.visitors,
         scene: sceneName(currentScene, gameState.settings.locale),
         completedPuzzles: completedPuzzleCount(),
@@ -464,5 +480,68 @@ export function emitGameState(scene?: string) {
 }
 
 export function updatePerformanceStats(stats: PerformanceStats) {
-  gameState.performance = sanitizePerformanceStats(stats);
+  const next = sanitizePerformanceStats(stats);
+  const previous = gameState.performance;
+  // Preserve object identity when nothing changed so state listeners can skip work.
+  if (
+    next.fps === previous.fps &&
+    next.longFrames === previous.longFrames &&
+    next.inputLatency === previous.inputLatency &&
+    next.worstInputLatency === previous.worstInputLatency &&
+    next.interactionSamples === previous.interactionSamples
+  ) {
+    return false;
+  }
+  gameState.performance = next;
+  return true;
+}
+
+export function serializeSaveString(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  const saveState = serializeGameState();
+  return window.btoa(encodeURIComponent(JSON.stringify(saveState)));
+}
+
+export function importSaveString(saveStr: string): boolean {
+  if (typeof window === "undefined" || !saveStr) {
+    return false;
+  }
+  try {
+    const raw = decodeURIComponent(window.atob(saveStr.trim()));
+    const parsed = JSON.parse(raw) as {
+      version?: number;
+      inventoryIds?: unknown[];
+      flags?: unknown;
+      museum?: unknown;
+      dialogue?: unknown;
+      easyMode?: unknown;
+      settings?: unknown;
+    };
+    if (parsed.version !== SAVE_VERSION) {
+      return false;
+    }
+    const settings = sanitizeSettings(parsed.settings, createDefaultSettings());
+    const defaults = createDefaultState(settings.locale);
+    const imported = {
+      ...defaults,
+      inventory: (parsed.inventoryIds ?? [])
+        .filter(isArtifactId)
+        .map((id) => artifacts[id]),
+      flags: sanitizeFlags(parsed.flags),
+      museum: sanitizeMuseum(parsed.museum),
+      dialogue:
+        typeof parsed.dialogue === "string" && parsed.dialogue.length > 0
+          ? parsed.dialogue
+          : defaults.dialogue,
+      easyMode: typeof parsed.easyMode === "boolean" ? parsed.easyMode : defaults.easyMode,
+      settings
+    } satisfies GameState;
+    applyState(imported);
+    emitGameState("world");
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -36,37 +36,44 @@ export class NPC {
 
   constructor(private scene: Phaser.Scene, readonly config: InteractableConfig) {
     this.marker = scene.add.container(config.x, config.y);
-    const guideGlow = scene.add.circle(0, 0, 72, config.color, 0.13).setStrokeStyle(2, 0xd0a84c, 0.42);
-    const guideRing = scene.add.circle(0, 0, 52, config.color, 0).setStrokeStyle(2, config.color, 0.72);
-    const guideNeedle = scene.add.triangle(0, -61, -10, -13, 10, -13, 0, 10, 0xd0a84c, 0.86);
-    const guideSpark = scene.add.circle(0, -61, 5, 0xf8edd2, 0.74);
+    const guideGlow = scene.add.circle(0, 0, 34, config.color, 0.08).setStrokeStyle(1, 0xd0a84c, 0.22);
+    const guideRing = scene.add.circle(0, 0, 27, config.color, 0).setStrokeStyle(1, config.color, 0.48);
+    const guideNeedle = scene.add.triangle(0, -34, -5, -8, 5, -8, 0, 3, 0xd0a84c, 0.82);
+    const guideSpark = scene.add.circle(0, -34, 2.5, 0xf8edd2, 0.7);
     this.guide = scene.add.container(0, 0, [guideGlow, guideRing, guideNeedle, guideSpark]).setAlpha(0);
-    this.halo = scene.add.circle(0, 0, 34, config.color, 0.14).setStrokeStyle(2, 0xf8efd5, 0.48);
-    const pulse = scene.add.circle(0, 0, 50, config.color, 0.08).setStrokeStyle(1, config.color, 0.34);
-    const outer = scene.add.circle(0, 0, 23, 0x07100f, 0.48).setStrokeStyle(2, 0xf8efd5, 0.64);
-    this.base = scene.add.circle(0, 0, 15, 0xf8efd5, 0.94).setStrokeStyle(2, config.color, 0.96);
-    const diamond = scene.add.rectangle(0, 0, 13, 13, config.color, 0.9).setRotation(Math.PI / 4);
-    const glint = scene.add.rectangle(0, -10, 15, 2, 0xffffff, 0.48).setRotation(-0.5);
+    this.halo = scene.add.circle(0, 0, 24, config.color, 0.1).setStrokeStyle(1.5, 0xf8efd5, 0.38);
+    
+    // Tight, subtle pulse ring (32px radius, much smaller footprint)
+    const pulse = scene.add.circle(0, 0, 23, config.color, 0.025).setStrokeStyle(1, config.color, 0.2);
+    const outer = scene.add.circle(0, 0, 17, 0x07100f, 0.62).setStrokeStyle(1.5, 0xf8efd5, 0.52);
+    this.base = scene.add.circle(0, 0, 11, 0xf8efd5, 0.94).setStrokeStyle(1.5, config.color, 0.88);
+    const diamond = scene.add.rectangle(0, 0, 8, 8, config.color, 0.9).setRotation(Math.PI / 4);
+    const glint = scene.add.rectangle(0, -7, 10, 1, 0xffffff, 0.42).setRotation(-0.5);
     const glyph = scene.add.text(0, -1, kindGlyphs[config.kind], {
       fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "13px",
+      fontSize: "9px",
       fontStyle: "bold",
       color: "#07100f"
     }).setOrigin(0.5);
-    const plaqueWidth = Math.max(112, config.label.length * 20 + 22);
-    const plaque = scene.add.rectangle(0, -74, plaqueWidth, 36, 0x07100f, 0.91);
-    plaque.setStrokeStyle(1, 0xd0a84c, 0.72);
-    const plaqueAccent = scene.add.rectangle(-plaqueWidth / 2 + 5, -74, 4, 25, config.color, 0.95);
-    const text = scene.add.text(0, 36, config.label, {
-      fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "15px",
-      color: "#fff6dc",
+
+    // Sleek rounded rectangle plaque with crisp bold text
+    const plaqueWidth = Math.max(82, config.label.length * 13 + 22);
+    const plaque = scene.add.graphics();
+    plaque.fillStyle(0x07100f, 0.94);
+    plaque.fillRoundedRect(-plaqueWidth / 2, -62, plaqueWidth, 25, 7);
+    plaque.lineStyle(1, 0xd0a84c, 0.68);
+    plaque.strokeRoundedRect(-plaqueWidth / 2, -62, plaqueWidth, 25, 7);
+
+    const text = scene.add.text(0, -49, config.label, {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, Noto Sans, sans-serif",
+      fontSize: "12px",
+      fontStyle: "bold",
+      color: "#fffcf0",
       stroke: "#07100f",
-      strokeThickness: 3
+      strokeThickness: 2
     }).setOrigin(0.5);
 
-    text.setPosition(0, -72);
-    this.label = scene.add.container(0, 0, [plaque, plaqueAccent, text]).setAlpha(0);
+    this.label = scene.add.container(0, 0, [plaque, text]).setAlpha(0);
     this.marker.add([this.guide, pulse, this.halo, outer, this.base, diamond, glyph, glint, this.label]);
     this.marker.setDepth(16);
     this.marker.setInteractive(
@@ -78,17 +85,17 @@ export class NPC {
     if (!gameState.settings.reduceMotion) {
       scene.tweens.add({
         targets: pulse,
-        scale: 1.25,
+        scale: 1.15,
         alpha: 0,
-        duration: 1800,
+        duration: 1500,
         yoyo: false,
         repeat: -1,
         ease: "Sine.easeInOut"
       });
       scene.tweens.add({
         targets: guideRing,
-        scale: 1.14,
-        alpha: 0.22,
+        scale: 1.12,
+        alpha: 0.18,
         duration: 1500,
         yoyo: true,
         repeat: -1,
@@ -96,7 +103,7 @@ export class NPC {
       });
       scene.tweens.add({
         targets: [guideNeedle, guideSpark],
-        y: -67,
+        y: -38,
         duration: 800,
         yoyo: true,
         repeat: -1,
@@ -134,9 +141,12 @@ export class NPC {
   }
 
   private updateFocus() {
+    // Truthy only for WorldScene with a dialogue open; scenes without the
+    // field read undefined, which must count as "no dialogue".
+    const isDialogueOpen = Boolean((this.scene as { activeDialogue?: unknown }).activeDialogue);
     const focused = this.proximityFocused || this.hovered || this.guided;
-    const labelVisible = this.proximityFocused || this.hovered || this.guided;
-    const guideVisible = this.guided;
+    const labelVisible = (this.proximityFocused || this.hovered || this.guided) && !isDialogueOpen;
+    const guideVisible = this.guided && !isDialogueOpen;
     if (
       this.focused === focused &&
       this.labelVisible === labelVisible &&
