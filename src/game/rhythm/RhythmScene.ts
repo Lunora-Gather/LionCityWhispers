@@ -199,7 +199,21 @@ export class RhythmScene extends Phaser.Scene {
     }
 
     const diff = candidateDiff;
-    if (diff <= 180) {
+    if (diff <= 90) {
+      this.score += 150;
+      candidate.markHit();
+      this.feedback.setText("MARVELOUS!");
+      this.combo += 1;
+      this.perfectHits += 1;
+      playRitualHit(true, lane);
+      if (!gameState.settings.reduceMotion) {
+        this.cameras.main.shake(70, 0.0015);
+      }
+      this.feedback.setColor("#3de0c8");
+      this.flashLane(lane, 0x3de0c8);
+      this.pulseFeedback(0x3de0c8);
+      burst(this, candidate.marker.x, candidate.marker.y, 0x3de0c8, 32, 7);
+    } else if (diff <= 180) {
       this.score += 120;
       candidate.markHit();
       this.feedback.setText("PERFECT");
@@ -241,7 +255,16 @@ export class RhythmScene extends Phaser.Scene {
       playMiss();
     }
     this.scoreText.setText(String(this.score));
-    this.comboText.setText(`COMBO ${this.combo}`);
+    if (this.combo >= 20) {
+      this.comboText.setText(`★ FEVER x${this.combo} ★`);
+      this.comboText.setColor("#3de0c8");
+    } else if (this.combo >= 10) {
+      this.comboText.setText(`✦ RESONANCE ${this.combo} ✦`);
+      this.comboText.setColor("#ffd685");
+    } else {
+      this.comboText.setText(`COMBO ${this.combo}`);
+      this.comboText.setColor("#ffd685");
+    }
     if (this.combo > 0 && !gameState.settings.reduceMotion) {
       this.comboText.setScale(1.15);
       this.tweens.add({

@@ -75,8 +75,19 @@ export class JigsawPuzzle extends Phaser.Scene {
     this.add.ellipse(640, 392, 560, 226, 0x06100f, 0.42)
       .setStrokeStyle(1, 0xd1a95d, 0.18);
     this.add.ellipse(640, 411, 510, 164, 0xd1a95d, 0.025);
-    this.add.line(640, 426, -230, 0, 230, 0, 0xd1a95d, 0.15);
     this.createBackButton();
+    this.create3DWorkshopButton();
+
+    const handle3DSolve = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail === "jigsaw") {
+        this.complete();
+      }
+    };
+    window.addEventListener("lcw:solve-puzzle-3d", handle3DSolve);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener("lcw:solve-puzzle-3d", handle3DSolve);
+    });
   }
 
   private drawTarget(piece: PieceConfig) {
@@ -309,6 +320,47 @@ export class JigsawPuzzle extends Phaser.Scene {
     container.on("pointerout", () => {
       bg.setStrokeStyle(1.5, 0xd1a95d, 0.6);
       label.setColor("#fff4d6");
+      this.tweens.add({
+        targets: container,
+        scale: 1,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+  }
+
+  private create3DWorkshopButton() {
+    const isZh = gameState.settings.locale === "zh";
+    const container = this.add.container(910, 188).setSize(160, 42);
+
+    const bg = this.add.rectangle(0, 0, 160, 42, 0x09201d, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.7);
+    const label = this.add.text(0, 0, isZh ? "🏛️ 3D机械工坊" : "🏛️ 3D Workshop", {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "14px",
+      fontStyle: "600",
+      color: "#3de0c8"
+    }).setOrigin(0.5);
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-80, -21, 160, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
+      playUiClick();
+      window.dispatchEvent(new CustomEvent("lcw:open-3d-workshop", { detail: "jigsaw" }));
+    });
+
+    container.on("pointerover", () => {
+      bg.setFillStyle(0x133833, 0.95).setStrokeStyle(2, 0xffd700, 0.9);
+      label.setColor("#ffd700");
+      this.tweens.add({
+        targets: container,
+        scale: 1.05,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+
+    container.on("pointerout", () => {
+      bg.setFillStyle(0x09201d, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.7);
+      label.setColor("#3de0c8");
       this.tweens.add({
         targets: container,
         scale: 1,

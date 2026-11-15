@@ -89,6 +89,7 @@ test("uses custom rhythm lane bindings during the ritual", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
+  await expect(page.getByLabel("进度").getByText("河岸")).toBeVisible();
   await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent("lcw:chapter", { detail: "RhythmScene" }));
   });

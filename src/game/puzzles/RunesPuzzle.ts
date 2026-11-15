@@ -46,6 +46,18 @@ export class RunesPuzzle extends Phaser.Scene {
 
     this.add.rectangle(640, 316, 520, 112, 0x050c0a, 0.32).setStrokeStyle(1, 0x1f8f82, 0.2);
     this.add.rectangle(640, 308, 468, 70, 0x0c1b18, 0.74).setStrokeStyle(1, 0xd1a95d, 0.36);
+
+    const poemZH = "「沧海行舟 · 灵狮镇波 · 辟阖关门 · 朗朗皓月」";
+    const poemEN = "「Across the Sea · Lion of the Bay · Open the Gate · Beneath the Moon」";
+    const poemText = gameState.settings.locale === "en" ? poemEN : poemZH;
+    this.add.rectangle(640, 242, 520, 30, 0x050c0b, 0.6).setStrokeStyle(1, 0xd1a95d, 0.3);
+    this.add.text(640, 242, poemText, {
+      fontFamily: "Georgia, Microsoft YaHei, serif",
+      fontSize: "13px",
+      fontStyle: "italic",
+      color: "#ffd685"
+    }).setOrigin(0.5);
+
     for (let index = 0; index < 9; index += 1) {
       this.add.line(424 + index * 54, 318, 0, -36, 0, 36, 0xd1a95d, 0.16);
     }
@@ -114,6 +126,18 @@ export class RunesPuzzle extends Phaser.Scene {
     });
 
     this.createFooter();
+    this.create3DWorkshopButton();
+
+    const handle3DSolve = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail === "runes") {
+        this.complete();
+      }
+    };
+    window.addEventListener("lcw:solve-puzzle-3d", handle3DSolve);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener("lcw:solve-puzzle-3d", handle3DSolve);
+    });
     emitGameState("runes");
   }
 
@@ -242,5 +266,46 @@ export class RunesPuzzle extends Phaser.Scene {
     playSuccess();
     showRewardBanner(this, copy.runesReward, 0xb9402f);
     this.timers.push(this.time.delayedCall(1100, () => this.scene.start("WorldScene")));
+  }
+
+  private create3DWorkshopButton() {
+    const isZh = gameState.settings.locale === "zh";
+    const container = this.add.container(910, 188).setSize(160, 42);
+
+    const bg = this.add.rectangle(0, 0, 160, 42, 0x09201d, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.7);
+    const label = this.add.text(0, 0, isZh ? "🏛️ 3D机械工坊" : "🏛️ 3D Workshop", {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "14px",
+      fontStyle: "600",
+      color: "#3de0c8"
+    }).setOrigin(0.5);
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-80, -21, 160, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
+      playUiClick();
+      window.dispatchEvent(new CustomEvent("lcw:open-3d-workshop", { detail: "runes" }));
+    });
+
+    container.on("pointerover", () => {
+      bg.setFillStyle(0x133833, 0.95).setStrokeStyle(2, 0xffd700, 0.9);
+      label.setColor("#ffd700");
+      this.tweens.add({
+        targets: container,
+        scale: 1.05,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+
+    container.on("pointerout", () => {
+      bg.setFillStyle(0x09201d, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.7);
+      label.setColor("#3de0c8");
+      this.tweens.add({
+        targets: container,
+        scale: 1,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
   }
 }

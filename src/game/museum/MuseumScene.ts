@@ -57,6 +57,7 @@ export class MuseumScene extends Phaser.Scene {
     this.drawSlots();
     this.drawInventory();
     this.createBackButton();
+    this.create3DVaultButton();
     this.bindKeyboard();
     bindSceneHint(this, () => {
       const storyOrder: ArtifactId[] = [
@@ -96,9 +97,17 @@ export class MuseumScene extends Phaser.Scene {
       const walkerY = 600 + Math.random() * 45;
 
       const walker = this.add.container(startX, walkerY).setDepth(20);
-      const head = this.add.circle(0, -18, 9, 0x050909, 0.4);
-      const body = this.add.rectangle(0, 10, 18, 38, 0x050909, 0.35);
-      walker.add([head, body]);
+      const g = this.add.graphics();
+      g.fillStyle(0x050909, 0.42);
+      // Hat & head silhouette
+      g.fillEllipse(0, -24, 20, 5);
+      g.fillCircle(0, -19, 7.5);
+      // Coat & shoulders silhouette
+      g.fillRoundedRect(-9, -11, 18, 22, 5);
+      // Legs silhouette
+      g.fillRoundedRect(-6, 9, 5, 14, 2);
+      g.fillRoundedRect(1, 9, 5, 14, 2);
+      walker.add([g]);
 
       this.tweens.add({
         targets: walker,
@@ -182,6 +191,14 @@ export class MuseumScene extends Phaser.Scene {
       this.add.rectangle(slot.x + 44, slot.y - 35, 52, 2, 0xfff4d6, 0.16);
       this.add.rectangle(slot.x, slot.y + 2, 150, 18, 0x090f0f, 0.48).setStrokeStyle(1, 0xd1a95d, 0.18);
       this.add.rectangle(slot.x, slot.y + 18, 178, 26, 0x090f0f, 0.6).setStrokeStyle(1, 0xfff4d6, 0.12);
+      const eraLabelsZh = ["I · 远古巨石", "II · 狮门铭文", "III · 海门星盘", "IV · 灵界编磬"];
+      const eraLabelsEn = ["I · Ancient Stone", "II · Lion Gate", "III · Harbor Seal", "IV · Spirit Chime"];
+      const plaqueLabel = gameState.settings.locale === "en" ? eraLabelsEn[slot.index] : eraLabelsZh[slot.index];
+      this.add.text(slot.x, slot.y + 18, plaqueLabel ?? "", {
+        fontFamily: "Microsoft YaHei, sans-serif",
+        fontSize: "12px",
+        color: "#d8c8a3"
+      }).setOrigin(0.5);
       this.slotFrames.set(slot.index, glass);
       glass.setInteractive();
       glass.on("pointerdown", () => this.placeSelectedArtifact(slot));
@@ -319,12 +336,31 @@ export class MuseumScene extends Phaser.Scene {
       return;
     }
     const token = this.tokens.get(id);
-    const occupiedByOther = Object.entries(gameState.museum.placements).some(
-      ([artifactId, slotIndex]) => artifactId !== id && slotIndex === slot.index
-    );
-    if (!token || occupiedByOther) {
+    if (!token) {
       playMiss();
       return;
+    }
+    const prevSlotIndex = gameState.museum.placements[id];
+    const occupiedEntry = Object.entries(gameState.museum.placements).find(
+      ([artifactId, slotIndex]) => artifactId !== id && slotIndex === slot.index
+    );
+    if (occupiedEntry) {
+      const otherId = occupiedEntry[0] as ArtifactId;
+      const otherToken = this.tokens.get(otherId);
+      if (prevSlotIndex !== undefined) {
+        gameState.museum.placements[otherId] = prevSlotIndex;
+        if (otherToken) {
+          otherToken.setPosition(this.slots[prevSlotIndex].x, this.slots[prevSlotIndex].y - 64);
+          otherToken.setScale(1);
+        }
+      } else {
+        delete gameState.museum.placements[otherId];
+        if (otherToken) {
+          const invIdx = Math.max(0, gameState.inventory.findIndex((item) => item.id === otherId));
+          otherToken.setPosition(276 + invIdx * 190, 582);
+          otherToken.setScale(1);
+        }
+      }
     }
     token.setPosition(slot.x, slot.y - 64);
     token.setScale(1);
@@ -341,10 +377,14 @@ export class MuseumScene extends Phaser.Scene {
         .filter(([artifactId]) => artifactId !== id)
         .map(([, slot]) => slot)
     );
-    return this.slots.find(
+    const freeMatch = this.slots.find(
       (slot) =>
         !occupied.has(slot.index) &&
         Phaser.Math.Distance.Between(x, y, slot.x, slot.y - 64) < 96
+    );
+    if (freeMatch) return freeMatch;
+    return this.slots.find(
+      (slot) => Phaser.Math.Distance.Between(x, y, slot.x, slot.y - 64) < 96
     );
   }
 
@@ -526,6 +566,55 @@ export class MuseumScene extends Phaser.Scene {
     container.on("pointerout", () => {
       bg.setStrokeStyle(1.5, 0xd1a95d, 0.6);
       label.setColor("#fff4d6");
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: container,
+          scale: 1,
+          duration: 100,
+          ease: "Sine.easeOut"
+        });
+      }
+    });
+  }
+
+  private create3DVaultButton() {
+    const copy = puzzleCopy[gameState.settings.locale];
+    const container = this.add.container(910, 188).setSize(160, 42);
+
+    const bg = this.add.rectangle(0, 0, 160, 42, 0x091412, 0.88).setStrokeStyle(1.5, 0x3de0c8, 0.7);
+    const label = this.add.text(0, 0, copy.vault3D, {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "15px",
+      fontStyle: "600",
+      color: "#3de0c8"
+    }).setOrigin(0.5);
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-80, -21, 160, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
+      playUiClick();
+      const placedIds = Object.keys(gameState.museum.placements) as ArtifactId[];
+      const firstArtifact = placedIds[0] || gameState.inventory[0]?.id || "badang-stone";
+      window.dispatchEvent(new CustomEvent("lcw:open-3d-vault", { detail: { artifactId: firstArtifact } }));
+    });
+
+    container.on("pointerover", () => {
+      bg.setStrokeStyle(2, 0xd1a95d, 0.95);
+      label.setColor("#fff4d6");
+      if (!gameState.settings.reduceMotion) {
+        this.tweens.add({
+          targets: container,
+          scale: 1.05,
+          duration: 100,
+          ease: "Sine.easeOut"
+        });
+      }
+    });
+
+    container.on("pointerout", () => {
+      bg.setStrokeStyle(1.5, 0x3de0c8, 0.7);
+      label.setColor("#3de0c8");
       if (!gameState.settings.reduceMotion) {
         this.tweens.add({
           targets: container,

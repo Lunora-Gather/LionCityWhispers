@@ -136,14 +136,73 @@ export function drawArtifactIcon(
 ) {
   const group = scene.add.container(x, y);
   const color = artifactColors[id];
-  const glow = scene.add.circle(0, 0, size * 0.64, color, 0.16);
-  const disc = scene.add.circle(0, 0, size * 0.42, color, 0.95).setStrokeStyle(2, 0xfff4d6, 0.5);
+  const glow = scene.add.circle(0, 0, size * 0.62, color, 0.18);
+  const g = scene.add.graphics();
+  const r = size * 0.44;
+
+  // Ornate octagonal Nanyang medallion backing
+  g.fillStyle(0x071311, 0.94);
+  g.fillCircle(0, 0, r);
+  g.lineStyle(1.8, 0xd1a95d, 0.85);
+  g.strokeCircle(0, 0, r);
+  g.lineStyle(1, color, 0.65);
+  g.strokeCircle(0, 0, r * 0.82);
+
+  if (id === "badang-stone") {
+    // Sculpted Singapore Stone megalith silhouette with golden Kawi veins
+    g.fillStyle(0x9b7642, 1);
+    g.fillPoints(
+      [
+        new Phaser.Math.Vector2(-r * 0.55, r * 0.48),
+        new Phaser.Math.Vector2(-r * 0.48, -r * 0.35),
+        new Phaser.Math.Vector2(-r * 0.08, -r * 0.62),
+        new Phaser.Math.Vector2(r * 0.46, -r * 0.28),
+        new Phaser.Math.Vector2(r * 0.56, r * 0.48)
+      ],
+      true
+    );
+    g.lineStyle(1.2, 0xffd685, 0.9);
+    g.lineBetween(-r * 0.25, -r * 0.25, r * 0.18, r * 0.25);
+    g.lineBetween(-r * 0.3, r * 0.1, r * 0.28, -r * 0.1);
+  } else if (id === "rune-plaque") {
+    // Crimson-bronze Lion Gate tablet with beveled arch
+    g.fillStyle(0x8e3324, 1);
+    g.fillRoundedRect(-r * 0.48, -r * 0.56, r * 0.96, r * 1.12, 4);
+    g.lineStyle(1.4, 0xffd685, 0.9);
+    g.strokeRoundedRect(-r * 0.48, -r * 0.56, r * 0.96, r * 1.12, 4);
+  } else if (id === "harbor-seal") {
+    // Maritime brass astrolabe & 8-tooth gear wheel
+    g.fillStyle(0x4c5854, 1);
+    g.fillCircle(0, 0, r * 0.56);
+    g.lineStyle(1.6, 0xffd685, 0.92);
+    g.strokeCircle(0, 0, r * 0.56);
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4;
+      g.lineBetween(
+        Math.cos(a) * r * 0.42,
+        Math.sin(a) * r * 0.42,
+        Math.cos(a) * r * 0.68,
+        Math.sin(a) * r * 0.68
+      );
+    }
+  } else {
+    // Spirit Chime jade-and-gold twin ritual bells
+    g.lineStyle(1.5, 0xffd685, 0.95);
+    g.lineBetween(-r * 0.5, -r * 0.42, r * 0.5, -r * 0.42);
+    g.fillStyle(0x2bc7ab, 0.95);
+    g.fillTriangle(-r * 0.46, r * 0.36, -r * 0.06, r * 0.36, -r * 0.26, -r * 0.36);
+    g.fillTriangle(r * 0.06, r * 0.36, r * 0.46, r * 0.36, r * 0.26, -r * 0.36);
+  }
+
   const glyph = scene.add.text(0, 0, artifactGlyphCopy[id][gameState.settings.locale], {
     fontFamily: "Microsoft YaHei, sans-serif",
-    fontSize: `${Math.round(size * (gameState.settings.locale === "en" ? 0.28 : 0.4))}px`,
-    color: "#fff4d6"
+    fontSize: `${Math.round(size * (gameState.settings.locale === "en" ? 0.24 : 0.34))}px`,
+    fontStyle: "bold",
+    color: "#fffcf0",
+    stroke: "#06100f",
+    strokeThickness: 2
   }).setOrigin(0.5);
-  group.add([glow, disc, glyph]);
+  group.add([glow, g, glyph]);
   return group;
 }
 

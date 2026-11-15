@@ -12,6 +12,7 @@ test("loads the playable prototype shell", async ({ page }) => {
 
 test("opens settings and switches language", async ({ page }) => {
   await page.goto("/");
+  await expect(page.locator("canvas")).toBeVisible();
 
   await page.getByRole("button", { name: "设置" }).click();
   await expect(page.getByRole("dialog", { name: "设置" })).toBeVisible();

@@ -24,6 +24,7 @@ import {
   resetGameState,
   setPaused,
   setUiLocked,
+  solvePuzzle,
   toggleEasyMode,
   toggleMuted,
   updatePerformanceStats,
@@ -182,6 +183,7 @@ export function startGame(parent: string) {
     clearSavedGame();
     resetGameState();
     applyAudioSettings(gameState.settings);
+    game.registry.remove("chapterOverride");
     for (const key of managedScenes) {
       if (game.scene.isActive(key) || game.scene.isPaused(key)) {
         game.scene.stop(key);
@@ -196,9 +198,11 @@ export function startGame(parent: string) {
     if (!managedScenes.includes(target)) {
       return;
     }
+    game.registry.set("chapterOverride", target);
+    window.dispatchEvent(new CustomEvent("lcw:loading", { detail: { ready: true, progress: 1 } }));
     setPaused(false);
     for (const key of managedScenes) {
-      if (game.scene.isActive(key) || game.scene.isPaused(key)) {
+      if (key !== target && (key !== "MainScene" || game.scene.isActive(key) || game.scene.isPaused(key))) {
         game.scene.stop(key);
       }
     }
@@ -223,6 +227,14 @@ export function startGame(parent: string) {
     window.dispatchEvent(new CustomEvent("lcw:save-import-result", { detail: success }));
   };
 
+  const onSolvePuzzle3D = (event: Event) => {
+    const puzzleType = (event as CustomEvent<"jigsaw" | "runes" | "lock">).detail;
+    if (puzzleType) {
+      solvePuzzle(puzzleType);
+      emitGameState(currentSceneLabel());
+    }
+  };
+
   const onVisibilityChange = () => {
     setAudioPageSuspended(document.hidden);
   };
@@ -240,6 +252,7 @@ export function startGame(parent: string) {
   window.addEventListener("lcw:audio-resume", onAudioResume);
   window.addEventListener("lcw:save-import", onSaveImport);
   window.addEventListener("lcw:audio-achievement", onAchievement);
+  window.addEventListener("lcw:solve-puzzle-3d", onSolvePuzzle3D);
   window.addEventListener("pointerdown", trackInteraction, { passive: true });
   window.addEventListener("keydown", trackInteraction);
   document.addEventListener("visibilitychange", onVisibilityChange);
@@ -258,6 +271,7 @@ export function startGame(parent: string) {
       window.removeEventListener("lcw:audio-resume", onAudioResume);
       window.removeEventListener("lcw:save-import", onSaveImport);
       window.removeEventListener("lcw:audio-achievement", onAchievement);
+      window.removeEventListener("lcw:solve-puzzle-3d", onSolvePuzzle3D);
       window.removeEventListener("pointerdown", trackInteraction);
       window.removeEventListener("keydown", trackInteraction);
       document.removeEventListener("visibilitychange", onVisibilityChange);

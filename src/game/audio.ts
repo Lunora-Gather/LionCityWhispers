@@ -444,3 +444,36 @@ export function playRitualHit(perfect: boolean, lane?: number) {
     }
   });
 }
+
+export function playStoneGrind() {
+  playSequence(
+    [
+      [110, 0.08],
+      [95, 0.12]
+    ],
+    "triangle"
+  );
+}
+
+export function playGearTick() {
+  playTone(880, 0.035, "triangle", 0.035);
+  window.setTimeout(() => playTone(1320, 0.045, "triangle", 0.025), 25);
+}
+
+export function playChimeResonance() {
+  playTone(528, 0.6, "sine", 0.035);
+  playTone(1056, 0.5, "sine", 0.02);
+  playTone(1584, 0.35, "sine", 0.015);
+}
+
+export function playKintsugiAwaken() {
+  playSequence(
+    [
+      [523.25, 0.09],
+      [659.25, 0.09],
+      [783.99, 0.09],
+      [1046.5, 0.28]
+    ],
+    "sine"
+  );
+}

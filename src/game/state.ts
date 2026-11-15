@@ -2,6 +2,7 @@ import {
   isLocale,
   localizedArtifact,
   objectiveCopy,
+  puzzleCopy,
   sceneName,
   stateCopy,
   text,
@@ -402,6 +403,24 @@ export function addArtifact(id: ArtifactId) {
   }
 }
 
+export function solvePuzzle(puzzleType: "jigsaw" | "runes" | "lock") {
+  const copy = puzzleCopy[gameState.settings.locale];
+  if (puzzleType === "jigsaw") {
+    gameState.flags.jigsaw = true;
+    addArtifact("badang-stone");
+    gameState.dialogue = copy.jigsawComplete;
+  } else if (puzzleType === "runes") {
+    gameState.flags.runes = true;
+    addArtifact("rune-plaque");
+    gameState.dialogue = copy.runesComplete;
+  } else if (puzzleType === "lock") {
+    gameState.flags.lock = true;
+    addArtifact("harbor-seal");
+    gameState.dialogue = copy.lockComplete;
+  }
+  emitGameState();
+}
+
 export function completedPuzzleCount() {
   // Called from WorldScene.update every frame; keep it allocation-free.
   return (gameState.flags.jigsaw ? 1 : 0) + (gameState.flags.runes ? 1 : 0) + (gameState.flags.lock ? 1 : 0);
@@ -472,7 +491,8 @@ export function emitGameState(scene?: string) {
         easyMode: gameState.easyMode,
         dialogue: gameState.dialogue,
         settings: gameState.settings,
-        performance: gameState.performance
+        performance: gameState.performance,
+        flags: { ...gameState.flags }
       }
     })
   );

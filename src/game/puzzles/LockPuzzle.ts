@@ -21,6 +21,8 @@ export class LockPuzzle extends Phaser.Scene {
   private returnTimer?: Phaser.Time.TimerEvent;
   private keyHandler?: (event: KeyboardEvent) => void;
   private done = false;
+  private outerRing?: Phaser.GameObjects.Container;
+  private midRing?: Phaser.GameObjects.Container;
 
   constructor() {
     super("LockPuzzle");
@@ -49,10 +51,43 @@ export class LockPuzzle extends Phaser.Scene {
       overlayAlpha: 0.5
     });
     this.createBackButton();
+    this.create3DWorkshopButton();
+
+    const handle3DSolve = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail === "lock") {
+        this.complete();
+      }
+    };
+    window.addEventListener("lcw:solve-puzzle-3d", handle3DSolve);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener("lcw:solve-puzzle-3d", handle3DSolve);
+    });
 
     this.add.rectangle(640, 350, 310, 210, 0x091412, 0.34).setStrokeStyle(1, 0xd1a95d, 0.24);
-    this.add.circle(640, 342, 112, 0x07110f, 0.76).setStrokeStyle(2, 0x1f8f82, 0.42);
-    this.add.circle(640, 342, 80, 0x091412, 0.84).setStrokeStyle(1.5, 0xd1a95d, 0.4);
+
+    const outerRing = this.add.container(640, 342);
+    const outerCircle = this.add.circle(0, 0, 112, 0x07110f, 0.76).setStrokeStyle(2, 0x1f8f82, 0.52);
+    outerRing.add(outerCircle);
+    for (let i = 0; i < 12; i++) {
+      const angle = (i * Math.PI) / 6;
+      const notch = this.add.rectangle(Math.cos(angle) * 112, Math.sin(angle) * 112, 8, 3, 0xd1a95d, 0.7);
+      notch.rotation = angle;
+      outerRing.add(notch);
+    }
+    this.outerRing = outerRing;
+
+    const midRing = this.add.container(640, 342);
+    const midCircle = this.add.circle(0, 0, 80, 0x091412, 0.84).setStrokeStyle(1.5, 0xd1a95d, 0.55);
+    midRing.add(midCircle);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI) / 4;
+      const tooth = this.add.triangle(Math.cos(angle) * 78, Math.sin(angle) * 78, -4, -4, 4, -4, 0, 5, 0x3de0c8, 0.6);
+      tooth.rotation = angle - Math.PI / 2;
+      midRing.add(tooth);
+    }
+    this.midRing = midRing;
+
     this.add.circle(640, 342, 50, 0x0c1b18, 0.9).setStrokeStyle(1, 0x3de0c8, 0.28);
     this.add.circle(640, 330, 16, 0x050c0a, 0.8).setStrokeStyle(1, 0xd1a95d, 0.3);
     this.add.rectangle(640, 362, 24, 60, 0x050c0a, 0.8).setStrokeStyle(1, 0xd1a95d, 0.26);
@@ -184,6 +219,24 @@ export class LockPuzzle extends Phaser.Scene {
     }
     this.selected.push(label);
     this.refreshSequenceSlots();
+
+    if (this.outerRing && !gameState.settings.reduceMotion) {
+      this.tweens.add({
+        targets: this.outerRing,
+        angle: this.outerRing.angle + 75,
+        duration: 320,
+        ease: "Back.easeOut"
+      });
+    }
+    if (this.midRing && !gameState.settings.reduceMotion) {
+      this.tweens.add({
+        targets: this.midRing,
+        angle: this.midRing.angle - 45,
+        duration: 320,
+        ease: "Back.easeOut"
+      });
+    }
+
     const expected = config.order.slice(0, this.selected.length).join("");
     if (this.selected.join("") !== expected) {
       playMiss();
@@ -265,6 +318,47 @@ export class LockPuzzle extends Phaser.Scene {
     container.on("pointerout", () => {
       bg.setStrokeStyle(1.5, 0xd1a95d, 0.6);
       label.setColor("#fff4d6");
+      this.tweens.add({
+        targets: container,
+        scale: 1,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+  }
+
+  private create3DWorkshopButton() {
+    const isZh = gameState.settings.locale === "zh";
+    const container = this.add.container(910, 188).setSize(160, 42);
+
+    const bg = this.add.rectangle(0, 0, 160, 42, 0x09201d, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.7);
+    const label = this.add.text(0, 0, isZh ? "🏛️ 3D机械工坊" : "🏛️ 3D Workshop", {
+      fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
+      fontSize: "14px",
+      fontStyle: "600",
+      color: "#3de0c8"
+    }).setOrigin(0.5);
+
+    container.add([bg, label]);
+    container.setInteractive(new Phaser.Geom.Rectangle(-80, -21, 160, 42), Phaser.Geom.Rectangle.Contains);
+
+    container.on("pointerdown", () => {
+      playUiClick();
+      window.dispatchEvent(new CustomEvent("lcw:open-3d-workshop", { detail: "lock" }));
+    });
+
+    container.on("pointerover", () => {
+      bg.setFillStyle(0x133833, 0.95).setStrokeStyle(2, 0xffd700, 0.9);
+      label.setColor("#ffd700");
+      this.tweens.add({
+        targets: container,
+        scale: 1.05,
+        duration: gameState.settings.reduceMotion ? 0 : 100
+      });
+    });
+
+    container.on("pointerout", () => {
+      bg.setFillStyle(0x09201d, 0.92).setStrokeStyle(1.5, 0x3de0c8, 0.7);
+      label.setColor("#3de0c8");
       this.tweens.add({
         targets: container,
         scale: 1,

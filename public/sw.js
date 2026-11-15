@@ -1,5 +1,5 @@
-const CACHE_NAME = "lion-city-whispers-v12";
-const RUNTIME_CACHE = "lion-city-whispers-runtime-v12";
+const CACHE_NAME = "lion-city-whispers-v22";
+const RUNTIME_CACHE = "lion-city-whispers-runtime-v22";
 const RUNTIME_CACHE_LIMIT = 80;
 const CACHE_PREFIX = "lion-city-whispers";
 const BASE_PATH = self.location.pathname.replace(/\/sw\.js$/, "");
@@ -98,6 +98,7 @@ async function warmCache(urls) {
 }
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches
       .open(CACHE_NAME)
@@ -180,14 +181,26 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     (async () => {
-      // Cached assets are immutable until the cache version bumps;
-      // re-fetching them would just duplicate bytes and churn eviction.
       const shellCache = await caches.open(CACHE_NAME);
       const shellHit = await shellCache.match(request);
       if (shellHit) {
         return shellHit;
       }
       const runtimeCache = await caches.open(RUNTIME_CACHE);
+      const isCodeBundle = request.url.includes("/_next/");
+      if (isCodeBundle) {
+        try {
+          const networkResponse = await fetch(request);
+          void putInRuntimeCache(request, networkResponse);
+          return networkResponse;
+        } catch {
+          const cached = await runtimeCache.match(request);
+          if (cached) {
+            return cached;
+          }
+          throw new Error("offline bundle miss");
+        }
+      }
       const runtimeHit = await runtimeCache.match(request);
       if (runtimeHit) {
         event.waitUntil(refreshRuntimeRecency(runtimeCache, request, runtimeHit.clone()));

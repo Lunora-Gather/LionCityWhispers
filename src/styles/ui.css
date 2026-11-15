@@ -360,8 +360,8 @@ a:focus-visible,
 .objective {
   position: absolute;
   top: var(--gutter);
-  left: clamp(244px, 25%, 364px);
-  right: clamp(330px, 27%, 414px);
+  left: clamp(224px, 21%, 320px);
+  right: clamp(368px, 31%, 430px);
   min-height: var(--bar-h);
   display: flex;
   flex-direction: column;
@@ -434,20 +434,20 @@ a:focus-visible,
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
-  padding: 7px;
+  gap: 2px;
+  padding: 5px 6px;
   border-radius: var(--radius-m);
   pointer-events: auto;
 }
 
 .icon-button {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   color: rgba(247, 239, 217, 0.8);
   cursor: pointer;
@@ -904,7 +904,7 @@ a:focus-visible,
 .codex-panel,
 .modal-backdrop {
   position: absolute;
-  z-index: 8;
+  z-index: 150;
   pointer-events: auto;
 }
 
@@ -1710,16 +1710,18 @@ a:focus-visible,
   }
 
   .objective {
-    left: 220px;
-    right: 300px;
+    left: 176px;
+    right: 348px;
   }
 
   .toolbar {
-    gap: 2px;
+    gap: 1px;
+    padding: 5px;
   }
 
   .icon-button {
-    width: 36px;
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -1813,14 +1815,14 @@ a:focus-visible,
     right: 10px;
     min-height: 48px;
     gap: 0;
-    padding: 5px;
+    padding: 4px;
     border-radius: 12px;
   }
 
   .icon-button {
-    width: 31px;
+    width: 24px;
     height: 36px;
-    min-width: 31px;
+    min-width: 24px;
     min-height: 36px;
     border-radius: 8px;
   }
@@ -2098,16 +2100,16 @@ a:focus-visible,
   }
 
   .icon-button {
-    width: 28px;
+    width: 24px;
     height: 28px;
-    min-width: 28px;
+    min-width: 24px;
     min-height: 28px;
   }
 
   .objective {
     top: 8px;
-    left: 180px;
-    right: 220px;
+    left: 162px;
+    right: 244px;
     min-height: 42px;
     padding: 6px 10px;
   }
@@ -2259,4 +2261,1341 @@ a:focus-visible,
   scroll-behavior: auto !important;
   transition-delay: 0s !important;
   transition-duration: 0s !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* 10. 3D WebGL Artifact Hologram Vault                             */
+/* ---------------------------------------------------------------- */
+
+.artifact-3d-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 5, 0.82);
+  backdrop-filter: blur(12px);
+  padding: 16px;
+  animation: fadeInModal 220ms var(--ease-out);
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.artifact-3d-modal {
+  width: min(980px, 95vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(165deg, #0a1716 0%, #040a09 100%);
+  border: 1px solid rgba(217, 182, 110, 0.38);
+  border-radius: var(--radius-l);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(61, 224, 200, 0.18);
+  overflow: hidden;
+}
+
+.artifact-3d-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid rgba(217, 182, 110, 0.16);
+  background: rgba(5, 12, 11, 0.6);
+}
+
+.header-titles h2 {
+  font-family: "Georgia", "Microsoft YaHei", serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #fff6e0;
+  margin: 4px 0 2px;
+  letter-spacing: 0.5px;
+}
+
+.badge-3d {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(43, 199, 171, 0.18);
+  color: #3de0c8;
+  border: 1px solid rgba(61, 224, 200, 0.35);
+}
+
+.artifact-tag {
+  font-size: 0.85rem;
+  color: var(--gold);
+  margin: 0;
+}
+
+.close-3d-btn {
+  background: transparent;
+  border: 1px solid rgba(217, 182, 110, 0.25);
+  color: var(--paper-dim);
+  border-radius: var(--radius-s);
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.close-3d-btn:hover {
+  color: #ffffff;
+  border-color: var(--gold-bright);
+  background: rgba(217, 182, 110, 0.15);
+}
+
+.artifact-3d-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 24px;
+  background: rgba(3, 8, 7, 0.45);
+  border-bottom: 1px solid rgba(238, 214, 163, 0.1);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  background: rgba(6, 16, 15, 0.6);
+  border: 1px solid rgba(217, 182, 110, 0.2);
+  color: var(--paper-dim);
+  padding: 6px 14px;
+  border-radius: var(--radius-s);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.tab-btn:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: var(--jade-bright);
+}
+
+.tab-btn.active {
+  background: rgba(43, 199, 171, 0.2);
+  border-color: var(--jade-bright);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(43, 199, 171, 0.25);
+}
+
+.tab-btn.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.viewport-wrapper {
+  position: relative;
+  height: 420px;
+  background: radial-gradient(circle at 50% 50%, #0d1e1c 0%, #040908 85%);
+  overflow: hidden;
+}
+
+.three-canvas-host {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.three-canvas-host:active {
+  cursor: grabbing;
+}
+
+.viewport-hint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(4, 10, 9, 0.65);
+  border: 1px solid rgba(238, 214, 163, 0.2);
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  color: var(--paper-dim);
+  pointer-events: none;
+}
+
+.floating-3d-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.ctrl-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(5, 14, 13, 0.82);
+  border: 1px solid rgba(217, 182, 110, 0.28);
+  color: var(--paper-dim);
+  padding: 8px 14px;
+  border-radius: var(--radius-s);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all var(--speed) var(--ease-out);
+}
+
+.ctrl-btn:hover {
+  background: rgba(10, 24, 22, 0.95);
+  border-color: var(--gold-bright);
+  color: #ffffff;
+}
+
+.ctrl-btn.active {
+  background: rgba(43, 199, 171, 0.25);
+  border-color: var(--jade-bright);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(43, 199, 171, 0.35);
+}
+
+.ctrl-btn.resonance-btn:active {
+  transform: scale(0.95);
+}
+
+.exploded-slider-box {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(5, 14, 13, 0.82);
+  border: 1px solid rgba(217, 182, 110, 0.28);
+  padding: 8px 14px;
+  border-radius: var(--radius-s);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 170px;
+}
+
+.slider-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--paper-dim);
+}
+
+.slider-label strong {
+  margin-left: auto;
+  color: var(--gold-bright);
+}
+
+.exploded-slider-box input[type="range"] {
+  width: 100%;
+  accent-color: var(--jade);
+  cursor: pointer;
+}
+
+.artifact-3d-info {
+  padding: 16px 24px;
+  background: rgba(5, 12, 11, 0.9);
+  border-top: 1px solid rgba(217, 182, 110, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-desc p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #e8e2cf;
+}
+
+.info-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(217, 182, 110, 0.15);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meta-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--paper-faint);
+}
+
+.meta-val {
+  font-size: 0.84rem;
+  color: var(--paper-dim);
+}
+
+.meta-val.gold {
+  color: var(--gold-bright);
+  font-weight: 600;
+}
+
+.codex-3d-btn {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(43, 199, 171, 0.16);
+  border: 1px solid rgba(61, 224, 200, 0.4);
+  color: #3de0c8;
+  padding: 4px 10px;
+  border-radius: var(--radius-s);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.codex-3d-btn:hover {
+  background: rgba(43, 199, 171, 0.3);
+  color: #ffffff;
+  border-color: var(--jade-bright);
+}
+
+@media (max-width: 768px) {
+  .viewport-wrapper {
+    height: 320px;
+  }
+  .floating-3d-controls {
+    bottom: 60px;
+    left: 10px;
+  }
+  .exploded-slider-box {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: auto;
+  }
+}
+
+/* 3D Mechanical Puzzle Workshop Styles */
+.puzzle-workshop-dialog {
+  max-width: 1020px;
+  height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.puzzle-workshop-subtitle {
+  font-size: 0.82rem;
+  color: var(--paper-dim);
+  margin: 2px 0 0;
+  max-width: 680px;
+  line-height: 1.4;
+}
+
+.workshop-angle-readout {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(29, 127, 115, 0.2);
+  border: 1px solid rgba(61, 224, 200, 0.35);
+  color: #a8ece0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.world-3d-pill-btn.gold-cta {
+  background: linear-gradient(135deg, rgba(217, 182, 110, 0.28), rgba(29, 127, 115, 0.35));
+  border-color: rgba(254, 214, 133, 0.75);
+  color: #ffe8a3;
+  box-shadow: 0 0 14px rgba(254, 214, 133, 0.25);
+}
+
+.world-3d-pill-btn.gold-cta:hover {
+  background: linear-gradient(135deg, rgba(217, 182, 110, 0.42), rgba(29, 127, 115, 0.5));
+  color: #ffffff;
+}
+
+.viewer-3d-canvas-wrap {
+  flex: 1;
+  min-height: 340px;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, rgba(29, 127, 115, 0.14) 0%, rgba(4, 10, 10, 0.92) 78%);
+}
+
+.viewer-3d-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+}
+
+.viewer-3d-canvas:active {
+  cursor: grabbing;
+}
+
+.puzzle-3d-solved-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: rgba(3, 8, 8, 0.88);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.puzzle-3d-solved-card {
+  background: linear-gradient(145deg, rgba(17, 33, 31, 0.95), rgba(7, 18, 16, 0.98));
+  border: 1.5px solid var(--gold-bright);
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.25), inset 0 0 20px rgba(61, 224, 200, 0.1);
+  border-radius: 16px;
+  padding: 32px 40px;
+  max-width: 480px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.puzzle-3d-sparkle-icon {
+  color: var(--gold-bright);
+  animation: pulse 1.8s infinite ease-in-out;
+}
+
+.puzzle-3d-solved-card h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #fff6d9;
+  letter-spacing: 0.5px;
+}
+
+.puzzle-3d-solved-card p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--paper-dim);
+}
+
+.puzzle-3d-claim-btn {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #2bc7ab 0%, #1f8f82 100%);
+  border: 1px solid var(--jade-bright);
+  color: #ffffff;
+  padding: 10px 24px;
+  border-radius: var(--radius-m);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(43, 199, 171, 0.35);
+  transition: all var(--speed) var(--ease-out);
+}
+
+.puzzle-3d-claim-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(43, 199, 171, 0.55);
+}
+
+.puzzle-workshop-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: 90%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.workshop-control-panel {
+  background: rgba(8, 18, 17, 0.92);
+  border: 1px solid rgba(209, 169, 93, 0.35);
+  border-radius: 12px;
+  padding: 12px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.workshop-piece-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.workshop-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(238, 214, 163, 0.08);
+  border: 1px solid rgba(238, 214, 163, 0.25);
+  color: var(--paper-dim);
+  padding: 6px 12px;
+  border-radius: var(--radius-s);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.workshop-tab-btn:hover {
+  background: rgba(238, 214, 163, 0.16);
+  color: var(--paper);
+}
+
+.workshop-tab-btn.active {
+  background: rgba(43, 199, 171, 0.22);
+  border-color: var(--jade-bright);
+  color: var(--jade-bright);
+  box-shadow: 0 0 12px rgba(61, 224, 200, 0.2);
+}
+
+.workshop-tab-btn.snapped {
+  border-color: rgba(61, 224, 200, 0.6);
+  color: #3de0c8;
+}
+
+.workshop-action-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.workshop-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(238, 214, 163, 0.08);
+  border: 1px solid rgba(209, 169, 93, 0.4);
+  color: var(--paper);
+  padding: 8px 14px;
+  border-radius: var(--radius-s);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.workshop-action-btn:hover {
+  background: rgba(209, 169, 93, 0.2);
+  border-color: var(--gold-bright);
+  color: #ffffff;
+}
+
+.workshop-action-btn.workshop-snap-btn {
+  background: linear-gradient(135deg, rgba(31, 143, 130, 0.85), rgba(43, 199, 171, 0.85));
+  border-color: var(--jade-bright);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 14px rgba(43, 199, 171, 0.3);
+}
+
+.workshop-action-btn.workshop-snap-btn:hover {
+  box-shadow: 0 0 20px rgba(43, 199, 171, 0.5);
+  transform: translateY(-1px);
+}
+
+.workshop-cryptex-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cryptex-cipher-label {
+  font-size: 0.82rem;
+  color: var(--paper-dim);
+}
+
+.cryptex-cipher-chars {
+  display: flex;
+  gap: 8px;
+}
+
+.cryptex-char-pill {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 28, 26, 0.95);
+  border: 1.5px solid rgba(209, 169, 93, 0.5);
+  border-radius: 6px;
+  color: var(--gold-bright);
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.cryptex-char-pill.active {
+  border-color: var(--jade-bright);
+  color: #3de0c8;
+  box-shadow: 0 0 12px rgba(61, 224, 200, 0.35);
+  transform: scale(1.08);
+}
+
+.workshop-tip-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--jade-bright);
+  background: rgba(3, 9, 8, 0.82);
+  border: 1px solid rgba(61, 224, 200, 0.25);
+  padding: 4px 14px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+
+/* ---------------------------------------------------------------- */
+/* 3D Miniature Exploration World Styles                            */
+/* ---------------------------------------------------------------- */
+
+.world-3d-entrance-pill {
+  position: absolute;
+  top: 88px;
+  right: var(--gutter);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(8, 26, 24, 0.95), rgba(16, 42, 38, 0.95));
+  border: 1.5px solid var(--jade-bright);
+  border-radius: 999px;
+  color: #ffffff;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(61, 224, 200, 0.35);
+  backdrop-filter: blur(8px);
+  transition: all var(--speed) var(--ease-out);
+  pointer-events: auto;
+}
+
+.world-3d-entrance-pill:hover {
+  transform: translateY(-2px) scale(1.04);
+  border-color: var(--gold-bright);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 24px rgba(255, 214, 133, 0.5);
+  color: #fff4d6;
+}
+
+.world-3d-fullscreen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 80;
+  background: #081110;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.world-3d-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  cursor: grab;
+}
+
+.world-3d-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.65), inset 0 0 200px rgba(4, 10, 9, 0.45);
+  z-index: 5;
+}
+
+.world-3d-macro-focus {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 40%,
+    rgba(6, 17, 15, 0.28) 72%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  mask-image: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 0, 0, 0.4) 60%,
+    black 90%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 0, 0, 0.4) 60%,
+    black 90%
+  );
+}
+
+.world-3d-macro-focus.active {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-3d-macro-focus {
+    transition: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+
+.world-3d-canvas:active {
+  cursor: grabbing;
+}
+
+.world-3d-header {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.world-3d-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(8, 18, 16, 0.88);
+  border: 1px solid rgba(43, 199, 171, 0.35);
+  border-radius: var(--radius-m);
+  padding: 8px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.world-3d-icon-pulse {
+  color: var(--jade-bright);
+  animation: pulse-glow 2.5s infinite;
+}
+
+.world-3d-brand h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #fff4d6;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.world-3d-brand small {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--paper-dim);
+}
+
+.world-3d-time-selector {
+  display: flex;
+  gap: 8px;
+  background: rgba(8, 18, 16, 0.88);
+  border: 1px solid rgba(209, 169, 93, 0.3);
+  border-radius: 999px;
+  padding: 4px 8px;
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.world-3d-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--paper-dim);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.world-3d-pill-btn:hover {
+  color: #fff4d6;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.world-3d-pill-btn.active {
+  background: rgba(43, 199, 171, 0.2);
+  border-color: var(--jade-bright);
+  color: #3de0c8;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(61, 224, 200, 0.25);
+}
+
+.world-3d-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.world-3d-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(14, 28, 26, 0.9);
+  border: 1px solid rgba(209, 169, 93, 0.35);
+  border-radius: 50%;
+  color: #fff4d6;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.world-3d-close-btn:hover {
+  background: rgba(214, 106, 83, 0.3);
+  border-color: #d66a53;
+  color: #ff8b73;
+  transform: rotate(90deg);
+}
+
+.world-3d-interact-badge {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(6, 17, 15, 0.94);
+  border: 1.5px solid var(--jade-bright);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(61, 224, 200, 0.3);
+  padding: 10px 22px;
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  z-index: 15;
+  animation: badge-float 2.2s ease-in-out infinite alternate;
+  backdrop-filter: blur(12px);
+  transition: all var(--speed) var(--ease-out);
+}
+
+@keyframes badge-float {
+  0% { transform: translate(-50%, 0); }
+  100% { transform: translate(-50%, -6px); }
+}
+
+.world-3d-interact-badge:hover {
+  border-color: var(--gold-bright);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 0 28px rgba(255, 214, 133, 0.4);
+}
+
+.interact-sparkle {
+  color: var(--gold-bright);
+  animation: spin-glow 4s linear infinite;
+}
+
+@keyframes spin-glow {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-3d-interact-badge,
+  .interact-sparkle {
+    animation: none;
+  }
+}
+
+.interact-text strong {
+  display: block;
+  color: #fff4d6;
+  font-size: 1.05rem;
+}
+
+.interact-text small {
+  display: block;
+  color: #3de0c8;
+  font-size: 0.78rem;
+}
+
+.interact-action-btn {
+  background: linear-gradient(135deg, #2bc7ab, #1f8f82);
+  border: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(43, 199, 171, 0.4);
+}
+
+.world-3d-footer {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.world-3d-compass-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(8, 18, 16, 0.85);
+  border: 1px solid rgba(209, 169, 93, 0.35);
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--gold-bright);
+  font-size: 0.82rem;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
+
+.world-3d-guide-pill {
+  background: rgba(8, 18, 16, 0.85);
+  border: 1px solid rgba(43, 199, 171, 0.25);
+  padding: 6px 16px;
+  border-radius: 999px;
+  color: var(--paper-dim);
+  font-size: 0.78rem;
+  backdrop-filter: blur(8px);
+}
+
+/* In-World 3D NPC Dialogue Card */
+.world-3d-npc-dialogue {
+  position: absolute;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, calc(100% - 40px));
+  background: rgba(8, 20, 18, 0.95);
+  border: 1.5px solid var(--gold-bright);
+  border-radius: var(--radius-l);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), 0 0 24px rgba(209, 169, 93, 0.3);
+  padding: 18px 24px 14px;
+  z-index: 30;
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: dialogue-fade-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialogue-fade-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.world-3d-npc-speaker-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.npc-avatar-badge {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.world-3d-npc-speaker-pill strong {
+  color: var(--gold-bright);
+  font-size: 1.02rem;
+  letter-spacing: 0.5px;
+}
+
+.npc-line-counter {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--jade-bright);
+  background: rgba(43, 199, 171, 0.15);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(43, 199, 171, 0.3);
+}
+
+.world-3d-npc-text {
+  margin: 0;
+  color: #fff6e5;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  min-height: 3.2em;
+}
+
+.world-3d-npc-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed rgba(209, 169, 93, 0.25);
+  padding-top: 8px;
+}
+
+.world-3d-npc-hint {
+  font-size: 0.78rem;
+  color: #a8c0ba;
+}
+
+.world-3d-npc-next-btn {
+  background: linear-gradient(135deg, #d1a95d, #b8860b);
+  border: none;
+  color: #121008;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 6px 14px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(209, 169, 93, 0.4);
+  transition: all var(--speed) var(--ease-out);
+}
+
+.world-3d-npc-next-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+/* ================================================================ */
+/* 3D Diegetic HUD: Objective Bar, Relic Dock & Waypoint Navigation  */
+/* ================================================================ */
+
+/* 1. Top-Center Diegetic Quest Objective Bar */
+.world-3d-objective-bar {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(6, 17, 15, 0.90);
+  border: 1px solid rgba(209, 169, 93, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 16px rgba(209, 169, 93, 0.2);
+  border-radius: 999px;
+  padding: 6px 18px 6px 14px;
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+  z-index: 12;
+  max-width: min(580px, calc(100% - 36px));
+  animation: objective-slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--speed) var(--ease-out);
+}
+
+@keyframes objective-slide-down {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.world-3d-objective-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(209, 169, 93, 0.18);
+  border: 1px solid rgba(209, 169, 93, 0.5);
+  color: var(--gold-bright);
+  flex-shrink: 0;
+}
+
+.world-3d-objective-sparkle {
+  color: var(--gold-bright);
+  animation: pulse-glow 2.5s infinite;
+}
+
+.world-3d-objective-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.world-3d-objective-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.world-3d-objective-text {
+  font-size: 0.85rem;
+  color: #fff6e5;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.world-3d-objective-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin-left: auto;
+  padding: 3px 8px;
+  background: rgba(43, 199, 171, 0.15);
+  border: 1px solid rgba(43, 199, 171, 0.35);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.world-3d-counter-num {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #3de0c8;
+}
+
+.world-3d-counter-divider {
+  font-size: 0.72rem;
+  color: var(--paper-dim);
+}
+
+.world-3d-counter-total {
+  font-size: 0.72rem;
+  color: var(--paper-dim);
+}
+
+/* 2. Bottom-Left Relic Inventory Dock */
+.world-3d-relic-dock {
+  position: absolute;
+  bottom: 62px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  z-index: 12;
+  padding: 4px;
+  background: rgba(6, 17, 15, 0.75);
+  border: 1px solid rgba(43, 199, 171, 0.25);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  transition: all var(--speed) var(--ease-out);
+}
+
+.world-3d-relic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 12px 5px 8px;
+  color: var(--paper-dim);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--speed) var(--ease-out);
+}
+
+.world-3d-relic-pill.acquired {
+  background: rgba(14, 30, 26, 0.85);
+  border-color: rgba(209, 169, 93, 0.45);
+  color: #fff4d6;
+  box-shadow: 0 0 10px rgba(209, 169, 93, 0.15);
+}
+
+.world-3d-relic-pill.acquired:hover {
+  background: rgba(24, 45, 38, 0.95);
+  border-color: var(--gold-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 16px rgba(255, 214, 133, 0.35);
+}
+
+.world-3d-relic-pill.locked {
+  opacity: 0.5;
+  cursor: default;
+  border: 1px dashed rgba(168, 192, 186, 0.25);
+}
+
+.world-3d-relic-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.world-3d-relic-pill.acquired .world-3d-relic-glyph {
+  background: rgba(209, 169, 93, 0.25);
+  border: 1px solid rgba(209, 169, 93, 0.6);
+  color: var(--gold-bright);
+}
+
+.world-3d-relic-pill.locked .world-3d-relic-glyph {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--paper-faint);
+  font-size: 0.65rem;
+}
+
+.world-3d-relic-name {
+  white-space: nowrap;
+}
+
+.world-3d-relic-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #3de0c8;
+  background: rgba(43, 199, 171, 0.18);
+  border: 1px solid rgba(43, 199, 171, 0.35);
+  border-radius: 4px;
+  padding: 1px 4px;
+  letter-spacing: 0.04em;
+}
+
+/* 3. Waypoint Navigation Guide (Footer Left) */
+.world-3d-footer-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.world-3d-waypoint-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(8, 20, 18, 0.88);
+  border: 1px solid rgba(43, 199, 171, 0.4);
+  padding: 6px 14px;
+  border-radius: 999px;
+  color: #3de0c8;
+  font-size: 0.82rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: all var(--speed) var(--ease-out);
+}
+
+.world-3d-waypoint-guide:hover {
+  background: rgba(14, 32, 28, 0.95);
+  border-color: var(--jade-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 14px rgba(61, 224, 200, 0.3);
+}
+
+.world-3d-waypoint-guide .waypoint-arrow {
+  color: var(--gold-bright);
+  transition: transform 0.1s linear;
+}
+
+.world-3d-waypoint-guide .waypoint-target-name {
+  color: #fff4d6;
+  font-weight: 600;
+}
+
+.world-3d-waypoint-guide .waypoint-distance {
+  color: #3de0c8;
+  font-size: 0.76rem;
+  background: rgba(43, 199, 171, 0.18);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(43, 199, 171, 0.3);
+}
+
+.world-3d-waypoint-guide.completed {
+  border-color: rgba(209, 169, 93, 0.4);
+  color: var(--gold-bright);
+  cursor: default;
+}
+
+/* 4. Responsive & Accessibility Adjustments */
+@media (max-width: 900px) {
+  .world-3d-objective-bar {
+    top: 66px;
+    padding: 4px 14px 4px 10px;
+    max-width: calc(100% - 32px);
+  }
+
+  .world-3d-objective-text {
+    font-size: 0.78rem;
+  }
+
+  .world-3d-relic-dock {
+    bottom: 58px;
+    left: 14px;
+    gap: 4px;
+    padding: 3px;
+  }
+
+  .world-3d-relic-pill {
+    padding: 4px 8px 4px 6px;
+    font-size: 0.72rem;
+  }
+
+  .world-3d-relic-tag {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-3d-objective-bar,
+  .world-3d-objective-sparkle {
+    animation: none;
+  }
 }

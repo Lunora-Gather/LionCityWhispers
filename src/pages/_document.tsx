@@ -6,12 +6,6 @@ export default function Document() {
     <Html lang="zh-Hans">
       <Head>
         <meta name="format-detection" content="telephone=no" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <link rel="preload" href={assetPath("/assets/images/lion-city-ink-bg.webp")} as="image" />
         <link rel="preload" href={assetPath("/assets/images/world-cinematic-v3.webp")} as="image" />
         {process.env.NEXT_PUBLIC_GA_ID ? (

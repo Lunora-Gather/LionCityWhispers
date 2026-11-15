@@ -107,8 +107,8 @@ for (const group of ["dependencies", "devDependencies"]) {
 if (packageJson.overrides?.postcss !== "8.5.23") {
   fail("postcss override must stay pinned to 8.5.23.");
 }
-if (packageJson.overrides?.sharp !== "0.35.3") {
-  fail("sharp override must stay pinned to 0.35.3 (libvips CVE fixes).");
+if (packageJson.overrides?.sharp !== "0.35.5") {
+  fail("sharp override must stay pinned to 0.35.5 (libvips CVE fixes).");
 }
 
 const swText = await readFile(join(root, "public/sw.js"), "utf8");

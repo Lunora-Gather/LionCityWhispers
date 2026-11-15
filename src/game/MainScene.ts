@@ -30,7 +30,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
-    if (this.hasGameplaySceneActive()) {
+    if (Boolean(this.registry.get("chapterOverride")) || this.hasGameplaySceneActive()) {
       window.dispatchEvent(new CustomEvent("lcw:loading", { detail: { ready: true, progress: 1 } }));
       this.scene.stop("MainScene");
       return;

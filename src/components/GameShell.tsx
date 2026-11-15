@@ -1,12 +1,15 @@
 import {
   BookOpen,
+  Box,
   Check,
   Circle,
+  Compass,
   Gauge,
   Lightbulb,
   Pause,
   Play,
   RotateCcw,
+  Rotate3d,
   Settings,
   Share2,
   Trash2,
@@ -14,10 +17,28 @@ import {
   VolumeX,
   X
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { getCodexEntries, getEndingCopy } from "@/data/codex";
 import { formatCopy, objectiveCopy, sceneName, sceneCopy, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
+import { solvePuzzle, gameState, type ArtifactId } from "@/game/state";
+import type { Puzzle3DType } from "@/game/three/puzzles/PuzzleWorkshop3D";
+
+const ArtifactViewer = dynamic(
+  () => import("@/game/three/ArtifactViewer").then((mod) => mod.ArtifactViewer),
+  { ssr: false }
+);
+
+const PuzzleWorkshop3D = dynamic(
+  () => import("@/game/three/puzzles/PuzzleWorkshop3D").then((mod) => mod.PuzzleWorkshop3D),
+  { ssr: false }
+);
+
+const World3D = dynamic(
+  () => import("@/game/three/world/World3D").then((mod) => mod.World3D),
+  { ssr: false }
+);
 
 type ControlBindingId =
   | "moveUp"
@@ -48,6 +69,12 @@ export type HudState = {
   museumComplete: boolean;
   easyMode: boolean;
   dialogue: string;
+  flags: {
+    jigsaw: boolean;
+    runes: boolean;
+    lock: boolean;
+    rhythm: boolean;
+  };
   settings: {
     muted: boolean;
     volume: number;
@@ -83,6 +110,12 @@ const initialHud: HudState = {
   museumComplete: false,
   easyMode: true,
   dialogue: text(stateCopy.opening, "zh"),
+  flags: {
+    jigsaw: false,
+    runes: false,
+    lock: false,
+    rhythm: false
+  },
   settings: {
     muted: false,
     volume: 0.78,
@@ -470,6 +503,20 @@ export function GameShell() {
   const [paused, setPaused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [codexOpen, setCodexOpen] = useState(false);
+  const [viewer3DOpen, setViewer3DOpen] = useState(false);
+  const [viewerArtifactId, setViewerArtifactId] = useState<ArtifactId>("badang-stone");
+  const [workshop3DOpen, setWorkshop3DOpen] = useState(false);
+  const [workshop3DPuzzleType, setWorkshop3DPuzzleType] = useState<Puzzle3DType>("jigsaw");
+  const [world3DOpen, setWorld3DOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "2d") return false;
+    if (params.get("mode") === "3d") return true;
+    const isHeadless =
+      typeof navigator !== "undefined" &&
+      (navigator.userAgent.includes("Headless") || (navigator as any).webdriver);
+    return !isHeadless;
+  });
   const [codexSearch, setCodexSearch] = useState("");
   const [codexFilter, setCodexFilter] = useState<"all" | "unlocked" | "locked">("all");
   const [resetConfirm, setResetConfirm] = useState(false);
@@ -517,6 +564,26 @@ export function GameShell() {
   };
 
   const earnedAchievementsRef = useRef<Record<string, boolean>>({});
+  const returnTo3DRef = useRef<"leaving" | "active" | false>(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "2d") {
+      setWorld3DOpen(false);
+      return;
+    }
+    if (params.get("mode") === "3d") {
+      setWorld3DOpen(true);
+      return;
+    }
+    const isHeadless =
+      typeof navigator !== "undefined" &&
+      (navigator.userAgent.includes("Headless") || (navigator as any).webdriver);
+    if (!isHeadless) {
+      setWorld3DOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading.ready) return;
@@ -664,7 +731,59 @@ export function GameShell() {
     }
   };
   const uiLocked =
-    settingsOpen || codexOpen || resetConfirm || importOpen || listeningBinding !== null;
+    settingsOpen ||
+    codexOpen ||
+    viewer3DOpen ||
+    workshop3DOpen ||
+    world3DOpen ||
+    resetConfirm ||
+    importOpen ||
+    listeningBinding !== null;
+
+  useEffect(() => {
+    const handleOpenWorkshop = (event: Event) => {
+      const detail = (event as CustomEvent<Puzzle3DType>).detail;
+      if (detail) {
+        setWorkshop3DPuzzleType(detail);
+        setWorkshop3DOpen(true);
+      }
+    };
+    const handleOpenVault = (event: Event) => {
+      const detail = (event as CustomEvent<{ artifactId?: ArtifactId }>).detail;
+      const targetId = detail?.artifactId || "badang-stone";
+      setViewerArtifactId(targetId);
+      setViewer3DOpen(true);
+    };
+    const handleOpenWorld3D = () => setWorld3DOpen(true);
+    window.addEventListener("lcw:open-3d-workshop", handleOpenWorkshop);
+    window.addEventListener("lcw:open-3d-vault", handleOpenVault);
+    window.addEventListener("lcw:open-3d-viewer", handleOpenVault);
+    window.addEventListener("lcw:open-3d-world", handleOpenWorld3D);
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("mode") === "3d" || params.get("world3d") === "1") {
+        setWorld3DOpen(true);
+      }
+    }
+
+    return () => {
+      window.removeEventListener("lcw:open-3d-workshop", handleOpenWorkshop);
+      window.removeEventListener("lcw:open-3d-vault", handleOpenVault);
+      window.removeEventListener("lcw:open-3d-viewer", handleOpenVault);
+      window.removeEventListener("lcw:open-3d-world", handleOpenWorld3D);
+    };
+  }, []);
+
+  const handleSolvePuzzle3D = (puzzleType: Puzzle3DType) => {
+    solvePuzzle(puzzleType);
+    window.dispatchEvent(new CustomEvent("lcw:solve-puzzle-3d", { detail: puzzleType }));
+    triggerToast(
+      hud.settings.locale === "zh"
+        ? "3D工坊重铸成功！历史文物已唤醒"
+        : "3D Workshop Complete! Relic Awoken"
+    );
+  };
 
   useModalFocus(settingsOpen, settingsPanelRef);
   useModalFocus(codexOpen, codexPanelRef);
@@ -676,10 +795,22 @@ export function GameShell() {
 
     const onState = (event: Event) => {
       const custom = event as CustomEvent<HudState>;
+      const detail = custom.detail;
+      if (returnTo3DRef.current && detail) {
+        const isWorldScene =
+          detail.scene === sceneName("world", "zh") ||
+          detail.scene === sceneName("world", "en") ||
+          detail.scene === "world";
+        if (returnTo3DRef.current === "leaving" && !isWorldScene) {
+          returnTo3DRef.current = "active";
+        } else if (returnTo3DRef.current === "active" && isWorldScene) {
+          returnTo3DRef.current = false;
+          setWorld3DOpen(true);
+        }
+      }
       setHud((current) => {
         // The emitter keeps object identities stable when nothing changed, so
         // a shallow comparison lets idle heartbeat emits skip the re-render.
-        const detail = custom.detail;
         for (const key of Object.keys(detail) as Array<keyof HudState>) {
           if (detail[key] !== current[key]) {
             return { ...current, ...detail };
@@ -710,7 +841,14 @@ export function GameShell() {
         if (!active) {
           return;
         }
-        if (hadController && window.sessionStorage.getItem("lcw:sw-dev-cleared") !== "1") {
+        const isHeadless =
+          typeof navigator !== "undefined" &&
+          (navigator.userAgent.includes("Headless") || (navigator as any).webdriver);
+        if (
+          !isHeadless &&
+          hadController &&
+          window.sessionStorage.getItem("lcw:sw-dev-cleared") !== "1"
+        ) {
           window.sessionStorage.setItem("lcw:sw-dev-cleared", "1");
           window.location.reload();
           return;
@@ -746,6 +884,7 @@ export function GameShell() {
         setResetConfirm(false);
         setImportOpen(false);
         setImportText("");
+        setWorkshop3DOpen(false);
       }
     };
     window.addEventListener("keydown", closePanels);
@@ -928,6 +1067,10 @@ export function GameShell() {
 
   const updateSettings = (detail: Partial<HudState["settings"]>) => {
     resumeAudioContext();
+    setHud((current) => ({
+      ...current,
+      settings: { ...current.settings, ...detail }
+    }));
     window.dispatchEvent(new CustomEvent("lcw:settings", { detail }));
   };
 
@@ -1153,6 +1296,18 @@ export function GameShell() {
     window.dispatchEvent(new CustomEvent("lcw:chapter", { detail: target }));
   };
 
+  const handleStartRitual = useCallback(() => {
+    returnTo3DRef.current = "leaving";
+    setWorld3DOpen(false);
+    openChapter("RhythmScene");
+  }, []);
+
+  const handleEnterMuseum = useCallback(() => {
+    returnTo3DRef.current = "leaving";
+    setWorld3DOpen(false);
+    openChapter("MuseumScene");
+  }, []);
+
   return (
     <div
       className={`shell ${isOpeningScene ? "is-opening" : "is-playing"} ${
@@ -1217,9 +1372,56 @@ export function GameShell() {
                 resumeAudioContext();
                 setCodexOpen(true);
                 setSettingsOpen(false);
+                setViewer3DOpen(false);
               }}
             >
               <BookOpen size={18} />
+            </button>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label={ui.vault3D}
+              title={ui.vault3D}
+              onClick={() => {
+                resumeAudioContext();
+                setViewerArtifactId((hud.inventory[0]?.id as ArtifactId) || "badang-stone");
+                setViewer3DOpen(true);
+                setSettingsOpen(false);
+                setCodexOpen(false);
+              }}
+            >
+              <Rotate3d size={18} />
+            </button>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label={ui.workshop3D}
+              title={ui.workshop3D}
+              onClick={() => {
+                resumeAudioContext();
+                setWorkshop3DOpen(true);
+                setSettingsOpen(false);
+                setCodexOpen(false);
+                setViewer3DOpen(false);
+              }}
+            >
+              <Box size={18} />
+            </button>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label={ui.world3D}
+              title={ui.world3D}
+              onClick={() => {
+                resumeAudioContext();
+                setWorld3DOpen(true);
+                setSettingsOpen(false);
+                setCodexOpen(false);
+                setViewer3DOpen(false);
+                setWorkshop3DOpen(false);
+              }}
+            >
+              <Compass size={18} />
             </button>
             <button
               className="icon-button"
@@ -1275,6 +1477,21 @@ export function GameShell() {
             </button>
           </nav>
         </header>
+
+        {!world3DOpen && !settingsOpen && !codexOpen && !resetConfirm && !importOpen && !viewer3DOpen && !workshop3DOpen && !isPuzzleOrRitualActive && (
+          <button
+            type="button"
+            className="world-3d-entrance-pill"
+            aria-label={hud.settings.locale === "zh" ? "进入 3D 探索小世界" : "Enter 3D Miniature Realm"}
+            onClick={() => {
+              resumeAudioContext();
+              setWorld3DOpen(true);
+            }}
+          >
+            <Compass size={16} className="world-3d-icon-pulse" />
+            <span>{hud.settings.locale === "zh" ? "进入 3D 探索小世界" : "Enter 3D Miniature Realm"}</span>
+          </button>
+        )}
 
         <aside
           className={`hud progress-strip ${isPuzzleOrRitualActive ? "hud-hidden-in-puzzle" : ""}`}
@@ -1333,7 +1550,12 @@ export function GameShell() {
                 key={item.id}
                 title={item.detail}
                 type="button"
-                onClick={() => setCodexOpen(true)}
+                onClick={() => {
+                  setViewerArtifactId(item.id as ArtifactId);
+                  setViewer3DOpen(true);
+                  setSettingsOpen(false);
+                  setCodexOpen(false);
+                }}
               >
                 <i />
                 {item.name}
@@ -1807,7 +2029,23 @@ export function GameShell() {
                       <article className={unlocked ? "codex-entry" : "codex-entry locked"} key={entry.id}>
                         {unlocked ? <span className={`codex-art codex-art-${entry.id}`} /> : null}
                         <div>
-                          <h3>{unlocked ? entry.name : ui.lockedArtifact}</h3>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                            <h3>{unlocked ? entry.name : ui.lockedArtifact}</h3>
+                            {unlocked ? (
+                              <button
+                                type="button"
+                                className="codex-3d-btn"
+                                onClick={() => {
+                                  setViewerArtifactId(entry.id);
+                                  setViewer3DOpen(true);
+                                  setCodexOpen(false);
+                                }}
+                              >
+                                <Rotate3d size={14} />
+                                <span>{ui.inspect3D}</span>
+                              </button>
+                            ) : null}
+                          </div>
                           <small>{unlocked ? entry.era : ui.lockedEra}</small>
                           <p>{unlocked ? entry.clue : ui.lockedClue}</p>
                           {unlocked ? <p style={{ marginTop: "4px", fontStyle: "italic", opacity: 0.88 }}>{entry.exhibit}</p> : null}
@@ -1869,6 +2107,71 @@ export function GameShell() {
               <Circle size={18} />
             </button>
           </nav>
+        )}
+
+        {viewer3DOpen && (
+          <ArtifactViewer
+            artifactId={viewerArtifactId}
+            locale={hud.settings.locale}
+            onClose={() => setViewer3DOpen(false)}
+            onSelectArtifact={(id) => setViewerArtifactId(id)}
+            unlockedArtifacts={
+              hud.easyMode
+                ? ["badang-stone", "rune-plaque", "harbor-seal", "spirit-chime"]
+                : Array.from(new Set(["badang-stone", ...hud.inventory.map((i) => i.id as ArtifactId)]))
+            }
+          />
+        )}
+
+        {workshop3DOpen && (
+          <PuzzleWorkshop3D
+            puzzleType={workshop3DPuzzleType}
+            locale={hud.settings.locale}
+            easyMode={hud.easyMode}
+            onClose={() => setWorkshop3DOpen(false)}
+            onSolve={handleSolvePuzzle3D}
+          />
+        )}
+
+        {world3DOpen && (
+          <World3D
+            locale={hud.settings.locale}
+            completedPuzzles={hud.completedPuzzles}
+            ritualComplete={hud.ritualComplete}
+            museumComplete={hud.museumComplete}
+            objective={hud.objective}
+            inventory={hud.inventory}
+            flags={hud.flags ?? gameState.flags}
+            modalOpen={workshop3DOpen || viewer3DOpen || codexOpen || settingsOpen}
+            muted={hud.settings.muted}
+            onClose={() => setWorld3DOpen(false)}
+            onOpenWorkshop={(type) => {
+              setWorkshop3DPuzzleType(type);
+              setWorkshop3DOpen(true);
+            }}
+            onOpenVault={(id) => {
+              setViewerArtifactId(id as ArtifactId);
+              setViewer3DOpen(true);
+            }}
+            onStartRitual={handleStartRitual}
+            onEnterMuseum={handleEnterMuseum}
+            onTalkNpc={(npcId) => {
+              window.dispatchEvent(new CustomEvent("lcw:narrative", { detail: npcId }));
+            }}
+            onOpenCodex={() => {
+              resumeAudioContext();
+              setCodexOpen(true);
+              setSettingsOpen(false);
+              setViewer3DOpen(false);
+            }}
+            onOpenSettings={() => {
+              resumeAudioContext();
+              setSettingsOpen(true);
+              setCodexOpen(false);
+              setViewer3DOpen(false);
+            }}
+            onToggleAudio={toggleAudio}
+          />
         )}
       </main>
     </div>

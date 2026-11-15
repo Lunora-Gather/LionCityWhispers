@@ -39,7 +39,7 @@ export class WorldScene extends Phaser.Scene {
 
   create() {
     this.drawWorld();
-    this.player = new Player(this, 230, 555);
+    this.player = new Player(this, 206, 560);
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.createInteractables();
     this.createPrompt();
@@ -78,6 +78,10 @@ export class WorldScene extends Phaser.Scene {
 
       if (moving) {
         this.hasMoved = true;
+        if (!this.activeDialogue && gameState.dialogue) {
+          gameState.dialogue = "";
+          emitGameState("world");
+        }
         const target = this.onboardingContainer;
         this.onboardingContainer = undefined;
         this.tweens.add({
@@ -126,13 +130,17 @@ export class WorldScene extends Phaser.Scene {
       item.setFocus(item === nearest);
     }
 
-    if (nearest) {
+    if (nearest && !gameState.dialogue) {
       // Only rebuild the label when the target or binding actually changes.
       if (nearest.config.id !== this.nearestId || bindings.action !== this.promptBindingCode) {
         this.nearestId = nearest.config.id;
         this.promptBindingCode = bindings.action;
         this.promptText.setText(`${nearest.config.label}  /  ${formatBinding(bindings.action)}`);
       }
+      this.prompt.setPosition(
+        Phaser.Math.Clamp(nearest.config.x, 180, 1100),
+        Math.min(608, nearest.config.y + 42)
+      );
       this.prompt.setAlpha(1);
     } else {
       this.nearestId = "";
@@ -174,8 +182,13 @@ export class WorldScene extends Phaser.Scene {
     window.addEventListener("keydown", this.keyDownHandler);
     window.addEventListener("keyup", this.keyUpHandler);
     window.addEventListener("lcw:advance-dialogue", this.dialogueHandler);
+    const enterMuseumHandler = () => {
+      transitionTo(this, "MuseumScene");
+    };
+    window.addEventListener("lcw:enter-museum", enterMuseumHandler);
     onSceneTeardown(this, () => {
       this.pressedCodes.clear();
+      window.removeEventListener("lcw:enter-museum", enterMuseumHandler);
       if (this.keyDownHandler) {
         window.removeEventListener("keydown", this.keyDownHandler);
       }
@@ -364,8 +377,8 @@ export class WorldScene extends Phaser.Scene {
       {
         id: "curator",
         kind: "npc",
-        x: 258,
-        y: 584,
+        x: 292,
+        y: 540,
         radius: 96,
         label: copy.curator,
         color: 0x1f8f82,
@@ -466,14 +479,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private createPrompt() {
-    const panel = this.add.rectangle(0, 0, 330, 42, 0x101817, 0.68);
-    panel.setStrokeStyle(1, 0xd1a95d, 0.38);
+    const panel = this.add.graphics();
+    panel.fillStyle(0x071210, 0.88);
+    panel.fillRoundedRect(-124, -16, 248, 32, 16);
+    panel.lineStyle(1.2, 0xd1a95d, 0.62);
+    panel.strokeRoundedRect(-124, -16, 248, 32, 16);
     this.promptText = this.add.text(0, 0, "", {
       fontFamily: "Microsoft YaHei, sans-serif",
-      fontSize: "16px",
+      fontSize: "13.5px",
+      fontStyle: "bold",
       color: "#fff4d6"
     }).setOrigin(0.5);
-    this.prompt = this.add.container(640, 548, [panel, this.promptText]).setDepth(40).setAlpha(0);
+    this.prompt = this.add.container(360, 598, [panel, this.promptText]).setDepth(40).setAlpha(0);
   }
 
   private getNpcLines(role: "curator" | "boatman") {
@@ -676,29 +693,30 @@ export class WorldScene extends Phaser.Scene {
       ? (locale === "en" ? "Drag Joystick to Move • Tap to Interact" : "滑动摇杆移动 • 点击角色/物品交互")
       : (locale === "en" ? "WASD / ➔ to Move • Space / Click to Interact" : "WASD / 方向键 移动 • 空格 / 点击 交互");
 
-    const container = this.add.container(230, 485).setDepth(35);
-    
-    const bg = this.add.rectangle(0, 0, locale === "en" ? 340 : 290, 36, 0x0c1b18, 0.92)
-      .setStrokeStyle(1.5, 0xd1a95d, 0.72);
-    
-    const arrow = this.add.triangle(0, 23, -6, -6, 6, -6, 0, 0, 0x0c1b18, 0.92)
-      .setStrokeStyle(1.5, 0xd1a95d, 0.72);
-    const cover = this.add.rectangle(0, 17, 10, 2, 0x0c1b18, 1);
+    const container = this.add.container(166, 434).setDepth(35);
+    const pillW = locale === "en" ? 316 : 268;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x081513, 0.9);
+    bg.fillRoundedRect(-pillW / 2, -16, pillW, 32, 16);
+    bg.lineStyle(1.2, 0xd1a95d, 0.72);
+    bg.strokeRoundedRect(-pillW / 2, -16, pillW, 32, 16);
+
+    const arrow = this.add.triangle(28, 21, -5, -5, 5, -5, 0, 1, 0xd1a95d, 0.85);
 
     const text = this.add.text(0, 0, textStr, {
       fontFamily: "Microsoft YaHei, Noto Sans SC, sans-serif",
-      fontSize: "12px",
+      fontSize: "11.5px",
       fontStyle: "bold",
       color: "#fff4d6"
     }).setOrigin(0.5);
 
-    container.add([bg, arrow, cover, text]);
+    container.add([bg, arrow, text]);
     this.onboardingContainer = container;
 
     if (!gameState.settings.reduceMotion) {
       this.tweens.add({
         targets: container,
-        y: 477,
+        y: 428,
         duration: 1000,
         yoyo: true,
         repeat: -1,
