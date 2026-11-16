@@ -6,9 +6,9 @@ const publicUrl = "https://lunora-gather.github.io/LionCityWhispers/";
 const publicImageUrl = `${publicUrl}icon-512.png`;
 const title = "狮城秘语 | Lion City Whispers";
 const description =
-  "狮城秘语 1.1.0：直接在浏览器中游玩的双语叙事解谜游戏，融合 3D 微缩世界探索、3D 文物鉴赏与工坊重铸、节奏仪式与博物馆布展冒险。";
+  "狮城秘语 1.2.0：直接在浏览器中游玩的双语叙事解谜游戏，融合 3D 微缩世界探索、3D 文物鉴赏与工坊重铸、节奏仪式与博物馆布展冒险。";
 const englishDescription =
-  "Play Lion City Whispers 1.1.0, a bilingual browser game featuring a 3D miniature world, 3D artifact restoration, rhythm ritual, and museum curation.";
+  "Play Lion City Whispers 1.2.0, a bilingual browser game featuring a 3D miniature world, 3D artifact restoration, rhythm ritual, and museum curation.";
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "VideoGame",

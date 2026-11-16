@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { createArtifact3D, type Artifact3DHandle } from "./artifactModels";
+import { getEquirectEnvTexture, getMuseumBackdropTexture } from "./world/World3DTextures";
 import type { ArtifactId } from "../state";
 import type { Locale } from "@/data/i18n";
 import { Layers, Lightbulb, Rotate3d, Sparkles, Volume2, X } from "lucide-react";
@@ -125,7 +126,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     const height = container.clientHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x060c0b);
+    scene.background = getMuseumBackdropTexture(uvMode);
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     camera.position.set(0, 0.25, 6.2);
@@ -136,10 +137,18 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
     container.appendChild(renderer.domElement);
 
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+    const studioEnvRT = pmrem.fromEquirectangular(getEquirectEnvTexture("studio"));
+    pmrem.dispose();
+    scene.environment = studioEnvRT.texture;
+
     // Studio Ambient & Spot Lighting
-    const ambientLight = new THREE.AmbientLight(0xd9ecd9, 0.7);
+    const ambientLight = new THREE.AmbientLight(0xd9ecd9, 0.95);
     scene.add(ambientLight);
 
     const keySpot = new THREE.SpotLight(0xfff1cf, 3.8);
@@ -285,6 +294,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
       pedestalMat.dispose();
       pedestalRingGeo.dispose();
       pedestalRingMat.dispose();
+      studioEnvRT.dispose();
       renderer.dispose();
       if (container.contains(domElement)) {
         container.removeChild(domElement);
@@ -300,7 +310,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     }
     if (sceneLightsRef.current) {
       const { scene, keySpot, fillSpot, rimLight } = sceneLightsRef.current;
-      scene.background = new THREE.Color(uvMode ? 0x050414 : 0x060c0b);
+      scene.background = getMuseumBackdropTexture(uvMode);
       keySpot.color.setHex(uvMode ? 0x7c4dff : 0xfff1cf);
       fillSpot.color.setHex(uvMode ? 0x00f2fe : 0x2bc7ab);
       rimLight.color.setHex(uvMode ? 0x3de0c8 : 0xd1a95d);

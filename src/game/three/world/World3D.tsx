@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { World3DEnvironment, type LandmarkTrigger, type TimeOfDay } from "./World3DEnvironment";
 import { World3DPlayer } from "./World3DPlayer";
+import { getEquirectEnvTexture } from "./World3DTextures";
 import { type Locale, worldCopy } from "@/data/i18n";
 import { playUiClick, playStoneGrind, playGearTick, playChimeResonance } from "@/game/audio";
 import { Compass, Eye, Moon, Sun, Sunrise, X, Sparkles, Navigation, BookOpen, Settings, Volume2, VolumeX, Landmark } from "lucide-react";
@@ -430,6 +431,7 @@ export const World3D: React.FC<World3DProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const envMapsRef = useRef<Record<TimeOfDay, THREE.WebGLRenderTarget> | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const camControllerRef = useRef<World3DCameraController | null>(null);
   const compassIconRef = useRef<HTMLDivElement | null>(null);
@@ -716,6 +718,18 @@ export const World3D: React.FC<World3DProps> = ({
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
 
+    // Pre-bake PMREM IBL environment maps for Dawn, Dusk & Night (zero frame allocations)
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+    const envMaps: Record<TimeOfDay, THREE.WebGLRenderTarget> = {
+      dawn: pmrem.fromEquirectangular(getEquirectEnvTexture("dawn")),
+      dusk: pmrem.fromEquirectangular(getEquirectEnvTexture("dusk")),
+      night: pmrem.fromEquirectangular(getEquirectEnvTexture("night"))
+    };
+    pmrem.dispose();
+    envMapsRef.current = envMaps;
+    scene.environment = envMaps[timeOfDay].texture;
+
     // Environment & Player
     const env = new World3DEnvironment();
     envRef.current = env;
@@ -946,6 +960,12 @@ export const World3D: React.FC<World3DProps> = ({
       }
       env.dispose();
       player.dispose();
+      if (envMapsRef.current) {
+        envMapsRef.current.dawn.dispose();
+        envMapsRef.current.dusk.dispose();
+        envMapsRef.current.night.dispose();
+        envMapsRef.current = null;
+      }
       renderer.dispose();
     };
   }, []);
@@ -954,6 +974,9 @@ export const World3D: React.FC<World3DProps> = ({
   useEffect(() => {
     if (envRef.current) {
       envRef.current.setupLighting(timeOfDay);
+    }
+    if (sceneRef.current && envMapsRef.current) {
+      sceneRef.current.environment = envMapsRef.current[timeOfDay].texture;
     }
   }, [timeOfDay]);
 

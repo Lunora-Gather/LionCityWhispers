@@ -4,6 +4,7 @@ import { X, RotateCw, RotateCcw, Check, Sparkles, Box, ShieldCheck, RefreshCw } 
 import { createMegalithWorkshop, MegalithWorkshopHandle } from "./MegalithWorkshop3D";
 import { createCryptexWorkshop, CryptexWorkshopHandle } from "./CryptexPuzzle3D";
 import { createAstrolabeWorkshop, AstrolabeWorkshopHandle } from "./AstrolabeBox3D";
+import { getEquirectEnvTexture, getMuseumBackdropTexture } from "../world/World3DTextures";
 import { playStoneGrind, playGearTick, playSnap, playKintsugiAwaken, playUiClick, playSuccess } from "@/game/audio";
 
 export type Puzzle3DType = "jigsaw" | "runes" | "lock";
@@ -95,8 +96,17 @@ export function PuzzleWorkshop3D({
     renderer.setSize(initWidth, initHeight, false);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
 
     const scene = new THREE.Scene();
+    scene.background = getMuseumBackdropTexture(false);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+    const studioEnvRT = pmrem.fromEquirectangular(getEquirectEnvTexture("studio"));
+    pmrem.dispose();
+    scene.environment = studioEnvRT.texture;
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -305,6 +315,7 @@ export function PuzzleWorkshop3D({
       megalithRef.current?.dispose();
       cryptexRef.current?.dispose();
       astrolabeRef.current?.dispose();
+      studioEnvRT.dispose();
       renderer.dispose();
     };
   }, [puzzleType]);

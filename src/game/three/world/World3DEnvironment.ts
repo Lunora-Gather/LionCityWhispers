@@ -21,7 +21,10 @@ import {
   getCargoCrateTexture,
   getCanvasAwningTexture,
   getSoftParticleTexture,
-  getMerlionScaleTexture
+  getMerlionScaleTexture,
+  getBanyanBarkTexture,
+  getBanyanLeafTexture,
+  getSkyDomeTexture
 } from "./World3DTextures";
 import { World3DLifeScenes } from "./World3DLifeScenes";
 import { HydrodynamicRiverSystem } from "./World3DHydrodynamics";
@@ -220,6 +223,8 @@ export class World3DEnvironment {
   private hemisphereLight!: THREE.HemisphereLight;
   private pointLights: THREE.PointLight[] = [];
   private lampLights: THREE.PointLight[] = [];
+  private skyDomeMesh?: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  private skyTextures?: Record<TimeOfDay, THREE.CanvasTexture>;
 
   // Smooth lighting targets
   private targetLighting = {
@@ -265,8 +270,30 @@ export class World3DEnvironment {
     this.buildBoatmanNPC();
     this.buildLifeScenes();
     this.buildAtmosphereParticles();
+    this.buildSkyAndHorizon();
     this.setupLighting("dusk");
     this.setupLandmarkTriggers();
+  }
+
+  /**
+   * Atmospheric Gradient Sky Dome & Distant Tropical Harbour Horizon Ring
+   * Eliminates bare dark void behind eye-level architectural & portrait vistas.
+   */
+  private buildSkyAndHorizon() {
+    this.skyTextures = {
+      dawn: getSkyDomeTexture("dawn"),
+      dusk: getSkyDomeTexture("dusk"),
+      night: getSkyDomeTexture("night")
+    };
+    const skyGeo = new THREE.SphereGeometry(125, 32, 20);
+    const skyMat = new THREE.MeshBasicMaterial({
+      map: this.skyTextures.dusk,
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false
+    });
+    this.skyDomeMesh = new THREE.Mesh(skyGeo, skyMat);
+    this.root.add(this.skyDomeMesh);
   }
 
   /* -------------------------------------------------------------- */
@@ -591,11 +618,12 @@ export class World3DEnvironment {
     const waterMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       vertexColors: true,
-      roughness: 0.12,
-      metalness: 0.85,
+      roughness: 0.18,
+      metalness: 0.36,
+      envMapIntensity: 0.62,
       transparent: true,
       opacity: 0.90,
-      flatShading: true
+      flatShading: false
     });
     this.waterMesh = new THREE.Mesh(this.waterGeo, waterMat);
     this.waterMesh.rotation.x = -Math.PI / 2;
@@ -1170,12 +1198,12 @@ export class World3DEnvironment {
       valanceMesh.position.set(0, 2.45, -2.85);
       house.add(valanceMesh);
 
-      // Hanging merchant banner (商号飞幡布旗)
+      // Hanging merchant banner (商号飞幡布旗 - tucked neatly beside arcade pillar cheek)
       const bannerGroup = new THREE.Group();
-      bannerGroup.position.set(-sh.width * 0.32, 2.38, -2.75);
+      bannerGroup.position.set(-sh.width * 0.40, 2.38, -2.76);
       house.add(bannerGroup);
 
-      const dowel = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.55, 6), trimMat);
+      const dowel = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.44, 6), trimMat);
       dowel.rotation.z = Math.PI / 2;
       bannerGroup.add(dowel);
 
@@ -1184,18 +1212,18 @@ export class World3DEnvironment {
         roughness: 0.65,
         side: THREE.DoubleSide
       });
-      const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.95, 0.012), bannerMat);
-      cloth.position.set(0, -0.48, 0);
+      const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.64, 0.012), bannerMat);
+      cloth.position.set(0, -0.32, 0);
       bannerGroup.add(cloth);
 
       // Hanging rolled bamboo chick blind (半卷防雨防晒竹帘)
       const blindGroup = new THREE.Group();
-      blindGroup.position.set(sh.width * 0.18, 2.38, -2.82);
+      blindGroup.position.set(sh.width * 0.18, 2.46, -2.84);
       house.add(blindGroup);
 
       const blindMat = new THREE.MeshStandardMaterial({ color: 0x9e8055, roughness: 0.82 });
-      const blind = new THREE.Mesh(new THREE.BoxGeometry(sh.width * 0.44, 0.42, 0.02), blindMat);
-      blind.position.set(0, -0.21, 0);
+      const blind = new THREE.Mesh(new THREE.BoxGeometry(sh.width * 0.42, 0.28, 0.02), blindMat);
+      blind.position.set(0, -0.14, 0);
       blindGroup.add(blind);
 
       this.shophouseBanners.push({ group: bannerGroup, phase: idx * 1.4 });
@@ -1222,7 +1250,7 @@ export class World3DEnvironment {
       dadoRail.position.set(0, 1.16, -0.16);
       house.add(dadoRail);
 
-      // Side party wall tile returns
+      // Side party wall tile returns & full-height enclosing courtyard wings on terrace ends
       for (const px of [-sh.width / 2 + 0.05, sh.width / 2 - 0.05]) {
         const sideTileDado = new THREE.Mesh(
           new THREE.PlaneGeometry(2.7, 0.95),
@@ -1235,6 +1263,21 @@ export class World3DEnvironment {
         const sideDadoRail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 2.7), woodTrimMat);
         sideDadoRail.position.set(px, 1.16, -1.45);
         house.add(sideDadoRail);
+
+        if ((idx === 0 && px < 0) || (idx === shophouses.length - 1 && px > 0)) {
+          const endPartyWall = new THREE.Mesh(
+            new THREE.BoxGeometry(0.14, 2.78, 2.88),
+            innerWallMat
+          );
+          endPartyWall.position.set(px + (px > 0 ? 0.08 : -0.08), 1.39, -1.48);
+          endPartyWall.castShadow = true;
+          endPartyWall.receiveShadow = true;
+          house.add(endPartyWall);
+
+          const friezeTrim = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 2.92), accentMat);
+          friezeTrim.position.set(px + (px > 0 ? 0.08 : -0.08), 2.74, -1.48);
+          house.add(friezeTrim);
+        }
       }
 
       // 6. Solid timber folding batten shopfront doors (传统实木排门)
@@ -3754,11 +3797,11 @@ export class World3DEnvironment {
       metalness: 0.18
     });
     const goldVeinMat = new THREE.MeshStandardMaterial({
-      color: 0xffd700,
-      roughness: 0.35,
-      metalness: 0.85,
-      emissive: 0xffb84d,
-      emissiveIntensity: 0.25
+      color: 0xd8a846,
+      roughness: 0.30,
+      metalness: 0.88,
+      emissive: 0xc28a2e,
+      emissiveIntensity: 0.14
     });
     const mossMat = new THREE.MeshStandardMaterial({ color: 0x284724, roughness: 0.92 });
     const makaraBronzeMat = new THREE.MeshStandardMaterial({
@@ -3915,67 +3958,34 @@ export class World3DEnvironment {
       shardGroup.position.set(sc.pos[0], sc.pos[1], sc.pos[2]);
       shardGroup.rotation.set(sc.rot[0], sc.rot[1], sc.rot[2]);
 
-      // Chiseled natural faceted monolith body
+      // Chiseled natural faceted monolith body (inlaid golden Sanskrit markings on stone face)
       const monolithGeo = this.createChiseledMonolithGeometry(sc.w, sc.h, sc.d, sc.slant, sc.seed);
       const shardMesh = new THREE.Mesh(monolithGeo, stoneMat);
       shardMesh.castShadow = true;
       shardMesh.receiveShadow = true;
       shardGroup.add(shardMesh);
 
-      // Embedded Kintsugi gold fracture vein (金缮裂隙金线)
-      const veinPts: THREE.Vector3[] = [];
-      const veinSteps = 8;
-      for (let s = 0; s <= veinSteps; s++) {
-        const t = s / veinSteps;
-        const vy = (0.5 - t) * (sc.h * 0.96);
-        const angle = (s % 2 === 0 ? 0.32 : -0.22) + sc.seed * 0.5;
-        const vx = Math.cos(angle) * (sc.w * 0.44);
-        const vz = Math.sin(angle) * (sc.d * 0.44);
-        veinPts.push(new THREE.Vector3(vx, vy, vz));
-      }
-      const veinCurve = new THREE.CatmullRomCurve3(veinPts);
-      const veinGeo = new THREE.TubeGeometry(veinCurve, 16, 0.032, 6, false);
-      const veinMesh = new THREE.Mesh(veinGeo, goldVeinMat);
-      shardGroup.add(veinMesh);
-
-      // Transverse fissure branches
-      for (const branchY of [-0.25 * sc.h, 0.18 * sc.h]) {
-        const bPts = [
-          new THREE.Vector3(0, branchY, sc.d * 0.42),
-          new THREE.Vector3(sc.w * 0.28, branchY + 0.12, sc.d * 0.38),
-          new THREE.Vector3(sc.w * 0.48, branchY + 0.08, 0)
-        ];
-        const bCurve = new THREE.CatmullRomCurve3(bPts);
-        const bGeo = new THREE.TubeGeometry(bCurve, 8, 0.022, 5, false);
-        const bMesh = new THREE.Mesh(bGeo, goldVeinMat);
-        shardGroup.add(bMesh);
-      }
-
       megalithGroup.add(shardGroup);
     });
 
-    // 7.3 Levitating Fractured Runic Stone Shards (悬浮爪哇古梵文裂石残片)
-    const floatingShardGeo = new THREE.DodecahedronGeometry(0.24, 1);
-    floatingShardGeo.scale(0.82, 1.45, 0.34);
-    const shardVeinVGeo = new THREE.BoxGeometry(0.045, 0.40, 0.17);
-    const shardVeinDGeo = new THREE.BoxGeometry(0.18, 0.038, 0.17);
+    // 7.3 Levitating Chiseled Fractured Runic Stone Shards (真实斜切多面体玄武岩符文悬石残片)
     for (let f = 0; f < 6; f++) {
       const fAngle = (f / 6) * Math.PI * 2;
-      const fRadius = 2.1 + (f % 2) * 0.45;
+      const fRadius = 2.05 + (f % 2) * 0.40;
       const shardFloatGroup = new THREE.Group();
-      shardFloatGroup.position.set(Math.cos(fAngle) * fRadius, 1.75 + Math.sin(f * 1.5) * 0.32, Math.sin(fAngle) * fRadius);
-      shardFloatGroup.rotation.set(0.15 * Math.sin(f), fAngle + Math.PI / 2, 0.18 * Math.cos(f));
+      shardFloatGroup.position.set(Math.cos(fAngle) * fRadius, 1.68 + Math.sin(f * 1.5) * 0.26, Math.sin(fAngle) * fRadius);
+      shardFloatGroup.rotation.set(0.14 * Math.sin(f), fAngle + Math.PI / 2, 0.16 * Math.cos(f));
 
-      const fShard = new THREE.Mesh(floatingShardGeo, stoneMat);
+      const fShardGeo = this.createChiseledMonolithGeometry(0.32, 0.72, 0.22, (f % 2 === 0 ? 0.22 : -0.22), 1.4 + f);
+      const fShard = new THREE.Mesh(fShardGeo, stoneMat);
       fShard.castShadow = true;
+      fShard.receiveShadow = true;
       shardFloatGroup.add(fShard);
 
-      const veinV = new THREE.Mesh(shardVeinVGeo, goldVeinMat);
-      shardFloatGroup.add(veinV);
-
-      const veinD = new THREE.Mesh(shardVeinDGeo, goldVeinMat);
-      veinD.rotation.z = 0.45;
-      shardFloatGroup.add(veinD);
+      // Fine flush gold hairline binding band inside fracture waist
+      const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.12, 0.018, 6), goldVeinMat);
+      collar.rotation.z = 0.28;
+      shardFloatGroup.add(collar);
 
       megalithGroup.add(shardFloatGroup);
     }
@@ -4308,16 +4318,37 @@ export class World3DEnvironment {
       bBowl.position.y = 1.18;
       brazierGroup.add(bBowl);
 
-      // Blazing Sacred Fire Flame Core
-      const fireCore = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.65, 8), fireGlowMat);
-      fireCore.position.y = 1.58;
+      // Glowing ember coals & translucent layered teardrop sacred flame (告别生硬橙色圆锥)
+      const emberBed = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xcc4410 })
+      );
+      emberBed.scale.set(1.0, 0.28, 1.0);
+      emberBed.position.y = 1.34;
+      brazierGroup.add(emberBed);
+
+      const outerFlameMat = new THREE.MeshBasicMaterial({
+        color: 0xff7722,
+        transparent: true,
+        opacity: 0.65,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const fireCore = new THREE.Mesh(new THREE.SphereGeometry(0.20, 12, 10), outerFlameMat);
+      fireCore.scale.set(0.82, 1.85, 0.82);
+      fireCore.position.y = 1.56;
       brazierGroup.add(fireCore);
 
-      const fireFlameInner = new THREE.Mesh(
-        new THREE.ConeGeometry(0.16, 0.48, 6),
-        new THREE.MeshBasicMaterial({ color: 0xffe066 })
-      );
-      fireFlameInner.position.y = 1.55;
+      const innerFlameMat = new THREE.MeshBasicMaterial({
+        color: 0xffdf70,
+        transparent: true,
+        opacity: 0.82,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const fireFlameInner = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), innerFlameMat);
+      fireFlameInner.scale.set(0.75, 1.65, 0.75);
+      fireFlameInner.position.y = 1.52;
       brazierGroup.add(fireFlameInner);
 
       const brazierLight = new THREE.PointLight(0xff7722, 1.25, 6.5);
@@ -5200,10 +5231,10 @@ export class World3DEnvironment {
     headGroup.add(cranium);
 
     // Sculpted Cheekbone & Zygomatic Arches (左右狮颊隆起肌群)
-    for (const cx of [-0.46, 0.46]) {
-      const cheekArch = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 14), stoneMat);
+    for (const cx of [-0.40, 0.40]) {
+      const cheekArch = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 14), stoneMat);
       cheekArch.position.set(cx, -0.02, 0.28);
-      cheekArch.scale.set(0.75, 0.85, 1.15);
+      cheekArch.scale.set(0.70, 0.82, 1.08);
       cheekArch.castShadow = true;
       headGroup.add(cheekArch);
     }
@@ -5216,25 +5247,25 @@ export class World3DEnvironment {
       headGroup.add(brow);
     }
 
-    // Contoured Rounded Upper Muzzle / Nasal Bridge (告别方盒鼻吻!)
-    const snoutBridge = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.36, 12, 20), stoneMat);
-    snoutBridge.rotation.x = Math.PI / 2 - 0.18;
-    snoutBridge.scale.set(1.18, 1.0, 0.82);
-    snoutBridge.position.set(0, 0.02, 0.52);
+    // Contoured Broad Upper Muzzle / Nasal Bridge
+    const snoutBridge = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.34, 12, 20), stoneMat);
+    snoutBridge.rotation.x = Math.PI / 2 - 0.14;
+    snoutBridge.scale.set(1.24, 1.0, 0.84);
+    snoutBridge.position.set(0, 0.01, 0.50);
     snoutBridge.castShadow = true;
     headGroup.add(snoutBridge);
 
     // Sculpted Broad Lion Nose Pad (如意形狮鼻头与鼻翼)
-    const nosePad = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 12), darkStoneMat);
-    nosePad.scale.set(1.25, 0.72, 0.68);
-    nosePad.position.set(0, 0.09, 0.88);
+    const nosePad = new THREE.Mesh(new THREE.SphereGeometry(0.185, 16, 12), darkStoneMat);
+    nosePad.scale.set(1.36, 0.74, 0.72);
+    nosePad.position.set(0, 0.09, 0.84);
     headGroup.add(nosePad);
 
-    // Flared Whisker Muzzle Pads on left and right
-    for (const wx of [-0.21, 0.21]) {
-      const whiskerPad = new THREE.Mesh(new THREE.SphereGeometry(0.20, 16, 14), stoneMat);
-      whiskerPad.position.set(wx, -0.06, 0.74);
-      whiskerPad.scale.set(0.95, 0.78, 1.18);
+    // Integrated Whisker Muzzle Contours tucked smoothly below nasal bridge
+    for (const wx of [-0.145, 0.145]) {
+      const whiskerPad = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 14), stoneMat);
+      whiskerPad.position.set(wx, -0.055, 0.67);
+      whiskerPad.scale.set(0.92, 0.72, 1.02);
       whiskerPad.castShadow = true;
       headGroup.add(whiskerPad);
     }
@@ -5420,10 +5451,11 @@ export class World3DEnvironment {
     const pMat = new THREE.PointsMaterial({
       map: softParticleTex,
       color: 0xdcf8ff,
-      size: 0.24,
+      size: 0.13,
       transparent: true,
-      opacity: 0.88,
-      alphaTest: 0.04,
+      opacity: 0.58,
+      alphaTest: 0.02,
+      blending: THREE.AdditiveBlending,
       depthWrite: false
     });
     this.merlionWaterParticles = new THREE.Points(pGeo, pMat);
@@ -6461,7 +6493,11 @@ export class World3DEnvironment {
 /* 13. Singapore Tropical Botany (百年大榕树、椰林蒲葵与水生生态)   */
   /* -------------------------------------------------------------- */
   private buildFoliageAndLamps() {
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x684b30, roughness: 0.78 });
+    const trunkMat = new THREE.MeshStandardMaterial({
+      map: getBanyanBarkTexture(),
+      color: 0xc2aa90,
+      roughness: 0.86
+    });
     const frondMat = new THREE.MeshStandardMaterial({ color: 0x286234, roughness: 0.58 });
     const orchidMat = new THREE.MeshStandardMaterial({ color: 0xdf528a, roughness: 0.5 });
     const orchidLeafMat = new THREE.MeshStandardMaterial({ color: 0x1b4522, roughness: 0.65 });
@@ -6745,15 +6781,17 @@ export class World3DEnvironment {
       { pos: [1.0, 7.6, -0.4], rad: 2.4, col: 0x3c8548 },
       { pos: [0, 7.8, 0], rad: 2.2, col: 0x449452 }
     ];
+    const banyanLeafTex = getBanyanLeafTexture();
     canopyConfigs.forEach((cfg, cIdx) => {
       const mat = new THREE.MeshStandardMaterial({
+        map: banyanLeafTex,
         color: cfg.col,
         emissive: 0x0b2412,
-        emissiveIntensity: 0.28,
-        roughness: 0.72
+        emissiveIntensity: 0.16,
+        roughness: 0.78
       });
-      // High-resolution organic botanical cloud pad (subdivision 3 + harmonic lobing, zero sharp low-poly facets!)
-      const foliageGeo = new THREE.IcosahedronGeometry(cfg.rad, 3);
+      // High-resolution indexed organic botanical cloud pad (smooth normals + harmonic lobing!)
+      const foliageGeo = new THREE.SphereGeometry(cfg.rad, 24, 18);
       const posAttr = foliageGeo.attributes.position;
       for (let k = 0; k < posAttr.count; k++) {
         const vx = posAttr.getX(k);
@@ -7703,10 +7741,14 @@ export class World3DEnvironment {
     this.curatorNPCGroup.add(briefcaseGroup);
 
     // Floating Interaction Beacon Star (Crucial: Keep name = "beacon")
-    const beaconGeo = new THREE.OctahedronGeometry(0.24, 0);
-    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xffd685 });
+    const beaconGeo = new THREE.OctahedronGeometry(0.16, 0);
+    const beaconMat = new THREE.MeshBasicMaterial({
+      color: 0xffd685,
+      transparent: true,
+      opacity: 0.85
+    });
     const star = new THREE.Mesh(beaconGeo, beaconMat);
-    star.position.set(0, 2.5, 0);
+    star.position.set(0, 2.82, 0);
     star.name = "beacon";
     this.curatorNPCGroup.add(star);
 
@@ -7725,7 +7767,7 @@ export class World3DEnvironment {
     const oarMat = new THREE.MeshStandardMaterial({ color: 0x543822, roughness: 0.7 });
     const ropeMat = new THREE.MeshStandardMaterial({ color: 0x968058, roughness: 0.92 });
     const brassMat = new THREE.MeshStandardMaterial({ color: 0xb58b3c, roughness: 0.35, metalness: 0.8 });
-    const mustacheMat = new THREE.MeshStandardMaterial({ color: 0xdedede, roughness: 0.9 });
+    const mustacheMat = new THREE.MeshStandardMaterial({ color: 0xa29b92, roughness: 0.9 });
     const ribMat = new THREE.MeshStandardMaterial({ color: 0x6e4e2e, roughness: 0.75 });
 
     // 14.6 Wooden Pier Decking (Walkable for player)
@@ -8067,11 +8109,11 @@ export class World3DEnvironment {
       headGroup.add(ear);
     }
 
-    // Sculpted Curved Weathered Mustache & Tapered Goatee Beard
-    for (const mx of [-0.056, 0.056]) {
-      const stache = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.105, 10), mustacheMat);
-      stache.rotation.set(0.18, 0, mx > 0 ? -1.22 : 1.22);
-      stache.position.set(mx, -0.054, 0.214);
+    // Sculpted Natural Silver-Grey Drooping Mustache & Tapered Goatee Beard
+    for (const mx of [-0.044, 0.044]) {
+      const stache = new THREE.Mesh(new THREE.CapsuleGeometry(0.015, 0.052, 6, 10), mustacheMat);
+      stache.rotation.set(0.10, 0, mx > 0 ? 0.52 : -0.52);
+      stache.position.set(mx, -0.056, 0.214);
       headGroup.add(stache);
     }
 
@@ -8242,10 +8284,14 @@ export class World3DEnvironment {
     this.lampLights.push(lanternGlow);
 
     // Floating Interaction Beacon Star (Crucial: Keep name = "beacon")
-    const beaconGeo = new THREE.OctahedronGeometry(0.24, 0);
-    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff9900 });
+    const beaconGeo = new THREE.OctahedronGeometry(0.16, 0);
+    const beaconMat = new THREE.MeshBasicMaterial({
+      color: 0xffd275,
+      transparent: true,
+      opacity: 0.85
+    });
     const beacon = new THREE.Mesh(beaconGeo, beaconMat);
-    beacon.position.set(0, 2.5, 0);
+    beacon.position.set(0, 2.82, 0);
     beacon.name = "beacon";
     this.boatmanNPCGroup.add(beacon);
 
@@ -8401,6 +8447,10 @@ export class World3DEnvironment {
       if (this.sunMotes) {
         (this.sunMotes.material as THREE.PointsMaterial).opacity = this.targetLighting.sunMotesOpacity;
       }
+    }
+    if (this.skyDomeMesh && this.skyTextures) {
+      this.skyDomeMesh.material.map = this.skyTextures[time];
+      this.skyDomeMesh.material.needsUpdate = true;
     }
   }
 
@@ -8999,11 +9049,11 @@ export class World3DEnvironment {
       pivot.rotation.x = Math.cos(time * 1.4 + phase) * 0.04 * (-shophouseWind.z / 1.2);
     }
 
-    // 8.3.1 Shophouse Fabric Banners & Bamboo Blinds Wind Sway
+    // 8.3.1 Shophouse Fabric Banners & Bamboo Blinds Gentle Breeze
     for (let i = 0; i < this.shophouseBanners.length; i++) {
       const b = this.shophouseBanners[i];
-      b.group.rotation.x = 0.06 * (shophouseWind.z / 1.2) + Math.sin(time * 3.2 + b.phase) * 0.08;
-      b.group.rotation.z = 0.10 * (shophouseWind.x / 1.2) + Math.cos(time * 2.8 + b.phase) * 0.06;
+      b.group.rotation.x = 0.022 * (shophouseWind.z / 1.2) + Math.sin(time * 2.8 + b.phase) * 0.025;
+      b.group.rotation.z = 0.028 * (shophouseWind.x / 1.2) + Math.cos(time * 2.4 + b.phase) * 0.02;
     }
 
     // 8.4 Quayside Parasols & Flowering Bushes
@@ -9094,7 +9144,7 @@ export class World3DEnvironment {
       const beacon = this.curatorNPCGroup.getObjectByName("beacon");
       if (beacon) {
         beacon.rotation.y += delta * 1.8;
-        beacon.position.y = 2.5 + Math.sin(time * 3.0) * 0.08;
+        beacon.position.y = 2.82 + Math.sin(time * 3.0) * 0.08;
       }
     }
     if (this.boatmanNPCGroup) {
@@ -9102,7 +9152,7 @@ export class World3DEnvironment {
       const beacon = this.boatmanNPCGroup.getObjectByName("beacon");
       if (beacon) {
         beacon.rotation.y += delta * 1.8;
-        beacon.position.y = 2.5 + Math.sin(time * 3.0 + 1.2) * 0.08;
+        beacon.position.y = 2.82 + Math.sin(time * 3.0 + 1.2) * 0.08;
       }
     }
 

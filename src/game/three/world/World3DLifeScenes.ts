@@ -1544,8 +1544,8 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
       metalness: 0.0
     });
     const sweatTowelMat = new THREE.MeshStandardMaterial({
-      color: 0xeee8d5,
-      roughness: 0.95,
+      color: 0xb8ad98,
+      roughness: 0.96,
       metalness: 0.0
     });
     const bambooPoleMat = new THREE.MeshStandardMaterial({
@@ -1740,36 +1740,25 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
     sash1.position.set(0, -0.32, 0);
     torsoGroup1.add(sash1);
 
-    // Sweat Towel: Padded Shoulder Loop with Cascading Front Tail & Rear Drape
-    const towel1 = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.026, 10, 18, Math.PI), sweatTowelMat);
-    towel1.rotation.set(0, Math.PI / 2, 0);
-    towel1.scale.set(1.12, 0.52, 0.88);
-    towel1.position.set(-0.135, 0.255, 0);
+    // Sweat Towel: Draped naturally around free collar & left chest without sticking off back
+    const towel1 = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.018, 10, 18, Math.PI * 1.15), sweatTowelMat);
+    towel1.rotation.set(Math.PI / 2 - 0.15, -0.25, 0);
+    towel1.scale.set(1.0, 0.88, 0.82);
+    towel1.position.set(0.0, 0.305, 0.01);
     torsoGroup1.add(towel1);
 
-    // Front cascading towel tails (sculpted soft cotton folds, zero boxy blocks)
-    const towelFrontUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.12, 8, 14), sweatTowelMat);
-    towelFrontUpper.scale.set(1.15, 1.0, 0.38);
-    towelFrontUpper.position.set(-0.13, 0.18, 0.155);
-    towelFrontUpper.rotation.set(0.18, 0, -0.12);
+    // Subtle front neck-towel drape hugging collar front
+    const towelFrontUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.020, 0.08, 8, 14), sweatTowelMat);
+    towelFrontUpper.scale.set(1.0, 1.0, 0.32);
+    towelFrontUpper.position.set(-0.075, 0.21, 0.152);
+    towelFrontUpper.rotation.set(0.08, 0, -0.12);
     torsoGroup1.add(towelFrontUpper);
 
-    const towelFrontLower = new THREE.Mesh(new THREE.CapsuleGeometry(0.034, 0.15, 8, 14), sweatTowelMat);
-    towelFrontLower.scale.set(1.15, 1.0, 0.36);
-    towelFrontLower.position.set(-0.14, 0.01, 0.172);
-    towelFrontLower.rotation.set(0.08, 0, -0.08);
+    const towelFrontLower = new THREE.Mesh(new THREE.CapsuleGeometry(0.019, 0.07, 8, 14), sweatTowelMat);
+    towelFrontLower.scale.set(1.0, 1.0, 0.30);
+    towelFrontLower.position.set(-0.082, 0.12, 0.158);
+    towelFrontLower.rotation.set(0.03, 0, -0.06);
     torsoGroup1.add(towelFrontLower);
-
-    const towelFrontHem = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.06, 6, 10), sweatTowelMat);
-    towelFrontHem.rotation.z = Math.PI / 2 - 0.08;
-    towelFrontHem.position.set(-0.14, -0.09, 0.175);
-    torsoGroup1.add(towelFrontHem);
-
-    // Rear drape tail
-    const towelRear = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.16, 8, 14), sweatTowelMat);
-    towelRear.scale.set(1.15, 1.0, 0.38);
-    towelRear.position.set(-0.13, 0.14, -0.155);
-    torsoGroup1.add(towelRear);
 
     // Head group with sculpted cranium & exertion facial features
     const headGroup1 = new THREE.Group();

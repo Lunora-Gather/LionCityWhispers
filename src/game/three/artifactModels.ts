@@ -800,21 +800,32 @@ export function createArtifact3D(id: ArtifactId): Artifact3DHandle {
       map: bambooTex,
       bumpMap: bambooBump,
       bumpScale: 0.06,
-      color: 0x4f7258,
-      roughness: 0.62,
+      color: 0x76a27e,
+      emissive: 0x162b1c,
+      emissiveIntensity: 0.22,
+      roughness: 0.56,
       metalness: 0.08
     });
     materials.push(bambooMat);
 
     const jadeMat = new THREE.MeshStandardMaterial({
-      color: 0x2bc7ab,
-      emissive: 0x12705f,
-      emissiveIntensity: 0.72,
-      roughness: 0.12,
-      metalness: 0.35
+      color: 0x3ed4b4,
+      emissive: 0x105949,
+      emissiveIntensity: 0.26,
+      roughness: 0.14,
+      metalness: 0.10
     });
     materials.push(jadeMat);
     emissiveMaterials.push(jadeMat);
+
+    const waveHaloMat = new THREE.MeshBasicMaterial({
+      color: 0x4ae8cc,
+      transparent: true,
+      opacity: 0.34,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    materials.push(waveHaloMat);
 
     const brassBellMat = new THREE.MeshStandardMaterial({
       color: 0xebbe56,
@@ -957,11 +968,11 @@ export function createArtifact3D(id: ArtifactId): Artifact3DHandle {
     root.add(clapperGroup);
     movableParts.push({ mesh: clapperGroup, direction: new THREE.Vector3(0, -1, 0), distance: 0.7 });
 
-    // Floating harmonic wave rings
+    // Delicate translucent harmonic resonance halos
     for (let r = 0; r < 2; r++) {
-      const waveGeo = new THREE.TorusGeometry(0.95 + r * 0.35, 0.02, 8, 32);
+      const waveGeo = new THREE.TorusGeometry(0.95 + r * 0.35, 0.008, 8, 48);
       geometries.push(waveGeo);
-      const waveMesh = new THREE.Mesh(waveGeo, jadeMat);
+      const waveMesh = new THREE.Mesh(waveGeo, waveHaloMat);
       waveMesh.rotation.x = Math.PI / 2;
       waveMesh.position.y = -0.4 + r * 0.4;
       root.add(waveMesh);

@@ -112,7 +112,7 @@ export class World3DPlayer {
     const skinMat = new THREE.MeshStandardMaterial({ color: 0xdba97e, roughness: 0.55 });
     const hairMat = new THREE.MeshStandardMaterial({ color: 0x201510, roughness: 0.82 });
     const hatMat = new THREE.MeshStandardMaterial({ color: 0x2d241b, roughness: 0.70 });
-    const scarfMat = new THREE.MeshStandardMaterial({ color: 0x28a38c, roughness: 0.48 });
+    const scarfMat = new THREE.MeshStandardMaterial({ color: 0x1d7069, roughness: 0.56 });
     const bootMat = new THREE.MeshStandardMaterial({ color: 0x1c1511, roughness: 0.78 });
     const leatherMat = new THREE.MeshStandardMaterial({ color: 0x5e3019, roughness: 0.55 });
     const brassMat = new THREE.MeshStandardMaterial({ color: 0xd8b23c, roughness: 0.24, metalness: 0.86 });
@@ -438,8 +438,9 @@ export class World3DPlayer {
     this.thoraxGroup.add(placket);
 
     for (const by of [0.54, 0.38, 0.22, 0.08]) {
-      const button = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), brassMat);
-      button.position.set(0, by, 0.242);
+      const button = new THREE.Mesh(new THREE.SphereGeometry(0.017, 10, 8), brassMat);
+      button.scale.set(1.0, 1.0, 0.52);
+      button.position.set(0, by, 0.241);
       this.thoraxGroup.add(button);
     }
 
@@ -498,30 +499,30 @@ export class World3DPlayer {
     this.canteenGroup.add(canteenStrap);
     this.thoraxGroup.add(this.canteenGroup);
 
-    // Scarf Collar & Fluttering Tails
+    // Tailored Neckerchief Collar & Subtle Fluttering Tails
     const scarfGroup = new THREE.Group();
-    scarfGroup.position.set(0, 0.80, 0);
+    scarfGroup.position.set(0, 0.77, 0.01);
 
-    const scarfCollar = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.064, 12, 24), scarfMat);
+    const scarfCollar = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.028, 12, 24), scarfMat);
     scarfCollar.rotation.x = Math.PI / 2;
-    scarfCollar.scale.set(1.05, 0.90, 1.0);
+    scarfCollar.scale.set(1.02, 0.86, 1.0);
     scarfGroup.add(scarfCollar);
 
-    const scarfKnot = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), scarfMat);
-    scarfKnot.position.set(0.04, -0.02, -0.18);
+    const scarfKnot = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), scarfMat);
+    scarfKnot.position.set(0.03, -0.02, -0.155);
     scarfGroup.add(scarfKnot);
 
-    this.scarfTailGroup.position.set(0, 0, -0.18);
-    const tailGeo1 = new THREE.CapsuleGeometry(0.032, 0.22, 6, 12);
-    tailGeo1.scale(1.2, 1.0, 0.35);
-    tailGeo1.translate(0.038, -0.14, -0.02);
+    this.scarfTailGroup.position.set(0, 0, -0.155);
+    const tailGeo1 = new THREE.CapsuleGeometry(0.024, 0.20, 6, 12);
+    tailGeo1.scale(1.15, 1.0, 0.32);
+    tailGeo1.translate(0.032, -0.13, -0.015);
     const tailMesh1 = new THREE.Mesh(tailGeo1, scarfMat);
     tailMesh1.rotation.z = 0.14;
     this.scarfTailGroup.add(tailMesh1);
 
-    const tailGeo2 = new THREE.CapsuleGeometry(0.028, 0.18, 6, 12);
-    tailGeo2.scale(1.2, 1.0, 0.35);
-    tailGeo2.translate(-0.035, -0.12, -0.02);
+    const tailGeo2 = new THREE.CapsuleGeometry(0.021, 0.17, 6, 12);
+    tailGeo2.scale(1.15, 1.0, 0.32);
+    tailGeo2.translate(-0.030, -0.11, -0.015);
     const tailMesh2 = new THREE.Mesh(tailGeo2, scarfMat);
     tailMesh2.rotation.z = -0.16;
     this.scarfTailGroup.add(tailMesh2);
@@ -590,13 +591,14 @@ export class World3DPlayer {
       this.headGroup.add(brow);
     }
 
-    // Sculpted hair cap, nape locks, sideburns, and swept bangs
+    // Sculpted hair cap, nape locks, sideburns, and clean hairline under hat
     const hairBackCap = new THREE.Mesh(
-      new THREE.SphereGeometry(0.244, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.65),
+      new THREE.SphereGeometry(0.248, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.62),
       hairMat
     );
-    hairBackCap.rotation.x = -0.35;
-    hairBackCap.position.set(0, 0.04, -0.015);
+    hairBackCap.scale.set(0.98, 1.05, 1.03);
+    hairBackCap.rotation.x = -0.52;
+    hairBackCap.position.set(0, 0.04, -0.02);
     this.headGroup.add(hairBackCap);
 
     // Sideburns & temple locks
@@ -607,13 +609,19 @@ export class World3DPlayer {
       this.headGroup.add(sideLock);
     }
 
-    // Swept bangs across forehead
-    for (let b = -2; b <= 2; b++) {
-      const bangLock = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.12, 10), hairMat);
-      bangLock.rotation.x = Math.PI - 0.35;
-      bangLock.rotation.z = b * 0.14;
-      bangLock.position.set(b * 0.048, 0.145, 0.185 - Math.abs(b) * 0.012);
-      this.headGroup.add(bangLock);
+    // Smooth Swept Hairline Framing Forehead cleanly beneath hat crown
+    for (const side of [-1, 1]) {
+      const partSweep = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.085, 8, 12), hairMat);
+      partSweep.scale.set(1.15, 0.36, 0.42);
+      partSweep.position.set(side * 0.072, 0.164, 0.142);
+      partSweep.rotation.set(0.14, side * -0.18, side * -1.36);
+      this.headGroup.add(partSweep);
+
+      const templeSoft = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.062, 6, 10), hairMat);
+      templeSoft.scale.set(0.70, 1.0, 0.80);
+      templeSoft.position.set(side * 0.158, 0.102, 0.128);
+      templeSoft.rotation.set(0.10, side * -0.52, side * -0.16);
+      this.headGroup.add(templeSoft);
     }
 
     // Pinched-Crown Explorer Fedora Hat with Curved Brim & Feather Accent

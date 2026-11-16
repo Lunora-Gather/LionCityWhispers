@@ -65,54 +65,64 @@ export function getCobblestoneTexture(): THREE.CanvasTexture {
 
   const { canvas, ctx } = createOffscreenCanvas(512, 512);
 
-  // Base stone background
-  ctx.fillStyle = "#635d52";
+  // Soft muted sandstone granite base
+  ctx.fillStyle = "#5c5449";
   ctx.fillRect(0, 0, 512, 512);
 
-  // Granite stone noise
-  for (let i = 0; i < 4000; i++) {
+  // Fine mineral grain across base bed
+  for (let i = 0; i < 4800; i++) {
     const x = Math.random() * 512;
     const y = Math.random() * 512;
-    const tone = Math.random() > 0.5 ? "rgba(220, 210, 195, 0.12)" : "rgba(35, 30, 25, 0.18)";
+    const tone = Math.random() > 0.5 ? "rgba(218, 208, 192, 0.08)" : "rgba(42, 37, 30, 0.11)";
     ctx.fillStyle = tone;
-    ctx.fillRect(x, y, 2 + Math.random() * 3, 2 + Math.random() * 3);
+    ctx.fillRect(x, y, 1.5 + Math.random() * 2.5, 1.5 + Math.random() * 2.5);
   }
 
-  // Draw irregular paving blocks
+  // Draw tightly laid Straits heritage granite paving slabs
   const rows = 16;
   const cols = 16;
   const rh = 512 / rows;
   const cw = 512 / cols;
 
-  ctx.strokeStyle = "#25211b"; // Dark mortar joint
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(48, 42, 34, 0.68)"; // Soft weathered mortar seam
+  ctx.lineWidth = 2;
 
   for (let r = 0; r < rows; r++) {
     const offsetX = (r % 2) * (cw / 2);
     for (let c = -1; c < cols + 1; c++) {
       const bx = c * cw + offsetX;
       const by = r * rh;
-      const bw = cw - 3;
-      const bh = rh - 3;
+      const bw = cw - 2;
+      const bh = rh - 2;
 
-      // Varied individual stone tint
-      const tint = (Math.random() - 0.5) * 25;
-      const rVal = Math.max(80, Math.min(150, 115 + tint));
-      const gVal = Math.max(75, Math.min(145, 110 + tint));
-      const bVal = Math.max(68, Math.min(135, 100 + tint));
+      // Subtle warm granite stone tint variation without harsh checkerboard steps
+      const tint = (Math.random() - 0.5) * 18;
+      const rVal = Math.max(95, Math.min(142, Math.round(118 + tint)));
+      const gVal = Math.max(90, Math.min(136, Math.round(112 + tint * 0.95)));
+      const bVal = Math.max(82, Math.min(126, Math.round(103 + tint * 0.9)));
 
       ctx.fillStyle = `rgb(${rVal}, ${gVal}, ${bVal})`;
-      ctx.fillRect(bx + 2, by + 2, bw - 4, bh - 4);
+      ctx.fillRect(bx + 1, by + 1, bw - 2, bh - 2);
 
-      // Top-left bevel highlight
-      ctx.fillStyle = "rgba(255, 245, 230, 0.22)";
-      ctx.fillRect(bx + 2, by + 2, bw - 4, 3);
-      ctx.fillRect(bx + 2, by + 2, 3, bh - 4);
+      // Gentle internal mineral speckle per paver
+      for (let s = 0; s < 5; s++) {
+        ctx.fillStyle = s % 2 === 0 ? "rgba(235, 226, 210, 0.09)" : "rgba(50, 44, 36, 0.09)";
+        ctx.fillRect(
+          bx + 3 + Math.random() * Math.max(4, bw - 8),
+          by + 3 + Math.random() * Math.max(4, bh - 8),
+          2 + Math.random() * 3,
+          2 + Math.random() * 2
+        );
+      }
 
-      // Bottom-right shadow bevel
-      ctx.fillStyle = "rgba(20, 15, 10, 0.35)";
-      ctx.fillRect(bx + 2, by + bh - 5, bw - 4, 3);
-      ctx.fillRect(bx + bw - 5, by + 2, 3, bh - 4);
+      // Soft warm top-left chamfer highlight & muted lower shadow
+      ctx.fillStyle = "rgba(255, 246, 232, 0.11)";
+      ctx.fillRect(bx + 2, by + 2, bw - 4, 2);
+      ctx.fillRect(bx + 2, by + 2, 2, bh - 4);
+
+      ctx.fillStyle = "rgba(32, 27, 21, 0.17)";
+      ctx.fillRect(bx + 2, by + bh - 3, bw - 4, 2);
+      ctx.fillRect(bx + bw - 3, by + 2, 2, bh - 4);
 
       ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
     }
@@ -1822,6 +1832,268 @@ export function getMerlionScaleTexture(): THREE.CanvasTexture {
   textureCache.set(cacheKey, texture);
   return texture;
 }
+
+/**
+ * 24. Furrowed Tropical Banyan Bark & Buttress Root Texture (百年古榕沧桑龟裂树皮纹理)
+ */
+export function getBanyanBarkTexture(): THREE.CanvasTexture {
+  const cacheKey = "banyan_bark";
+  if (textureCache.has(cacheKey)) return textureCache.get(cacheKey)!;
+
+  const { canvas, ctx } = createOffscreenCanvas(512, 512);
+
+  // Rich weathered sepia-bark gradient
+  const grad = ctx.createLinearGradient(0, 0, 512, 0);
+  grad.addColorStop(0.0, "#563d28");
+  grad.addColorStop(0.28, "#6a4c32");
+  grad.addColorStop(0.55, "#4d3622");
+  grad.addColorStop(0.82, "#63462e");
+  grad.addColorStop(1.0, "#563d28");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Longitudinal bark fissures and fibrous ridges
+  for (let i = 0; i < 64; i++) {
+    const baseX = (i / 64) * 512;
+    const isShadow = i % 2 === 0;
+    ctx.strokeStyle = isShadow ? "rgba(28, 18, 10, 0.42)" : "rgba(138, 104, 72, 0.28)";
+    ctx.lineWidth = 1.5 + (i % 3) * 1.1;
+    ctx.beginPath();
+    ctx.moveTo(baseX, 0);
+    for (let y = 16; y <= 512; y += 24) {
+      const wave = Math.sin(y * 0.045 + i * 0.7) * 5 + Math.cos(y * 0.02 - i) * 3;
+      ctx.lineTo(baseX + wave, y);
+    }
+    ctx.stroke();
+  }
+
+  // Lenticels & horizontal fig-bark ring scars
+  for (let r = 0; r < 140; r++) {
+    const rx = Math.random() * 512;
+    const ry = Math.random() * 512;
+    ctx.fillStyle = r % 3 === 0 ? "rgba(72, 92, 46, 0.20)" : "rgba(26, 17, 10, 0.25)";
+    ctx.fillRect(rx, ry, 6 + Math.random() * 14, 2 + Math.random() * 2);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(3, 2);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  textureCache.set(cacheKey, texture);
+  return texture;
+}
+
+/**
+ * 25. Dappled Tropical Banyan Canopy Leaf Texture (南洋细叶榕枝叶繁茂斑驳肌理)
+ */
+export function getBanyanLeafTexture(): THREE.CanvasTexture {
+  const cacheKey = "banyan_leaf";
+  if (textureCache.has(cacheKey)) return textureCache.get(cacheKey)!;
+
+  const { canvas, ctx } = createOffscreenCanvas(512, 512);
+
+  // Deep forest foliage base
+  ctx.fillStyle = "#2b5e34";
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Layered multi-tone leaf clusters breaking up uniform poly surfaces
+  const tones = ["#1a3e20", "#24542c", "#326c3b", "#45844b", "#589957"];
+  for (let i = 0; i < 650; i++) {
+    const lx = Math.random() * 512;
+    const ly = Math.random() * 512;
+    const lr = 7 + Math.random() * 13;
+    ctx.fillStyle = tones[i % tones.length];
+    ctx.beginPath();
+    ctx.arc(lx, ly, lr, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (i % 4 === 0) {
+      ctx.fillStyle = "rgba(182, 224, 138, 0.22)";
+      ctx.beginPath();
+      ctx.arc(lx - lr * 0.2, ly - lr * 0.25, lr * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(3, 3);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  textureCache.set(cacheKey, texture);
+  return texture;
+}
+
+/**
+ * 26. Procedural Equirectangular Environment Map for IBL PBR Reflections (PBR环境反射天穹贴图)
+ */
+export function getEquirectEnvTexture(preset: "dawn" | "dusk" | "night" | "studio"): THREE.CanvasTexture {
+  const cacheKey = `equirect_env_${preset}`;
+  if (textureCache.has(cacheKey)) return textureCache.get(cacheKey)!;
+
+  const { canvas, ctx } = createOffscreenCanvas(512, 256);
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+
+  if (preset === "dawn") {
+    grad.addColorStop(0.0, "#1f3c5c");
+    grad.addColorStop(0.32, "#466e88");
+    grad.addColorStop(0.49, "#f5be88");
+    grad.addColorStop(0.54, "#ffe2b0");
+    grad.addColorStop(0.68, "#455852");
+    grad.addColorStop(1.0, "#192224");
+  } else if (preset === "dusk") {
+    grad.addColorStop(0.0, "#141d34");
+    grad.addColorStop(0.30, "#2f3252");
+    grad.addColorStop(0.48, "#cc6d49");
+    grad.addColorStop(0.54, "#f4aa65");
+    grad.addColorStop(0.66, "#3a454d");
+    grad.addColorStop(1.0, "#161a20");
+  } else if (preset === "night") {
+    grad.addColorStop(0.0, "#060b16");
+    grad.addColorStop(0.35, "#0d1a30");
+    grad.addColorStop(0.50, "#1b334c");
+    grad.addColorStop(0.58, "#294156");
+    grad.addColorStop(0.74, "#132028");
+    grad.addColorStop(1.0, "#090f16");
+  } else {
+    // Museum Studio softbox dome for ArtifactVault & PuzzleWorkshop
+    grad.addColorStop(0.0, "#1d3835");
+    grad.addColorStop(0.34, "#4b7268");
+    grad.addColorStop(0.48, "#f0dfb6");
+    grad.addColorStop(0.56, "#384e48");
+    grad.addColorStop(1.0, "#0c1413");
+  }
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Soft primary highlight lobe for metallic glint (sun or key studio softbox)
+  const lobeX = preset === "dawn" ? 130 : preset === "dusk" ? 360 : preset === "night" ? 190 : 310;
+  const lobeY = preset === "studio" ? 72 : 112;
+  const lobeColor =
+    preset === "night"
+      ? "rgba(130, 175, 255, 0.55)"
+      : preset === "studio"
+      ? "rgba(255, 246, 224, 0.85)"
+      : "rgba(255, 226, 168, 0.90)";
+
+  const sunLobe = ctx.createRadialGradient(lobeX, lobeY, 4, lobeX, lobeY, 82);
+  sunLobe.addColorStop(0.0, lobeColor);
+  sunLobe.addColorStop(0.45, preset === "night" ? "rgba(70, 110, 175, 0.22)" : "rgba(255, 195, 130, 0.28)");
+  sunLobe.addColorStop(1.0, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = sunLobe;
+  ctx.fillRect(0, 0, 512, 256);
+
+  if (preset === "studio") {
+    // Secondary cool jade-cyan fill softbox opposite key light for crisp museum rim reflections
+    const fillLobe = ctx.createRadialGradient(110, 110, 4, 110, 110, 96);
+    fillLobe.addColorStop(0.0, "rgba(88, 224, 200, 0.55)");
+    fillLobe.addColorStop(1.0, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = fillLobe;
+    ctx.fillRect(0, 0, 512, 256);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  textureCache.set(cacheKey, texture);
+  return texture;
+}
+
+/**
+ * 27. Atmospheric Museum Sky Dome Texture (远景海港天穹渐变贴图)
+ */
+export function getSkyDomeTexture(preset: "dawn" | "dusk" | "night"): THREE.CanvasTexture {
+  const cacheKey = `sky_dome_${preset}`;
+  if (textureCache.has(cacheKey)) return textureCache.get(cacheKey)!;
+
+  const { canvas, ctx } = createOffscreenCanvas(512, 256);
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+
+  if (preset === "dawn") {
+    grad.addColorStop(0.0, "#1c334c");
+    grad.addColorStop(0.32, "#355872");
+    grad.addColorStop(0.48, "#d4986d");
+    grad.addColorStop(0.55, "#f0c18e");
+    grad.addColorStop(0.68, "#29343b");
+    grad.addColorStop(1.0, "#141a20");
+  } else if (preset === "dusk") {
+    grad.addColorStop(0.0, "#0e1526");
+    grad.addColorStop(0.28, "#1e243d");
+    grad.addColorStop(0.45, "#593545");
+    grad.addColorStop(0.53, "#be6f4c");
+    grad.addColorStop(0.62, "#2a2b36");
+    grad.addColorStop(1.0, "#11141c");
+  } else {
+    grad.addColorStop(0.0, "#040812");
+    grad.addColorStop(0.32, "#0a1528");
+    grad.addColorStop(0.50, "#13263e");
+    grad.addColorStop(0.62, "#0d1826");
+    grad.addColorStop(1.0, "#060b14");
+  }
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Subtle horizon twilight glow arc
+  const horizonGlow = ctx.createRadialGradient(340, 128, 6, 340, 128, 140);
+  horizonGlow.addColorStop(
+    0.0,
+    preset === "night"
+      ? "rgba(75, 130, 195, 0.25)"
+      : preset === "dawn"
+      ? "rgba(255, 224, 175, 0.55)"
+      : "rgba(255, 166, 98, 0.45)"
+  );
+  horizonGlow.addColorStop(1.0, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = horizonGlow;
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Faint stars in upper zenith hemisphere for dusk & night
+  if (preset !== "dawn") {
+    const starCount = preset === "night" ? 95 : 42;
+    for (let s = 0; s < starCount; s++) {
+      const sx = (s * 73 + 19) % 512;
+      const sy = (s * 41 + 11) % 88;
+      ctx.fillStyle = preset === "night" ? "rgba(235, 245, 255, 0.55)" : "rgba(255, 240, 220, 0.32)";
+      ctx.fillRect(sx, sy, s % 5 === 0 ? 2 : 1, s % 5 === 0 ? 2 : 1);
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  textureCache.set(cacheKey, texture);
+  return texture;
+}
+
+/**
+ * 28. Museum Velvet Spotlight Backdrop Texture (博物馆微光展厅渐变背景)
+ */
+export function getMuseumBackdropTexture(uvMode = false): THREE.CanvasTexture {
+  const cacheKey = `museum_backdrop_${uvMode ? "uv" : "std"}`;
+  if (textureCache.has(cacheKey)) return textureCache.get(cacheKey)!;
+
+  const { canvas, ctx } = createOffscreenCanvas(512, 512);
+  const bg = ctx.createRadialGradient(256, 225, 24, 256, 256, 360);
+  if (uvMode) {
+    bg.addColorStop(0.0, "#14223a");
+    bg.addColorStop(0.45, "#0a1026");
+    bg.addColorStop(1.0, "#040610");
+  } else {
+    bg.addColorStop(0.0, "#19302a");
+    bg.addColorStop(0.48, "#0d1a18");
+    bg.addColorStop(1.0, "#050b0a");
+  }
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 512, 512);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  textureCache.set(cacheKey, texture);
+  return texture;
+}
+
 
 
 
