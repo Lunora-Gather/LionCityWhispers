@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # bash with pipefail so `cmd | tee log` steps fail when cmd fails, not when tee does.
     defaults:
       run:
