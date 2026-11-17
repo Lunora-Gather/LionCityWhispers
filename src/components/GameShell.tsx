@@ -22,6 +22,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type
 import { getCodexEntries, getEndingCopy } from "@/data/codex";
 import { formatCopy, objectiveCopy, sceneName, sceneCopy, shellCopy, stateCopy, text, type Locale } from "@/data/i18n";
 import { assetPath } from "@/utils/assetPath";
+import { playTypewriterBlip } from "@/game/audio";
 import { solvePuzzle, gameState, type ArtifactId } from "@/game/state";
 import type { Puzzle3DType } from "@/game/three/puzzles/PuzzleWorkshop3D";
 
@@ -744,13 +745,18 @@ export function GameShell() {
     const handleOpenWorkshop = (event: Event) => {
       const detail = (event as CustomEvent<Puzzle3DType>).detail;
       if (detail) {
+        setViewer3DOpen(false);
         setWorkshop3DPuzzleType(detail);
         setWorkshop3DOpen(true);
       }
     };
     const handleOpenVault = (event: Event) => {
-      const detail = (event as CustomEvent<{ artifactId?: ArtifactId }>).detail;
-      const targetId = detail?.artifactId || "badang-stone";
+      const detail = (event as CustomEvent<{ artifactId?: ArtifactId } | ArtifactId>).detail;
+      const targetId =
+        typeof detail === "string"
+          ? detail
+          : detail?.artifactId || "badang-stone";
+      setWorkshop3DOpen(false);
       setViewerArtifactId(targetId);
       setViewer3DOpen(true);
     };
@@ -1253,6 +1259,9 @@ export function GameShell() {
     const interval = setInterval(() => {
       index += 1;
       setText(msg.slice(0, index));
+      if (index % 3 === 1 && !/\s/.test(msg[index - 1] ?? "")) {
+        playTypewriterBlip();
+      }
       if (index >= msg.length) {
         setIsTyping(false);
         clearInterval(interval);
@@ -1310,7 +1319,7 @@ export function GameShell() {
 
   return (
     <div
-      className={`shell ${isOpeningScene ? "is-opening" : "is-playing"} ${
+      className={`shell ${isOpeningScene && !world3DOpen ? "is-opening" : "is-playing"} ${
         hud.settings.reduceMotion ? "reduced-motion" : ""
       }`}
     >
@@ -2109,30 +2118,6 @@ export function GameShell() {
           </nav>
         )}
 
-        {viewer3DOpen && (
-          <ArtifactViewer
-            artifactId={viewerArtifactId}
-            locale={hud.settings.locale}
-            onClose={() => setViewer3DOpen(false)}
-            onSelectArtifact={(id) => setViewerArtifactId(id)}
-            unlockedArtifacts={
-              hud.easyMode
-                ? ["badang-stone", "rune-plaque", "harbor-seal", "spirit-chime"]
-                : Array.from(new Set(["badang-stone", ...hud.inventory.map((i) => i.id as ArtifactId)]))
-            }
-          />
-        )}
-
-        {workshop3DOpen && (
-          <PuzzleWorkshop3D
-            puzzleType={workshop3DPuzzleType}
-            locale={hud.settings.locale}
-            easyMode={hud.easyMode}
-            onClose={() => setWorkshop3DOpen(false)}
-            onSolve={handleSolvePuzzle3D}
-          />
-        )}
-
         {world3DOpen && (
           <World3D
             locale={hud.settings.locale}
@@ -2142,7 +2127,7 @@ export function GameShell() {
             objective={hud.objective}
             inventory={hud.inventory}
             flags={hud.flags ?? gameState.flags}
-            modalOpen={workshop3DOpen || viewer3DOpen || codexOpen || settingsOpen}
+            modalOpen={workshop3DOpen || viewer3DOpen || codexOpen || settingsOpen || resetConfirm || importOpen}
             muted={hud.settings.muted}
             onClose={() => setWorld3DOpen(false)}
             onOpenWorkshop={(type) => {
@@ -2171,6 +2156,30 @@ export function GameShell() {
               setViewer3DOpen(false);
             }}
             onToggleAudio={toggleAudio}
+          />
+        )}
+
+        {viewer3DOpen && (
+          <ArtifactViewer
+            artifactId={viewerArtifactId}
+            locale={hud.settings.locale}
+            onClose={() => setViewer3DOpen(false)}
+            onSelectArtifact={(id) => setViewerArtifactId(id)}
+            unlockedArtifacts={
+              hud.easyMode
+                ? ["badang-stone", "rune-plaque", "harbor-seal", "spirit-chime"]
+                : Array.from(new Set(["badang-stone", ...hud.inventory.map((i) => i.id as ArtifactId)]))
+            }
+          />
+        )}
+
+        {workshop3DOpen && (
+          <PuzzleWorkshop3D
+            puzzleType={workshop3DPuzzleType}
+            locale={hud.settings.locale}
+            easyMode={hud.easyMode}
+            onClose={() => setWorkshop3DOpen(false)}
+            onSolve={handleSolvePuzzle3D}
           />
         )}
       </main>

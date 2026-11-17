@@ -99,6 +99,11 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
   const handleRef = useRef<Artifact3DHandle | null>(null);
 
   const [activeId, setActiveId] = useState<ArtifactId>(artifactId);
+
+  useEffect(() => {
+    setActiveId(artifactId);
+    setExploded(0);
+  }, [artifactId]);
   const [autoRotate, setAutoRotate] = useState(true);
   const [uvMode, setUvMode] = useState(false);
   const [exploded, setExploded] = useState(0);

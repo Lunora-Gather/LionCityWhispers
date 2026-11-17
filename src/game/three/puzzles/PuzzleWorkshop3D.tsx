@@ -5,7 +5,7 @@ import { createMegalithWorkshop, MegalithWorkshopHandle } from "./MegalithWorksh
 import { createCryptexWorkshop, CryptexWorkshopHandle } from "./CryptexPuzzle3D";
 import { createAstrolabeWorkshop, AstrolabeWorkshopHandle } from "./AstrolabeBox3D";
 import { getEquirectEnvTexture, getMuseumBackdropTexture } from "../world/World3DTextures";
-import { playStoneGrind, playGearTick, playSnap, playKintsugiAwaken, playUiClick, playSuccess } from "@/game/audio";
+import { playStoneGrind, playGearTick, playSnap, playKintsugiAwaken, playUiClick, playSuccess, playMiss } from "@/game/audio";
 
 export type Puzzle3DType = "jigsaw" | "runes" | "lock";
 
@@ -44,6 +44,30 @@ export function PuzzleWorkshop3D({
     { current: 60, target: 180 },
     { current: 120, target: 270 }
   ]);
+  const [snapShake, setSnapShake] = useState<boolean>(false);
+  const shakeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (shakeTimerRef.current !== null) {
+        window.clearTimeout(shakeTimerRef.current);
+      }
+    };
+  }, []);
+
+  const triggerSnapShake = () => {
+    setSnapShake(false);
+    if (shakeTimerRef.current !== null) {
+      window.clearTimeout(shakeTimerRef.current);
+    }
+    window.requestAnimationFrame(() => {
+      setSnapShake(true);
+      shakeTimerRef.current = window.setTimeout(() => {
+        setSnapShake(false);
+        shakeTimerRef.current = null;
+      }, 360);
+    });
+  };
 
   const titles: Record<Puzzle3DType, { title: string; subtitle: string; tip: string; clue: string }> = {
     jigsaw: {
@@ -346,24 +370,27 @@ export function PuzzleWorkshop3D({
   const handleSnapMegalith = () => {
     const pieceId = megalithPieces[selectedPieceIndex];
     const success = megalithRef.current?.trySnapPiece(pieceId, easyMode ?? false);
-    if (success) {
-      playSnap();
-      setMegalithAngleDeg(0);
-      if (megalithRef.current?.isComplete()) {
-        playKintsugiAwaken();
-        setSolved(true);
-      } else {
-        // Auto-select next unplaced piece
-        const nextIdx = (selectedPieceIndex + 1) % 3;
-        setSelectedPieceIndex(nextIdx);
-        const nextId = megalithPieces[nextIdx];
-        megalithRef.current?.selectPiece(nextId);
-        if (megalithRef.current) {
-          setMegalithAngleDeg(megalithRef.current.getPieceAngleDeg(nextId));
+      if (success) {
+        playSnap();
+        setMegalithAngleDeg(0);
+        if (megalithRef.current?.isComplete()) {
+          playKintsugiAwaken();
+          setSolved(true);
+        } else {
+          // Auto-select next unplaced piece
+          const nextIdx = (selectedPieceIndex + 1) % 3;
+          setSelectedPieceIndex(nextIdx);
+          const nextId = megalithPieces[nextIdx];
+          megalithRef.current?.selectPiece(nextId);
+          if (megalithRef.current) {
+            setMegalithAngleDeg(megalithRef.current.getPieceAngleDeg(nextId));
+          }
         }
+      } else {
+        playMiss();
+        triggerSnapShake();
       }
-    }
-  };
+    };
 
   // Handle Controls for Cryptex
   const handleSelectCryptexRing = (index: number) => {
@@ -407,17 +434,22 @@ export function PuzzleWorkshop3D({
 
   const handleSnapAstrolabeRing = () => {
     if (!astrolabeRef.current) return;
-    playGearTick();
-    astrolabeRef.current.tryAlignRing(selectedPieceIndex, easyMode ?? false);
+    const success = astrolabeRef.current.tryAlignRing(selectedPieceIndex, easyMode ?? false);
     setAlignedRings(astrolabeRef.current.rings.map((r) => r.isAligned));
     setAstrolabeAngles(astrolabeRef.current.getRingAnglesDeg());
-    if (astrolabeRef.current.isComplete()) {
-      playSuccess();
-      setSolved(true);
+    if (success) {
+      if (astrolabeRef.current.isComplete()) {
+        playSuccess();
+        setSolved(true);
+      } else {
+        playSnap();
+        const nextIdx = (selectedPieceIndex + 1) % 3;
+        setSelectedPieceIndex(nextIdx);
+        astrolabeRef.current.selectRing(nextIdx);
+      }
     } else {
-      const nextIdx = (selectedPieceIndex + 1) % 3;
-      setSelectedPieceIndex(nextIdx);
-      astrolabeRef.current.selectRing(nextIdx);
+      playMiss();
+      triggerSnapShake();
     }
   };
 
@@ -585,7 +617,7 @@ export function PuzzleWorkshop3D({
                   </button>
                   <button
                     type="button"
-                    className="workshop-action-btn workshop-snap-btn"
+                    className={`workshop-action-btn workshop-snap-btn ${snapShake ? "workshop-shake" : ""}`}
                     onClick={handleSnapMegalith}
                   >
                     <ShieldCheck size={16} />
@@ -701,7 +733,7 @@ export function PuzzleWorkshop3D({
                   </button>
                   <button
                     type="button"
-                    className="workshop-action-btn workshop-snap-btn"
+                    className={`workshop-action-btn workshop-snap-btn ${snapShake ? "workshop-shake" : ""}`}
                     onClick={handleSnapAstrolabeRing}
                   >
                     <ShieldCheck size={16} />

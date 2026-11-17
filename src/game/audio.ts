@@ -165,9 +165,9 @@ let noiseSource: AudioBufferSourceNode | null = null;
 let waveLfo: OscillatorNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 
-function createNoiseNode(ctx: AudioContext) {
+function ensureNoiseBuffer(ctx: AudioContext) {
   // Filling ~2s of samples is a visible main-thread hitch, so generate the
-  // buffer once and reuse it across every ambient restart (mute/pause/focus).
+  // buffer once and reuse it across ambient restarts and procedural footsteps.
   if (!noiseBuffer || noiseBuffer.sampleRate !== ctx.sampleRate) {
     const bufferSize = 2 * ctx.sampleRate;
     noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -176,8 +176,12 @@ function createNoiseNode(ctx: AudioContext) {
       output[i] = Math.random() * 2 - 1;
     }
   }
+  return noiseBuffer;
+}
+
+function createNoiseNode(ctx: AudioContext) {
   const source = ctx.createBufferSource();
-  source.buffer = noiseBuffer;
+  source.buffer = ensureNoiseBuffer(ctx);
   source.loop = true;
   return source;
 }
@@ -476,4 +480,122 @@ export function playKintsugiAwaken() {
     ],
     "sine"
   );
+}
+
+export function playFootstep(isWater: boolean) {
+  if (muted || pageSuspended || typeof window === "undefined") {
+    return;
+  }
+  const ctx = getContext();
+  if (!ctx) {
+    return;
+  }
+  if (ctx.state === "suspended") {
+    void ctx.resume();
+  }
+  const volScale = masterVolume * effectsVolume;
+  if (volScale <= 0) {
+    return;
+  }
+  const now = ctx.currentTime;
+
+  if (isWater) {
+    // Soft wet splash pop (< 0.06s, 0 byte asset impact)
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(240 + Math.random() * 40, now);
+    osc.frequency.exponentialRampToValueAtTime(340, now + 0.045);
+    oscGain.gain.setValueAtTime(0.0001, now);
+    oscGain.gain.linearRampToValueAtTime(0.02 * volScale, now + 0.006);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.058);
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = ensureNoiseBuffer(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 950;
+    filter.Q.value = 1.6;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, now);
+    noiseGain.gain.linearRampToValueAtTime(0.012 * volScale, now + 0.005);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.048);
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    const offset = Math.random() * 1.5;
+    noise.start(now, offset, 0.05);
+  } else {
+    // Subtle dry stone click/tap (< 0.04s, 0 byte asset impact)
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(115 + Math.random() * 18, now);
+    osc.frequency.exponentialRampToValueAtTime(68, now + 0.032);
+    oscGain.gain.setValueAtTime(0.0001, now);
+    oscGain.gain.linearRampToValueAtTime(0.015 * volScale, now + 0.003);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.036);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.038);
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = ensureNoiseBuffer(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 1450;
+    filter.Q.value = 2.0;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, now);
+    noiseGain.gain.linearRampToValueAtTime(0.009 * volScale, now + 0.002);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.026);
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    const offset = Math.random() * 1.5;
+    noise.start(now, offset, 0.03);
+  }
+}
+
+export function playTypewriterBlip() {
+  if (muted || pageSuspended || typeof window === "undefined") {
+    return;
+  }
+  const ctx = getContext();
+  if (!ctx || ctx.state !== "running") {
+    return;
+  }
+  const vol = 0.0045 * masterVolume * effectsVolume;
+  if (vol <= 0) {
+    return;
+  }
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.value = 780 + Math.random() * 60;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.linearRampToValueAtTime(vol, now + 0.002);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.014);
+}
+
+export function playLockedChime() {
+  if (muted || pageSuspended || typeof window === "undefined") {
+    return;
+  }
+  playTone(392, 0.085, "sine", 0.022);
+  const timer = window.setTimeout(() => {
+    sequenceTimers.delete(timer);
+    playTone(311.13, 0.14, "sine", 0.018);
+  }, 75);
+  sequenceTimers.add(timer);
 }

@@ -357,13 +357,42 @@ test.describe("Milestone 2 Empirical Challenger Stress Suite: World3DPlayer", ()
     expect(player.position.z).toBeGreaterThanOrEqual(-22.0);
     expect(player.position.z).toBe(-22.0);
 
-    // Run south (boundary is z = 20)
+    // Run south at x = -26 (blocked by Singapore River North Quay at z = -1.1)
+    input.set(0.0, 1.0);
+    for (let i = 0; i < 2000; i++) {
+      player.update(0.05, input);
+    }
+    expect(player.position.z).toBe(-1.1);
+
+    // Move onto Cavenagh Bridge (x = 0) and cross south to South Bank perimeter (z = 20)
+    player.position.set(0.0, 1.0, -2.0);
     input.set(0.0, 1.0);
     for (let i = 0; i < 2000; i++) {
       player.update(0.05, input);
     }
     expect(player.position.z).toBeLessThanOrEqual(20.0);
     expect(player.position.z).toBe(20.0);
+
+    // Run north on South Bank at x = 10 (blocked by Singapore River South Quay at z = 6.1)
+    player.position.set(10.0, 1.0, 12.0);
+    input.set(0.0, -1.0);
+    for (let i = 0; i < 500; i++) {
+      player.update(0.05, input);
+    }
+    expect(player.position.z).toBe(6.1);
+
+    // Attempt to walk sideways off Cavenagh Bridge (clamped to [-3.2, 3.2])
+    player.position.set(0.0, 1.0, 2.5);
+    input.set(1.0, 0.0);
+    for (let i = 0; i < 200; i++) {
+      player.update(0.05, input);
+    }
+    expect(player.position.x).toBe(3.2);
+    input.set(-1.0, 0.0);
+    for (let i = 0; i < 400; i++) {
+      player.update(0.05, input);
+    }
+    expect(player.position.x).toBe(-3.2);
 
     player.dispose();
   });

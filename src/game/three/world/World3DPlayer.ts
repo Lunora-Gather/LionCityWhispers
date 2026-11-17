@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { getSoftParticleTexture } from "./World3DTextures";
+import { playFootstep } from "../../audio";
 
 const SCRATCH_V3_A = new THREE.Vector3();
 const SCRATCH_V3_B = new THREE.Vector3();
@@ -7,7 +8,7 @@ const SCRATCH_V2 = new THREE.Vector2();
 
 export class World3DPlayer {
   public root = new THREE.Group();
-  public position = new THREE.Vector3(-6, 1.0, 0); // Start near the riverbridge
+  public position = new THREE.Vector3(-6, 1.0, -2.2); // Start on North Bank quay near Cavenagh Bridge
   public targetPosition: THREE.Vector3 | null = null;
   public isMoving = false;
 
@@ -860,12 +861,14 @@ export class World3DPlayer {
     // Moisture / Proximity sensing: wet stone steps or river margin
     const isNearWaterSteps = worldX >= 0.0 && worldX <= 5.0 && worldZ >= -2.0 && worldZ <= 2.0;
     const isWaterMargin = worldY <= 0.45 && worldZ >= -1.5 && worldZ <= 6.5;
+    const isWater = isNearWaterSteps || isWaterMargin;
 
-    if (isNearWaterSteps || isWaterMargin) {
+    if (isWater) {
       this.spawnWaterRipple(localX, localZ);
     } else {
       this.spawnDustPuff(localX, localZ);
     }
+    playFootstep(isWater);
   }
 
   private spawnDustPuff(localX: number, localZ: number) {
@@ -937,6 +940,27 @@ export class World3DPlayer {
       // Diorama perimeter constraints
       this.position.x = Math.max(-26, Math.min(22, this.position.x));
       this.position.z = Math.max(-22, Math.min(20, this.position.z));
+
+      // Singapore River fairway collision clamping (Z in (-1.1, 6.1) outside Cavenagh Bridge X in [-3.2, 3.2])
+      const RIVER_Z_MIN = -1.1;
+      const RIVER_Z_MAX = 6.1;
+      const BRIDGE_X_MIN = -3.2;
+      const BRIDGE_X_MAX = 3.2;
+      const inRiverZ = this.position.z > RIVER_Z_MIN && this.position.z < RIVER_Z_MAX;
+      const onBridgeX = this.position.x >= BRIDGE_X_MIN && this.position.x <= BRIDGE_X_MAX;
+      if (inRiverZ && !onBridgeX) {
+        const wasOnBridgeX = prevPosX >= BRIDGE_X_MIN && prevPosX <= BRIDGE_X_MAX;
+        const wasInRiverZ = prevPosZ > RIVER_Z_MIN && prevPosZ < RIVER_Z_MAX;
+        if (wasOnBridgeX && wasInRiverZ) {
+          this.position.x = this.position.x < BRIDGE_X_MIN ? BRIDGE_X_MIN : BRIDGE_X_MAX;
+        } else if (prevPosZ <= RIVER_Z_MIN) {
+          this.position.z = RIVER_Z_MIN;
+        } else if (prevPosZ >= RIVER_Z_MAX) {
+          this.position.z = RIVER_Z_MAX;
+        } else {
+          this.position.z = this.position.z < 2.5 ? RIVER_Z_MIN : RIVER_Z_MAX;
+        }
+      }
     }
 
     // Measure delta movement for feedback pool anchor compensation

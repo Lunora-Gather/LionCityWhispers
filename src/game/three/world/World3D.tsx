@@ -4,8 +4,9 @@ import { World3DEnvironment, type LandmarkTrigger, type TimeOfDay } from "./Worl
 import { World3DPlayer } from "./World3DPlayer";
 import { getEquirectEnvTexture } from "./World3DTextures";
 import { type Locale, worldCopy } from "@/data/i18n";
-import { playUiClick, playStoneGrind, playGearTick, playChimeResonance } from "@/game/audio";
-import { Compass, Eye, Moon, Sun, Sunrise, X, Sparkles, Navigation, BookOpen, Settings, Volume2, VolumeX, Landmark } from "lucide-react";
+import { playUiClick, playStoneGrind, playGearTick, playChimeResonance, playLockedChime, playTypewriterBlip } from "@/game/audio";
+import { gameState } from "@/game/state";
+import { Compass, Eye, Moon, Sun, Sunrise, X, Sparkles, Navigation, BookOpen, Settings, Volume2, VolumeX, Landmark, ScrollText, Anchor } from "lucide-react";
 
 export type World3DProps = {
   locale: Locale;
@@ -74,6 +75,8 @@ export class World3DCameraController {
   private prevMouseX = 0;
   private prevMouseY = 0;
   private prevMouseMoveTime = 0;
+  private prevPinchDist = 0;
+  private isTouchPinching = false;
 
   constructor(initialTarget: THREE.Vector3) {
     this.state = {
@@ -137,6 +140,71 @@ export class World3DCameraController {
       this.state.angularVelocityY = 0;
     }
     this.state.isDragging = false;
+  }
+
+  public handleTouchStart(e: TouchEvent): void {
+    if (e.touches.length === 1) {
+      this.isTouchPinching = false;
+      this.state.isDragging = true;
+      this.prevMouseX = e.touches[0].clientX;
+      this.prevMouseY = e.touches[0].clientY;
+      this.prevMouseMoveTime = performance.now();
+      this.state.angularVelocityX = 0;
+      this.state.angularVelocityY = 0;
+    } else if (e.touches.length === 2) {
+      this.isTouchPinching = true;
+      this.state.isDragging = false;
+      this.prevPinchDist = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+    }
+  }
+
+  public handleTouchMove(e: TouchEvent): void {
+    if (e.touches.length === 2 && this.isTouchPinching) {
+      const dist = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+      const delta = (this.prevPinchDist - dist) * 2.5;
+      this.prevPinchDist = dist;
+      this.handleWheel(delta);
+      return;
+    }
+    if (e.touches.length !== 1 || !this.state.isDragging || this.isTouchPinching) return;
+    const now = performance.now();
+    const dt = Math.max((now - this.prevMouseMoveTime) / 1000, 0.005);
+    this.prevMouseMoveTime = now;
+
+    const touchX = e.touches[0].clientX;
+    const touchY = e.touches[0].clientY;
+    const deltaX = touchX - this.prevMouseX;
+    const deltaY = touchY - this.prevMouseY;
+    this.prevMouseX = touchX;
+    this.prevMouseY = touchY;
+
+    const dPhi = -deltaX * this.SENSITIVITY_X;
+    const dTheta = -deltaY * this.SENSITIVITY_Y;
+
+    this.state.azimuth += dPhi;
+    this.state.currentPolar = Math.max(this.POLAR_MIN, Math.min(this.POLAR_MAX, this.state.currentPolar + dTheta));
+    this.state.targetPolar = this.state.currentPolar;
+
+    const instVelX = dPhi / dt;
+    const instVelY = dTheta / dt;
+
+    this.state.angularVelocityX = this.state.angularVelocityX * (1 - this.VELOCITY_SMOOTH_BETA) + instVelX * this.VELOCITY_SMOOTH_BETA;
+    this.state.angularVelocityY = this.state.angularVelocityY * (1 - this.VELOCITY_SMOOTH_BETA) + instVelY * this.VELOCITY_SMOOTH_BETA;
+  }
+
+  public handleTouchEnd(e: TouchEvent): void {
+    if (e.touches.length < 2) {
+      this.isTouchPinching = false;
+    }
+    if (e.touches.length === 0) {
+      this.handleMouseUp();
+    }
   }
 
   public handleWheel(deltaY: number): void {
@@ -448,6 +516,13 @@ export const World3D: React.FC<World3DProps> = ({
   }, [acquiredRelicIds, ritualComplete, syncedFlags.rhythm, museumComplete]);
 
   const keysPressed = useRef<Record<string, boolean>>({});
+  const virtualMoveRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dialogueAnchorRef = useRef<{ x: number; y: number; z: number; maxDist: number } | null>(null);
+  const npcDialogueTextRef = useRef<HTMLParagraphElement | null>(null);
+  const npcTypingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isNpcTyping, setIsNpcTyping] = useState(false);
+  const isNpcTypingRef = useRef(false);
+  isNpcTypingRef.current = isNpcTyping;
   const activeNpcDialogueRef = useRef(activeNpcDialogue);
   activeNpcDialogueRef.current = activeNpcDialogue;
   const activeLandmarkRef = useRef(activeLandmark);
@@ -464,8 +539,55 @@ export const World3D: React.FC<World3DProps> = ({
   useEffect(() => {
     if (modalOpen) {
       keysPressed.current = {};
+      virtualMoveRef.current.x = 0;
+      virtualMoveRef.current.y = 0;
     }
   }, [modalOpen]);
+
+  // Typewriter text stream with throttled audio blip for 3D NPC dialogue
+  useEffect(() => {
+    if (npcTypingIntervalRef.current !== null) {
+      clearInterval(npcTypingIntervalRef.current);
+      npcTypingIntervalRef.current = null;
+    }
+    const line = activeNpcDialogue?.lines[activeNpcDialogue.index] ?? "";
+    const el = npcDialogueTextRef.current;
+    if (!activeNpcDialogue || !line) {
+      if (el) el.textContent = "";
+      setIsNpcTyping(false);
+      return;
+    }
+    const isFast =
+      gameState?.settings?.reduceMotion ||
+      (typeof window !== "undefined" && Boolean(window.navigator.webdriver));
+    if (isFast) {
+      if (el) el.textContent = line;
+      setIsNpcTyping(false);
+      return;
+    }
+    if (el) el.textContent = "";
+    setIsNpcTyping(true);
+    let idx = 0;
+    const timer = setInterval(() => {
+      idx += 1;
+      if (npcDialogueTextRef.current) {
+        npcDialogueTextRef.current.textContent = line.slice(0, idx);
+      }
+      if (idx % 3 === 1 && !/\s/.test(line[idx - 1] ?? "")) {
+        playTypewriterBlip();
+      }
+      if (idx >= line.length) {
+        setIsNpcTyping(false);
+        clearInterval(timer);
+        npcTypingIntervalRef.current = null;
+      }
+    }, 20);
+    npcTypingIntervalRef.current = timer;
+    return () => {
+      clearInterval(timer);
+      npcTypingIntervalRef.current = null;
+    };
+  }, [activeNpcDialogue?.speaker, activeNpcDialogue?.index, activeNpcDialogue?.lines]);
 
   const getNpcLines = useCallback((role: "curator" | "boatman") => {
     const copy = worldCopy[locale] || worldCopy.zh;
@@ -485,12 +607,25 @@ export const World3D: React.FC<World3DProps> = ({
   }, [locale, completedPuzzles, ritualComplete, museumComplete]);
 
   const handleAdvanceNpcDialogue = useCallback(() => {
+    if (isNpcTypingRef.current && activeNpcDialogueRef.current) {
+      if (npcTypingIntervalRef.current !== null) {
+        clearInterval(npcTypingIntervalRef.current);
+        npcTypingIntervalRef.current = null;
+      }
+      const fullLine = activeNpcDialogueRef.current.lines[activeNpcDialogueRef.current.index] ?? "";
+      if (npcDialogueTextRef.current) {
+        npcDialogueTextRef.current.textContent = fullLine;
+      }
+      setIsNpcTyping(false);
+      return;
+    }
     playUiClick();
     setActiveNpcDialogue((prev) => {
       if (!prev) return null;
       if (prev.index + 1 < prev.lines.length) {
         return { ...prev, index: prev.index + 1 };
       }
+      dialogueAnchorRef.current = null;
       if (prev.onAction) {
         prev.onAction();
       }
@@ -502,10 +637,17 @@ export const World3D: React.FC<World3DProps> = ({
 
   const handleLandmarkInteract = useCallback((landmark: LandmarkTrigger) => {
     playUiClick();
+    const anchor = {
+      x: landmark.position.x,
+      y: landmark.position.y,
+      z: landmark.position.z,
+      maxDist: landmark.radius + 1.5
+    };
     if (landmark.id === "curator" || landmark.id === "boatman") {
       const copy = worldCopy[locale] || worldCopy.zh;
       const speaker = landmark.id === "curator" ? copy.curator : copy.boatman;
       const lines = getNpcLines(landmark.id);
+      dialogueAnchorRef.current = anchor;
       setActiveNpcDialogue({
         role: landmark.id,
         speaker,
@@ -516,6 +658,7 @@ export const World3D: React.FC<World3DProps> = ({
     } else if (landmark.id === "hop-hing") {
       playChimeResonance();
       setInvestigatingLandmark(landmark);
+      dialogueAnchorRef.current = anchor;
       setActiveNpcDialogue({
         role: "system",
         speaker: locale === "zh" ? "合兴南洋茶室 · 茶座老伯" : "Hop Hing Kopitiam · Tea Elders",
@@ -543,6 +686,7 @@ export const World3D: React.FC<World3DProps> = ({
     } else if (landmark.id === "guan-huat") {
       playChimeResonance();
       setInvestigatingLandmark(landmark);
+      dialogueAnchorRef.current = anchor;
       setActiveNpcDialogue({
         role: "system",
         speaker: locale === "zh" ? "源发香料铺 · 航海星象账册" : "Guan Huat Spice Shop · Maritime Ledger",
@@ -584,6 +728,7 @@ export const World3D: React.FC<World3DProps> = ({
         onOpenVault?.("spirit-chime");
       } else if (canDoRitual) {
         playChimeResonance();
+        dialogueAnchorRef.current = anchor;
         setActiveNpcDialogue({
           role: "spirit",
           speaker: locale === "zh" ? "灵界清音入口" : "Spirit Realm Gateway",
@@ -603,8 +748,9 @@ export const World3D: React.FC<World3DProps> = ({
           }
         });
       } else {
-        playStoneGrind();
+        playLockedChime();
         const copy = worldCopy[locale] || worldCopy.zh;
+        dialogueAnchorRef.current = anchor;
         setActiveNpcDialogue({
           role: "spirit",
           speaker: locale === "zh" ? "灵界竹林结界" : "Spirit Gate Barrier",
@@ -620,7 +766,8 @@ export const World3D: React.FC<World3DProps> = ({
     } else if (landmark.id === "museum") {
       const hasAllRelics = acquiredRelicIds.size >= 4 || museumComplete;
       if (!hasAllRelics) {
-        playStoneGrind();
+        playLockedChime();
+        dialogueAnchorRef.current = anchor;
         setActiveNpcDialogue({
           role: "museum",
           speaker: locale === "zh" ? "新加坡国家历史博物馆" : "National History Museum",
@@ -633,6 +780,7 @@ export const World3D: React.FC<World3DProps> = ({
         });
       } else {
         playUiClick();
+        dialogueAnchorRef.current = anchor;
         setActiveNpcDialogue({
           role: "museum",
           speaker: locale === "zh" ? "新加坡国家历史博物馆" : "National History Museum",
@@ -651,6 +799,7 @@ export const World3D: React.FC<World3DProps> = ({
     } else if (landmark.id === "merlion") {
       playStoneGrind();
       setInvestigatingLandmark(landmark);
+      dialogueAnchorRef.current = anchor;
       setActiveNpcDialogue({
         role: "system",
         speaker: locale === "zh" ? "鱼尾狮滨水石阶 · 1972原塑考据" : "Merlion Waterfront Steps · 1972 Heritage",
@@ -807,19 +956,80 @@ export const World3D: React.FC<World3DProps> = ({
       }
     };
 
+    const onTouchStart = (e: TouchEvent) => {
+      if (modalOpenRef.current) return;
+      camController.handleTouchStart(e);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (modalOpenRef.current) return;
+      if (e.cancelable) e.preventDefault();
+      camController.handleTouchMove(e);
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      camController.handleTouchEnd(e);
+    };
+
     canvas.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     canvas.addEventListener("wheel", onWheel, { passive: false });
     canvas.addEventListener("click", onPointerClick);
+    canvas.addEventListener("touchstart", onTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
+    canvas.addEventListener("touchcancel", onTouchEnd);
 
-    // Keyboard controls
+    // Virtual touch controls from GameShell (TouchJoystick & touch-action button)
+    const onVirtualMove = (e: Event) => {
+      const detail = (e as CustomEvent<{ x?: number; y?: number }>).detail;
+      virtualMoveRef.current.x = typeof detail?.x === "number" ? detail.x : 0;
+      virtualMoveRef.current.y = typeof detail?.y === "number" ? detail.y : 0;
+    };
+
+    const onVirtualAction = () => {
+      if (modalOpenRef.current) return;
+      if (activeNpcDialogueRef.current) {
+        handleAdvanceNpcDialogueRef.current();
+        return;
+      }
+      if (investigatingLandmarkRef.current) {
+        setInvestigatingLandmark(null);
+        return;
+      }
+      if (activeLandmarkRef.current) {
+        handleLandmarkInteractRef.current(activeLandmarkRef.current);
+      }
+    };
+
+    window.addEventListener("lcw:virtual-move", onVirtualMove);
+    window.addEventListener("lcw:virtual-action", onVirtualAction);
+
+    // Keyboard controls (synchronized with gameState.settings.bindings)
     const onKeyDown = (e: KeyboardEvent) => {
       if (modalOpenRef.current) return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       keysPressed.current[e.code] = true;
-      if (e.code === "Space" || e.code === "KeyE" || e.code === "Enter") {
+
+      const bindings = gameState?.settings?.bindings;
+      const moveUpKey = bindings?.moveUp || "KeyW";
+      const moveDownKey = bindings?.moveDown || "KeyS";
+      const moveLeftKey = bindings?.moveLeft || "KeyA";
+      const moveRightKey = bindings?.moveRight || "KeyD";
+      const actionKey = bindings?.action || "Space";
+      const isBoundToMove =
+        e.code === moveUpKey ||
+        e.code === moveDownKey ||
+        e.code === moveLeftKey ||
+        e.code === moveRightKey;
+      const isAction =
+        e.code === actionKey ||
+        (!isBoundToMove && e.code === "Enter") ||
+        (actionKey === "Space" && !isBoundToMove && e.code === "KeyE");
+
+      if (isAction) {
         if (activeNpcDialogueRef.current) {
           e.preventDefault();
           handleAdvanceNpcDialogueRef.current();
@@ -853,13 +1063,21 @@ export const World3D: React.FC<World3DProps> = ({
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
 
-      // Keyboard input vector
+      // Keyboard & virtual touch input vector
       STATIC_INPUT.set(0, 0);
       if (!modalOpenRef.current) {
-        if (keysPressed.current["KeyW"] || keysPressed.current["ArrowUp"]) STATIC_INPUT.y -= 1;
-        if (keysPressed.current["KeyS"] || keysPressed.current["ArrowDown"]) STATIC_INPUT.y += 1;
-        if (keysPressed.current["KeyA"] || keysPressed.current["ArrowLeft"]) STATIC_INPUT.x -= 1;
-        if (keysPressed.current["KeyD"] || keysPressed.current["ArrowRight"]) STATIC_INPUT.x += 1;
+        const bindings = gameState?.settings?.bindings;
+        const moveUpKey = bindings?.moveUp || "KeyW";
+        const moveDownKey = bindings?.moveDown || "KeyS";
+        const moveLeftKey = bindings?.moveLeft || "KeyA";
+        const moveRightKey = bindings?.moveRight || "KeyD";
+        const actionKey = bindings?.action || "Space";
+        if (keysPressed.current[moveUpKey] || (actionKey !== "ArrowUp" && keysPressed.current["ArrowUp"])) STATIC_INPUT.y -= 1;
+        if (keysPressed.current[moveDownKey] || (actionKey !== "ArrowDown" && keysPressed.current["ArrowDown"])) STATIC_INPUT.y += 1;
+        if (keysPressed.current[moveLeftKey] || (actionKey !== "ArrowLeft" && keysPressed.current["ArrowLeft"])) STATIC_INPUT.x -= 1;
+        if (keysPressed.current[moveRightKey] || (actionKey !== "ArrowRight" && keysPressed.current["ArrowRight"])) STATIC_INPUT.x += 1;
+        STATIC_INPUT.x += virtualMoveRef.current.x;
+        STATIC_INPUT.y += virtualMoveRef.current.y;
       }
 
       // Transform input vector by camera azimuth angle so W is forward relative to camera!
@@ -900,6 +1118,18 @@ export const World3D: React.FC<World3DProps> = ({
       }
       if (!closest && investigatingLandmarkRef.current) {
         setInvestigatingLandmark(null);
+      }
+
+      // Auto-dismiss NPC dialogue if player walks further than landmark.radius + 1.5m (zero heap allocations)
+      if (activeNpcDialogueRef.current && dialogueAnchorRef.current) {
+        const anchor = dialogueAnchorRef.current;
+        const dx = player.position.x - anchor.x;
+        const dy = player.position.y - anchor.y;
+        const dz = player.position.z - anchor.z;
+        if (dx * dx + dy * dy + dz * dz > anchor.maxDist * anchor.maxDist) {
+          dialogueAnchorRef.current = null;
+          setActiveNpcDialogue(null);
+        }
       }
 
       // Close-up Macro State Synchronization
@@ -952,6 +1182,12 @@ export const World3D: React.FC<World3DProps> = ({
       window.removeEventListener("mouseup", onMouseUp);
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("click", onPointerClick);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+      canvas.removeEventListener("touchcancel", onTouchEnd);
+      window.removeEventListener("lcw:virtual-move", onVirtualMove);
+      window.removeEventListener("lcw:virtual-action", onVirtualAction);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -1199,31 +1435,30 @@ export const World3D: React.FC<World3DProps> = ({
       {/* In-World 3D NPC Dialogue Card */}
       {activeNpcDialogue && (
         <div
-          className="world-3d-npc-dialogue"
+          className={`world-3d-npc-dialogue ${isNpcTyping ? "is-typing" : ""}`}
           onClick={handleAdvanceNpcDialogue}
           role="dialog"
           aria-label={activeNpcDialogue.speaker}
         >
           <div className="world-3d-npc-speaker-pill">
-            <span className="npc-avatar-badge">
-              {activeNpcDialogue.role === "curator"
-                ? "🏛️"
-                : activeNpcDialogue.role === "boatman"
-                ? "🛶"
-                : activeNpcDialogue.role === "spirit"
-                ? "🎋"
-                : activeNpcDialogue.role === "museum"
-                ? "🏛️"
-                : "📜"}
+            <span className="npc-avatar-badge" aria-hidden="true">
+              <span className="speaker-decoration" />
+              {activeNpcDialogue.role === "curator" || activeNpcDialogue.role === "museum" ? (
+                <Landmark size={13} />
+              ) : activeNpcDialogue.role === "boatman" ? (
+                <Anchor size={13} />
+              ) : activeNpcDialogue.role === "spirit" ? (
+                <Sparkles size={13} />
+              ) : (
+                <ScrollText size={13} />
+              )}
             </span>
             <strong>{activeNpcDialogue.speaker}</strong>
             <span className="npc-line-counter">
               {activeNpcDialogue.index + 1} / {activeNpcDialogue.lines.length}
             </span>
           </div>
-          <p className="world-3d-npc-text">
-            {activeNpcDialogue.lines[activeNpcDialogue.index]}
-          </p>
+          <p className="world-3d-npc-text" ref={npcDialogueTextRef} />
           <div className="world-3d-npc-actions">
             <span className="world-3d-npc-hint">
               {locale === "zh" ? "按 [空格 / E / 回车] 或点击继续" : "Press [Space / E / Enter] or click to continue"}

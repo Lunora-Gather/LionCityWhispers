@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { playFootstep } from "./audio";
 import { gameState } from "./state";
 
 const SPEED = 224;
@@ -286,6 +287,7 @@ export class Player {
       return;
     }
     this.trailCooldown = STEP_TRAIL_INTERVAL;
+    playFootstep(false);
     const trail = this.scene.add.ellipse(
       this.root.x,
       this.root.y + 31,

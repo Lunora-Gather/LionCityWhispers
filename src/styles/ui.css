@@ -584,7 +584,7 @@ a:focus-visible,
   font-style: normal;
   font-weight: 700;
   font-size: 10px;
-  font-family: "Microsoft YaHei", serif;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
 }
 
 .route-step b {
@@ -1509,7 +1509,7 @@ a:focus-visible,
   left: 14px;
   right: 14px;
   bottom: 98px;
-  z-index: 4;
+  z-index: 85;
   justify-content: space-between;
   align-items: end;
   pointer-events: none;
@@ -2827,6 +2827,20 @@ a:focus-visible,
   transform: translateY(-1px);
 }
 
+.workshop-action-btn.workshop-shake {
+  border-color: rgba(214, 106, 83, 0.9) !important;
+  background: linear-gradient(135deg, rgba(180, 65, 50, 0.85), rgba(214, 106, 83, 0.85)) !important;
+  box-shadow: 0 0 18px rgba(214, 106, 83, 0.45) !important;
+  animation: lcw-workshop-shake 0.34s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes lcw-workshop-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+
 .workshop-cryptex-display {
   display: flex;
   align-items: center;
@@ -2931,6 +2945,7 @@ a:focus-visible,
   height: 100%;
   outline: none;
   cursor: grab;
+  touch-action: none;
 }
 
 .world-3d-vignette {
@@ -3208,25 +3223,31 @@ a:focus-visible,
   backdrop-filter: blur(8px);
 }
 
-/* In-World 3D NPC Dialogue Card */
+/* In-World 3D NPC Dialogue Card — Harmonized with 2D Ink-Wash Theme */
 .world-3d-npc-dialogue {
   position: absolute;
   bottom: 84px;
   left: 50%;
   transform: translateX(-50%);
   width: min(720px, calc(100% - 40px));
-  background: rgba(8, 20, 18, 0.95);
-  border: 1.5px solid var(--gold-bright);
+  background: var(--surface-raise), var(--surface-solid);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-l);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), 0 0 24px rgba(209, 169, 93, 0.3);
-  padding: 18px 24px 14px;
+  box-shadow: var(--shadow-2), var(--edge-light);
+  padding: 20px 26px 14px;
   z-index: 30;
-  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  backdrop-filter: blur(16px) saturate(130%);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 10px;
   animation: dialogue-fade-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color var(--speed) ease;
+}
+
+.world-3d-npc-dialogue:hover {
+  border-color: rgba(217, 182, 110, 0.6);
 }
 
 @keyframes dialogue-fade-up {
@@ -3247,57 +3268,73 @@ a:focus-visible,
 }
 
 .npc-avatar-badge {
-  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--line-jade);
+  border-radius: 6px;
+  background: rgba(31, 143, 130, 0.16);
+  color: var(--jade-bright);
   line-height: 1;
 }
 
 .world-3d-npc-speaker-pill strong {
-  color: var(--gold-bright);
-  font-size: 1.02rem;
-  letter-spacing: 0.5px;
+  color: var(--gold);
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 .npc-line-counter {
   margin-left: auto;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--jade-bright);
-  background: rgba(43, 199, 171, 0.15);
+  background: rgba(43, 199, 171, 0.12);
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(43, 199, 171, 0.3);
+  border: 1px solid rgba(43, 199, 171, 0.28);
 }
 
 .world-3d-npc-text {
   margin: 0;
-  color: #fff6e5;
-  font-size: 1.05rem;
-  line-height: 1.6;
-  min-height: 3.2em;
+  color: var(--paper);
+  font-size: clamp(15px, 1.35vw, 17px);
+  font-weight: 600;
+  line-height: 1.55;
+  min-height: 3.1em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.world-3d-npc-dialogue.is-typing .world-3d-npc-text::after {
+  content: "▌";
+  margin-left: 2px;
+  color: var(--jade-bright);
 }
 
 .world-3d-npc-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px dashed rgba(209, 169, 93, 0.25);
+  border-top: 1px dashed rgba(238, 214, 163, 0.22);
   padding-top: 8px;
 }
 
 .world-3d-npc-hint {
-  font-size: 0.78rem;
-  color: #a8c0ba;
+  font-size: 0.76rem;
+  color: var(--paper-dim);
 }
 
 .world-3d-npc-next-btn {
-  background: linear-gradient(135deg, #d1a95d, #b8860b);
-  border: none;
-  color: #121008;
+  background: linear-gradient(135deg, rgba(217, 182, 110, 0.92), rgba(184, 134, 11, 0.95));
+  border: 1px solid rgba(255, 214, 133, 0.55);
+  color: #100e07;
   font-weight: 700;
   font-size: 0.82rem;
   padding: 6px 14px;
   border-radius: var(--radius-s);
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(209, 169, 93, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 10px rgba(209, 169, 93, 0.3);
   transition: all var(--speed) var(--ease-out);
 }
 
