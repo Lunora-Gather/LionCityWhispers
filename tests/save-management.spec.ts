@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { clickUntilScene } from "./helpers";
 
 test.describe("Save Management", () => {
-  test.beforeEach(async ({ context }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  test.beforeEach(async ({ browserName, context }) => {
+    await context.grantPermissions(browserName === "webkit" ? ["clipboard-read"] : ["clipboard-read", "clipboard-write"]);
   });
 
   test("exports save, resets progress, and imports save to restore progress", async ({ page }) => {

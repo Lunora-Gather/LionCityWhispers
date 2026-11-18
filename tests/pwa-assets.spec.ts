@@ -1,3 +1,5 @@
+import { createServer, request } from "node:http";
+import { once } from "node:events";
 import { expect, test } from "@playwright/test";
 
 const imageAssets = [
@@ -60,36 +62,67 @@ test("keeps install metadata and critical asset budgets valid", async ({ request
   expect(audioBytes).toBeLessThan(120_000);
 });
 
-test("starts from the cached route after the service worker is warmed", async ({ page, context }) => {
-  await page.goto("/?pwa=1");
-  await expect(page.locator("canvas")).toBeVisible();
-  const hasController = await page.evaluate(async () => {
-    if (!("serviceWorker" in navigator)) {
-      throw new Error("service worker unavailable");
-    }
-    await navigator.serviceWorker.ready;
-    return Boolean(navigator.serviceWorker.controller);
+test("starts from the cached route after the service worker is warmed", async ({ page, baseURL }) => {
+  // Disconnect this test origin at the HTTP layer. Browser-level offline
+  // emulation can abort a WebKit navigation before the worker sees it.
+  if (!baseURL) throw new Error("Missing game server URL");
+  const target = new URL(baseURL);
+  const server = createServer((incoming, outgoing) => {
+    const upstream = request(target, {
+      path: incoming.url,
+      method: incoming.method,
+      headers: { ...incoming.headers, host: target.host },
+    }, (response) => {
+      outgoing.writeHead(response.statusCode!, response.headers);
+      response.pipe(outgoing);
+    });
+    upstream.on("error", () => outgoing.destroy());
+    incoming.pipe(upstream);
   });
-  if (!hasController) {
-    // Reload from the test side; calling location.reload() inside evaluate
-    // destroys the execution context mid-call and rejects the evaluation.
-    await page.reload({ waitUntil: "load" });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Missing test origin");
+  const origin = `http://127.0.0.1:${address.port}`;
+  async function disconnect() {
+    if (!server.listening) return;
+    const closed = once(server, "close");
+    server.close();
+    server.closeAllConnections();
+    await closed;
   }
-  await expect(page.locator("canvas")).toBeVisible();
-  await page.waitForFunction(async () => {
-    const resourceUrls = performance
-      .getEntriesByType("resource")
-      .map((entry) => entry.name)
-      .filter((name) => name.includes("/_next/") && name.includes(".js"));
-    if (resourceUrls.length === 0) {
-      return false;
+  try {
+    await page.goto(origin + "/?pwa=1");
+    await expect(page.locator("canvas")).toBeVisible();
+    const hasController = await page.evaluate(async () => {
+      if (!("serviceWorker" in navigator)) {
+        throw new Error("service worker unavailable");
+      }
+      await navigator.serviceWorker.ready;
+      return Boolean(navigator.serviceWorker.controller);
+    });
+    if (!hasController) {
+      // Reload from the test side; calling location.reload() inside evaluate
+      // destroys the execution context mid-call and rejects the evaluation.
+      await page.reload({ waitUntil: "load" });
     }
-    const hits = await Promise.all(resourceUrls.map((name) => caches.match(name)));
-    return hits.every(Boolean);
-  });
+    await expect(page.locator("canvas")).toBeVisible();
+    await expect.poll(() => page.evaluate(async () => {
+      const resourceUrls = performance
+        .getEntriesByType("resource")
+        .map((entry) => entry.name)
+        .filter((name) => name.includes("/_next/") && /\.(js|css)(\?|$)/.test(name));
+      if (resourceUrls.length === 0) {
+        return false;
+      }
+      const hits = await Promise.all(resourceUrls.map((name) => caches.match(name)));
+      return hits.every(Boolean);
+    }), { timeout: 30000 }).toBe(true);
 
-  await context.setOffline(true);
-  await page.reload({ waitUntil: "load" });
-  await expect(page.locator("canvas")).toBeVisible({ timeout: 10000 });
-  await context.setOffline(false);
+    await disconnect();
+    await page.reload({ waitUntil: "load" });
+    await expect(page.locator("canvas")).toBeVisible({ timeout: 10000 });
+  } finally {
+    await disconnect();
+  }
 });
