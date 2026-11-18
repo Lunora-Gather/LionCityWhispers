@@ -26,26 +26,27 @@ function createBronzeTexture(): { diffuse: THREE.CanvasTexture; bump: THREE.Canv
   canvas.height = 512;
   const ctx = canvas.getContext("2d")!;
 
-  ctx.fillStyle = "#3a2d1f";
+  const grad = ctx.createLinearGradient(0, 0, 0, 512);
+  grad.addColorStop(0, "#7c5f37");
+  grad.addColorStop(0.5, "#9a7848");
+  grad.addColorStop(1, "#6b502d");
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 512, 512);
 
-  // Bronze patina specks
-  for (let i = 0; i < 2000; i++) {
-    const x = Math.random() * 512;
-    const y = Math.random() * 512;
-    const r = Math.random() * 2 + 1;
-    const isVerdigris = Math.random() < 0.25;
-    ctx.fillStyle = isVerdigris ? "rgba(42, 133, 119, 0.45)" : "rgba(180, 140, 70, 0.3)";
+  for (let i = 0; i < 1800; i++) {
+    const x = (i * 179.3) % 512;
+    const y = (i * 293.1) % 512;
+    const r = (i % 3) * 0.7 + 0.8;
+    ctx.fillStyle = i % 5 === 0 ? "rgba(44, 138, 118, 0.25)" : "rgba(232, 192, 112, 0.22)";
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Lathe concentric metallic scratches
-  ctx.strokeStyle = "rgba(220, 180, 100, 0.15)";
+  // Fine lathe-turned circumferential grain
+  ctx.strokeStyle = "rgba(245, 208, 135, 0.16)";
   ctx.lineWidth = 1;
-  for (let i = 0; i < 20; i++) {
-    const y = Math.random() * 512;
+  for (let y = 8; y < 512; y += 12) {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(512, y);
@@ -61,10 +62,9 @@ function createBronzeTexture(): { diffuse: THREE.CanvasTexture; bump: THREE.Canv
   bctx.fillStyle = "#808080";
   bctx.fillRect(0, 0, 512, 512);
 
-  bctx.strokeStyle = "#252525";
-  bctx.lineWidth = 2;
-  for (let i = 0; i < 20; i++) {
-    const y = Math.random() * 512;
+  bctx.strokeStyle = "#3a3a3a";
+  bctx.lineWidth = 1.5;
+  for (let y = 8; y < 512; y += 12) {
     bctx.beginPath();
     bctx.moveTo(0, y);
     bctx.lineTo(512, y);
@@ -77,26 +77,33 @@ function createBronzeTexture(): { diffuse: THREE.CanvasTexture; bump: THREE.Canv
 
 function createRuneFaceTexture(rune: string): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
+  canvas.width = 160;
+  canvas.height = 176;
   const ctx = canvas.getContext("2d")!;
 
-  ctx.fillStyle = "#1e1710";
-  ctx.fillRect(0, 0, 128, 128);
+  const grad = ctx.createLinearGradient(0, 0, 160, 176);
+  grad.addColorStop(0, "#1d140d");
+  grad.addColorStop(0.5, "#2d2015");
+  grad.addColorStop(1, "#160f09");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 160, 176);
 
-  // Border groove
-  ctx.strokeStyle = "#5a452c";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(6, 6, 116, 116);
+  // Double gilt border with corner notches
+  ctx.strokeStyle = "#d9af5b";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(8, 8, 144, 160);
+  ctx.strokeStyle = "rgba(217, 175, 91, 0.42)";
+  ctx.lineWidth = 1.8;
+  ctx.strokeRect(17, 17, 126, 142);
 
-  // Golden Inscribed Glyph
-  ctx.font = "bold 68px 'Microsoft YaHei', sans-serif";
+  // Crisp Golden Inscribed Maritime Cipher Glyph
+  ctx.font = "bold 88px 'Songti SC', 'SimSun', 'Microsoft YaHei', serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#ffd572";
-  ctx.shadowColor = "#ffaa00";
-  ctx.shadowBlur = 6;
-  ctx.fillText(rune, 64, 64);
+  ctx.fillStyle = "#ffe086";
+  ctx.shadowColor = "rgba(255, 170, 20, 0.55)";
+  ctx.shadowBlur = 8;
+  ctx.fillText(rune, 80, 90);
 
   return new THREE.CanvasTexture(canvas);
 }
@@ -116,113 +123,194 @@ export function createCryptexWorkshop(onSolved?: () => void): CryptexWorkshopHan
   const materials: THREE.Material[] = [];
   const textures: THREE.Texture[] = [];
 
+  const trackGeo = <T extends THREE.BufferGeometry>(g: T): T => {
+    geometries.push(g);
+    return g;
+  };
+  const trackMat = <T extends THREE.Material>(m: T): T => {
+    materials.push(m);
+    return m;
+  };
+  const trackTex = <T extends THREE.Texture>(t: T): T => {
+    textures.push(t);
+    return t;
+  };
+
   const { diffuse: bronzeTex, bump: bronzeBump } = createBronzeTexture();
-  textures.push(bronzeTex, bronzeBump);
+  trackTex(bronzeTex);
+  trackTex(bronzeBump);
 
-  const bronzeMaterial = new THREE.MeshStandardMaterial({
-    map: bronzeTex,
-    bumpMap: bronzeBump,
-    bumpScale: 0.05,
-    color: 0x8a6e46,
-    roughness: 0.42,
-    metalness: 0.82
-  });
-  materials.push(bronzeMaterial);
+  const bronzeMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      map: bronzeTex,
+      bumpMap: bronzeBump,
+      bumpScale: 0.04,
+      color: 0xc29b61,
+      roughness: 0.34,
+      metalness: 0.72
+    })
+  );
 
-  const goldFiligreeMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffd700,
-    emissive: 0x664400,
-    roughness: 0.25,
-    metalness: 0.9
-  });
-  materials.push(goldFiligreeMaterial);
+  const goldFiligreeMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0xf5ca63,
+      emissive: 0x4a3108,
+      emissiveIntensity: 0.25,
+      roughness: 0.22,
+      metalness: 0.86
+    })
+  );
 
-  const innerCoreMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1a1510,
-    roughness: 0.7,
-    metalness: 0.5
-  });
-  materials.push(innerCoreMaterial);
+  const rosewoodMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x2c1810,
+      roughness: 0.46,
+      metalness: 0.18
+    })
+  );
 
-  // Central Axle
-  const axleGeo = new THREE.CylinderGeometry(0.7, 0.7, 6.2, 32);
-  geometries.push(axleGeo);
-  const axle = new THREE.Mesh(axleGeo, innerCoreMaterial);
+  const innerCoreMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x1c1712,
+      roughness: 0.56,
+      metalness: 0.58
+    })
+  );
+
+  // Reading angle: rotating around +X by negative angle (-0.21 rad ≈ 12° upward) tilts +Z face up toward camera!
+  const READ_ROT_X = -0.21;
+
+  // 1. Central Rosewood & Gunmetal Core Barrel
+  const axle = new THREE.Mesh(trackGeo(new THREE.CylinderGeometry(1.12, 1.12, 5.6, 36)), rosewoodMaterial);
   axle.rotation.z = Math.PI / 2;
   root.add(axle);
 
-  // Left & Right Ornate End Caps
-  const endCapGeo = new THREE.CylinderGeometry(1.5, 1.6, 0.7, 32);
-  geometries.push(endCapGeo);
+  // 2. Lathe-Turned Stepped Rosewood & Gilt-Bronze Scroll End-Caps with Finials
+  const capProfile = [
+    new THREE.Vector2(0.001, 0.92),
+    new THREE.Vector2(0.28, 0.88),
+    new THREE.Vector2(0.36, 0.72),
+    new THREE.Vector2(0.26, 0.58),
+    new THREE.Vector2(0.72, 0.50),
+    new THREE.Vector2(1.18, 0.38),
+    new THREE.Vector2(1.48, 0.28),
+    new THREE.Vector2(1.56, 0.14),
+    new THREE.Vector2(1.52, 0.0),
+    new THREE.Vector2(1.36, -0.06),
+    new THREE.Vector2(0.95, -0.06)
+  ];
+  const latheCapGeo = trackGeo(new THREE.LatheGeometry(capProfile, 40));
 
-  const leftCap = new THREE.Mesh(endCapGeo, bronzeMaterial);
-  leftCap.rotation.z = Math.PI / 2;
-  leftCap.position.x = -2.7;
-  root.add(leftCap);
+  for (const side of [-1, 1] as const) {
+    const capGroup = new THREE.Group();
+    capGroup.position.x = side * 2.42;
+    // Lathe axis is +Y; rotate so +Y points outward along -X (left) or +X (right)
+    capGroup.rotation.z = side < 0 ? Math.PI / 2 : -Math.PI / 2;
 
-  const rightCap = new THREE.Mesh(endCapGeo, bronzeMaterial);
-  rightCap.rotation.z = Math.PI / 2;
-  rightCap.position.x = 2.7;
-  root.add(rightCap);
+    const capMesh = new THREE.Mesh(latheCapGeo, bronzeMaterial);
+    capMesh.castShadow = true;
+    capMesh.receiveShadow = true;
+    capGroup.add(capMesh);
 
-  // End cap gold lion crest rings
-  const crestRingGeo = new THREE.TorusGeometry(1.3, 0.08, 16, 32);
-  geometries.push(crestRingGeo);
+    const collarRing = new THREE.Mesh(trackGeo(new THREE.TorusGeometry(1.53, 0.042, 12, 40)), goldFiligreeMaterial);
+    collarRing.rotation.x = Math.PI / 2;
+    collarRing.position.y = 0.18;
+    capGroup.add(collarRing);
 
-  const leftCrest = new THREE.Mesh(crestRingGeo, goldFiligreeMaterial);
-  leftCrest.position.x = -2.75;
-  leftCrest.rotation.y = Math.PI / 2;
-  root.add(leftCrest);
+    const medRing = new THREE.Mesh(trackGeo(new THREE.TorusGeometry(0.96, 0.032, 10, 32)), goldFiligreeMaterial);
+    medRing.rotation.x = Math.PI / 2;
+    medRing.position.y = 0.44;
+    capGroup.add(medRing);
 
-  const rightCrest = new THREE.Mesh(crestRingGeo, goldFiligreeMaterial);
-  rightCrest.position.x = 2.75;
-  rightCrest.rotation.y = Math.PI / 2;
-  root.add(rightCrest);
+    // 8 decorative axial flutes along each end-cap crown
+    const fluteGeo = trackGeo(new THREE.BoxGeometry(0.055, 0.24, 0.06));
+    for (let f = 0; f < 8; f++) {
+      const ang = (f * Math.PI) / 4;
+      const flute = new THREE.Mesh(fluteGeo, goldFiligreeMaterial);
+      flute.position.set(Math.cos(ang) * 1.48, 0.16, Math.sin(ang) * 1.48);
+      flute.rotation.y = -ang;
+      capGroup.add(flute);
+    }
 
-  // Dual Alignment Meridian Framing Bars around the front-upper reading line (angle = +30°)
-  const READ_ANGLE = Math.PI / 6;
-  const guideGeo = new THREE.BoxGeometry(4.65, 0.065, 0.16);
-  geometries.push(guideGeo);
-  const guideMat = new THREE.MeshStandardMaterial({
-    color: 0x3de0c8,
-    emissive: 0x1d7f73,
-    emissiveIntensity: 0.75,
-    roughness: 0.2,
-    metalness: 0.8
-  });
-  materials.push(guideMat);
-  const upperGuideBar = new THREE.Mesh(guideGeo, guideMat);
-  upperGuideBar.position.set(0, 1.14, 0.96);
-  upperGuideBar.rotation.x = READ_ANGLE;
-  root.add(upperGuideBar);
+    root.add(capGroup);
+  }
 
-  const lowerGuideBar = new THREE.Mesh(guideGeo, guideMat);
-  lowerGuideBar.position.set(0, 0.20, 1.40);
-  lowerGuideBar.rotation.x = READ_ANGLE;
-  root.add(lowerGuideBar);
+  // 3. Ornate Openwork Brass & Turquoise Reading Window Bridge (shares exact READ_ROT_X pivot!)
+  const bridgePivot = new THREE.Group();
+  bridgePivot.rotation.x = READ_ROT_X;
+  root.add(bridgePivot);
 
-  // 4 Cryptex Dial Rings
+  const guideMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x3de0c8,
+      emissive: 0x167a6e,
+      emissiveIntensity: 0.68,
+      roughness: 0.22,
+      metalness: 0.65
+    })
+  );
+
+  const railBrassGeo = trackGeo(new THREE.BoxGeometry(4.92, 0.085, 0.12));
+  const railInlayGeo = trackGeo(new THREE.BoxGeometry(4.86, 0.034, 0.135));
+  for (const ry of [0.58, -0.58]) {
+    const brassRail = new THREE.Mesh(railBrassGeo, goldFiligreeMaterial);
+    brassRail.position.set(0, ry, 1.45);
+    bridgePivot.add(brassRail);
+
+    const inlayRail = new THREE.Mesh(railInlayGeo, guideMat);
+    inlayRail.position.set(0, ry, 1.46);
+    bridgePivot.add(inlayRail);
+  }
+
+  // 5 Vertical Bridge Stile Dividers framing each of the 4 active cipher windows + 8 Pointer Chevrons
+  const stileGeo = trackGeo(new THREE.BoxGeometry(0.065, 1.22, 0.09));
+  for (const sx of [-2.34, -1.16, 0, 1.16, 2.34]) {
+    const stile = new THREE.Mesh(stileGeo, goldFiligreeMaterial);
+    stile.position.set(sx, 0, 1.45);
+    bridgePivot.add(stile);
+  }
+
+  const ringXPositions = [-1.74, -0.58, 0.58, 1.74];
+  const chevronGeo = trackGeo(new THREE.ConeGeometry(0.065, 0.11, 4));
+  for (const rx of ringXPositions) {
+    const topChevron = new THREE.Mesh(chevronGeo, goldFiligreeMaterial);
+    topChevron.rotation.z = Math.PI;
+    topChevron.rotation.y = Math.PI / 4;
+    topChevron.position.set(rx, 0.50, 1.50);
+    bridgePivot.add(topChevron);
+
+    const botChevron = new THREE.Mesh(chevronGeo, goldFiligreeMaterial);
+    botChevron.rotation.y = Math.PI / 4;
+    botChevron.position.set(rx, -0.50, 1.50);
+    bridgePivot.add(botChevron);
+  }
+
+  // 4. Four Rotating Bronze & Gilt Cipher Dial Drums
   const rings: CryptexRing[] = [];
-  const selectionHalos: THREE.Mesh[] = [];
-  const ringXPositions = [-1.725, -0.575, 0.575, 1.725];
+  const selectionHaloMats: THREE.MeshBasicMaterial[] = [];
+
+  const bodyGeo = trackGeo(new THREE.CylinderGeometry(1.32, 1.32, 0.98, 36));
+  const ringBorderGeo = trackGeo(new THREE.TorusGeometry(1.34, 0.038, 12, 40));
+  const knurlToothGeo = trackGeo(new THREE.BoxGeometry(0.065, 0.048, 0.075));
+  const dividerGeo = trackGeo(new THREE.CylinderGeometry(1.24, 1.24, 0.14, 32));
+  const ratchetToothGeo = trackGeo(new THREE.BoxGeometry(0.055, 0.09, 0.08));
+  const cartoucheBoxGeo = trackGeo(new THREE.BoxGeometry(0.86, 0.92, 0.075));
+  const filletRimGeo = trackGeo(new THREE.BoxGeometry(0.94, 1.00, 0.045));
+  const facetPlaneGeo = trackGeo(new THREE.PlaneGeometry(0.80, 0.86));
+  const rosetteRingGeo = trackGeo(new THREE.TorusGeometry(0.22, 0.024, 8, 20));
+  const rosetteStudGeo = trackGeo(new THREE.OctahedronGeometry(0.07, 0));
 
   for (let r = 0; r < 4; r++) {
     const ringGroup = new THREE.Group();
     ringGroup.position.x = ringXPositions[r];
 
-    // Cylinder ring body
-    const bodyGeo = new THREE.CylinderGeometry(1.35, 1.35, 1.0, 32, 1, true);
-    geometries.push(bodyGeo);
     const body = new THREE.Mesh(bodyGeo, bronzeMaterial);
     body.rotation.z = Math.PI / 2;
+    body.castShadow = true;
+    body.receiveShadow = true;
     ringGroup.add(body);
 
-    // Decorative ring borders & 24 Knurled Bronze Bezel Ridges per ring
-    const knurlToothGeo = new THREE.BoxGeometry(0.07, 0.055, 0.08);
-    geometries.push(knurlToothGeo);
-    for (const bOffset of [-0.48, 0.48]) {
-      const ringBorderGeo = new THREE.TorusGeometry(1.38, 0.045, 10, 32);
-      geometries.push(ringBorderGeo);
+    for (const bOffset of [-0.46, 0.46]) {
       const ringBorder = new THREE.Mesh(ringBorderGeo, goldFiligreeMaterial);
       ringBorder.rotation.y = Math.PI / 2;
       ringBorder.position.x = bOffset;
@@ -230,93 +318,96 @@ export function createCryptexWorkshop(onSolved?: () => void): CryptexWorkshopHan
 
       for (let k = 0; k < 24; k++) {
         const kAng = (k * Math.PI * 2) / 24;
+        // Place knurl via pivot around +X for clean radial normal
+        const kPivot = new THREE.Group();
+        kPivot.rotation.x = kAng;
         const knurl = new THREE.Mesh(knurlToothGeo, bronzeMaterial);
-        knurl.position.set(bOffset, Math.sin(kAng) * 1.41, Math.cos(kAng) * 1.41);
-        knurl.rotation.x = kAng;
-        ringGroup.add(knurl);
+        knurl.position.set(bOffset, 0, 1.36);
+        kPivot.add(knurl);
+        ringGroup.add(kPivot);
       }
     }
 
-    // Internal Ratchet Cogs & Tumbler Divider Ring at ring interface
-    const dividerGeo = new THREE.CylinderGeometry(1.26, 1.26, 0.08, 24);
-    geometries.push(dividerGeo);
-    const divider = new THREE.Mesh(dividerGeo, innerCoreMaterial);
-    divider.rotation.z = Math.PI / 2;
-    divider.position.x = 0.52;
-    ringGroup.add(divider);
+    if (r < 3) {
+      const divider = new THREE.Mesh(dividerGeo, innerCoreMaterial);
+      divider.rotation.z = Math.PI / 2;
+      divider.position.x = 0.58;
+      ringGroup.add(divider);
 
-    const ratchetToothGeo = new THREE.BoxGeometry(0.06, 0.12, 0.10);
-    geometries.push(ratchetToothGeo);
-    for (let rt = 0; rt < 12; rt++) {
-      const rtAng = (rt * Math.PI * 2) / 12;
-      const rTooth = new THREE.Mesh(ratchetToothGeo, goldFiligreeMaterial);
-      rTooth.position.set(0.52, Math.sin(rtAng) * 1.29, Math.cos(rtAng) * 1.29);
-      rTooth.rotation.x = rtAng + 0.25;
-      ringGroup.add(rTooth);
+      for (let rt = 0; rt < 16; rt++) {
+        const rtPivot = new THREE.Group();
+        rtPivot.rotation.x = (rt * Math.PI * 2) / 16;
+        const rTooth = new THREE.Mesh(ratchetToothGeo, goldFiligreeMaterial);
+        rTooth.position.set(0.58, 0, 1.26);
+        rtPivot.add(rTooth);
+        ringGroup.add(rtPivot);
+      }
     }
 
-    // 4 Sunken 3D Bronze Rune Cartouches with Beveled Gold Fillets around the perimeter
+    // 4 Upright Outward-Facing Rune Cartouches via exact X-axis Pivot Groups!
+    // When ringGroup.rotation.x === READ_ROT_X - selectedIndex * (PI / 2),
+    // facet f === selectedIndex has total X rotation === READ_ROT_X, facing straight out into bridgePivot!
     const options = RING_OPTIONS[r];
-    const cartoucheBoxGeo = new THREE.BoxGeometry(0.92, 1.02, 0.08);
-    const filletRimGeo = new THREE.BoxGeometry(0.98, 1.08, 0.05);
-    geometries.push(cartoucheBoxGeo, filletRimGeo);
-
     for (let f = 0; f < 4; f++) {
-      const angle = (f * Math.PI) / 2;
-      const runeTex = createRuneFaceTexture(options[f]);
-      textures.push(runeTex);
+      const facetPivot = new THREE.Group();
+      facetPivot.rotation.x = f * (Math.PI / 2);
 
-      const facetMat = new THREE.MeshStandardMaterial({
-        map: runeTex,
-        roughness: 0.36,
-        metalness: 0.68
-      });
-      materials.push(facetMat);
+      const runeTex = trackTex(createRuneFaceTexture(options[f]));
+      const facetMat = trackMat(
+        new THREE.MeshStandardMaterial({
+          map: runeTex,
+          roughness: 0.32,
+          metalness: 0.48
+        })
+      );
 
-      const facetGroup = new THREE.Group();
-      const radius = 1.36;
-      facetGroup.position.set(0, Math.sin(angle) * radius, Math.cos(angle) * radius);
-      facetGroup.rotation.x = angle;
-
-      // Beveled gold fillet outer rim
       const filletMesh = new THREE.Mesh(filletRimGeo, goldFiligreeMaterial);
-      filletMesh.position.z = 0.01;
-      facetGroup.add(filletMesh);
+      filletMesh.position.z = 1.325;
+      facetPivot.add(filletMesh);
 
-      // 3D Sunken bronze cartouche block
       const cartoucheMesh = new THREE.Mesh(cartoucheBoxGeo, bronzeMaterial);
-      cartoucheMesh.position.z = 0.025;
-      facetGroup.add(cartoucheMesh);
+      cartoucheMesh.position.z = 1.345;
+      facetPivot.add(cartoucheMesh);
 
-      // Rune glyph plate inset cleanly on the cartouche face
-      const facetGeo = new THREE.PlaneGeometry(0.84, 0.94);
-      geometries.push(facetGeo);
-      const facet = new THREE.Mesh(facetGeo, facetMat);
-      facet.position.z = 0.068;
-      facetGroup.add(facet);
+      const facet = new THREE.Mesh(facetPlaneGeo, facetMat);
+      facet.position.z = 1.386;
+      facetPivot.add(facet);
 
-      ringGroup.add(facetGroup);
+      ringGroup.add(facetPivot);
+
+      // Decorative filigree compass rosette at each 45° intermediate facet around the drum
+      const midPivot = new THREE.Group();
+      midPivot.rotation.x = (f + 0.5) * (Math.PI / 2);
+      const rosette = new THREE.Mesh(rosetteRingGeo, goldFiligreeMaterial);
+      rosette.position.z = 1.33;
+      midPivot.add(rosette);
+      const stud = new THREE.Mesh(rosetteStudGeo, bronzeMaterial);
+      stud.position.z = 1.34;
+      midPivot.add(stud);
+      ringGroup.add(midPivot);
     }
 
-    // Initial shuffle: not solved initially, aligned with READ_ANGLE so active rune faces camera
+    // Initial combination: ["川", "龙", "户", "日"] (unsolved), perfectly centered in the reading bridge!
     const initialIndex = (r * 2 + 2) % 4;
-    const initialAngle = READ_ANGLE - initialIndex * (Math.PI / 2);
+    const initialAngle = READ_ROT_X - initialIndex * (Math.PI / 2);
     ringGroup.rotation.x = initialAngle;
 
-    // Glowing turquoise selection ring indicator
-    const selHaloGeo = new THREE.TorusGeometry(1.45, 0.036, 12, 36);
-    geometries.push(selHaloGeo);
-    const selHaloMat = new THREE.MeshBasicMaterial({
-      color: 0x3de0c8,
-      transparent: true,
-      opacity: r === 0 ? 0.85 : 0
-    });
-    materials.push(selHaloMat);
-    const selHalo = new THREE.Mesh(selHaloGeo, selHaloMat);
-    selHalo.rotation.y = Math.PI / 2;
-    selHalo.position.x = ringXPositions[r];
-    root.add(selHalo);
-    selectionHalos.push(selHalo);
+    // Dual flanking turquoise bezel halos on left & right rims of the selected drum (never cuts through the active glyph!)
+    const selHaloGeo = trackGeo(new THREE.TorusGeometry(1.40, 0.032, 12, 48));
+    const selHaloMat = trackMat(
+      new THREE.MeshBasicMaterial({
+        color: 0x3de0c8,
+        transparent: true,
+        opacity: r === 0 ? 0.90 : 0
+      })
+    );
+    for (const hOff of [-0.48, 0.48]) {
+      const selHalo = new THREE.Mesh(selHaloGeo, selHaloMat);
+      selHalo.rotation.y = Math.PI / 2;
+      selHalo.position.x = ringXPositions[r] + hOff;
+      root.add(selHalo);
+    }
+    selectionHaloMats.push(selHaloMat);
 
     root.add(ringGroup);
 
@@ -330,30 +421,61 @@ export function createCryptexWorkshop(onSolved?: () => void): CryptexWorkshopHan
     });
   }
 
-  let selectedRingIndex: number | null = 0;
   let solved = false;
 
-  // Pedestal stand for cryptex
-  const standBaseGeo = new THREE.BoxGeometry(6.6, 0.4, 2.8);
-  geometries.push(standBaseGeo);
-  const standMat = new THREE.MeshStandardMaterial({
-    color: 0x0c1317,
-    roughness: 0.6,
-    metalness: 0.5
-  });
-  materials.push(standMat);
-  const standBase = new THREE.Mesh(standBaseGeo, standMat);
-  standBase.position.y = -1.8;
-  root.add(standBase);
+  // 5. Stepped Museum Rosewood & Brass Display Stand with True U-Shaped Saddle Cradles
+  const standMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x121d1c,
+      roughness: 0.42,
+      metalness: 0.56
+    })
+  );
 
-  // Stand Cradles
-  for (const cx of [-2.4, 2.4]) {
-    const cradleGeo = new THREE.CylinderGeometry(1.6, 1.7, 0.3, 16, 1, false, 0, Math.PI);
-    geometries.push(cradleGeo);
-    const cradle = new THREE.Mesh(cradleGeo, standMat);
-    cradle.position.set(cx, -1.0, 0);
-    cradle.rotation.z = Math.PI;
-    root.add(cradle);
+  const standLower = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(6.5, 0.22, 2.75)), standMat);
+  standLower.position.y = -2.02;
+  standLower.receiveShadow = true;
+  root.add(standLower);
+
+  const standUpper = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(5.95, 0.20, 2.35)), rosewoodMaterial);
+  standUpper.position.y = -1.82;
+  standUpper.receiveShadow = true;
+  root.add(standUpper);
+
+  const standTrim = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(6.02, 0.05, 2.42)), goldFiligreeMaterial);
+  standTrim.position.y = -1.72;
+  root.add(standTrim);
+
+  // Extruded U-shaped saddle cradles hugging the X-axis end-caps at x = ±2.52 (oriented in YZ plane!)
+  const saddleShape = new THREE.Shape();
+  saddleShape.moveTo(-1.76, -1.72);
+  saddleShape.lineTo(1.76, -1.72);
+  saddleShape.lineTo(1.76, -0.45);
+  saddleShape.lineTo(1.48, -0.45);
+  saddleShape.absarc(0, 0, 1.54, -0.28, -Math.PI + 0.28, true);
+  saddleShape.lineTo(-1.76, -0.45);
+  saddleShape.closePath();
+
+  const saddleGeo = trackGeo(
+    new THREE.ExtrudeGeometry(saddleShape, {
+      depth: 0.28,
+      bevelEnabled: true,
+      bevelThickness: 0.03,
+      bevelSize: 0.03,
+      bevelSegments: 2,
+      curveSegments: 28
+    })
+  );
+  saddleGeo.translate(0, 0, -0.14);
+  // Rotate so XY shape lies in YZ plane (hugging cylinder whose axis is X!)
+  saddleGeo.rotateY(Math.PI / 2);
+
+  for (const cx of [-2.52, 2.52]) {
+    const saddle = new THREE.Mesh(saddleGeo, standMat);
+    saddle.position.x = cx;
+    saddle.castShadow = true;
+    saddle.receiveShadow = true;
+    root.add(saddle);
   }
 
   function checkSolved(): boolean {
@@ -370,7 +492,6 @@ export function createCryptexWorkshop(onSolved?: () => void): CryptexWorkshopHan
     root,
     rings,
     update: (_time: number, delta: number) => {
-      // Smoothly interpolate ring rotation towards target angle
       for (const ring of rings) {
         const diff = ring.targetAngle - ring.currentAngle;
         if (Math.abs(diff) > 0.001) {
@@ -382,23 +503,19 @@ export function createCryptexWorkshop(onSolved?: () => void): CryptexWorkshopHan
         }
       }
 
-      // Solved pulse effect on guide bar
       if (solved) {
-        guideMat.emissiveIntensity = 0.8 + Math.sin(_time * 0.006) * 0.4;
+        guideMat.emissiveIntensity = 0.85 + Math.sin(_time * 0.006) * 0.38;
       }
     },
     selectRing: (index: number | null) => {
-      selectedRingIndex = index;
-      for (let i = 0; i < selectionHalos.length; i++) {
-        const mat = selectionHalos[i].material as THREE.MeshBasicMaterial;
-        mat.opacity = i === index ? 0.85 : 0;
+      for (let i = 0; i < selectionHaloMats.length; i++) {
+        selectionHaloMats[i].opacity = i === index ? 0.90 : 0;
       }
     },
     rotateRing: (index: number, step: 1 | -1) => {
       if (index < 0 || index >= rings.length) return;
       const ring = rings[index];
 
-      // Update selected index in circular range [0..3]
       ring.selectedIndex = (ring.selectedIndex + step + 4) % 4;
       ring.targetAngle -= step * (Math.PI / 2);
 

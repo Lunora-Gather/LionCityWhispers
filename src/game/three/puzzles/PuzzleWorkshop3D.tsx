@@ -134,29 +134,44 @@ export function PuzzleWorkshop3D({
     }
 
     const camera = new THREE.PerspectiveCamera(
-      45,
+      puzzleType === "runes" ? 42 : 44,
       initWidth / initHeight,
       0.1,
       100
     );
-    camera.position.set(0, 4.4, 8.0);
-    camera.lookAt(0, -1.85, 0);
+    if (puzzleType === "jigsaw") {
+      camera.position.set(0, 1.85, 7.65);
+      camera.lookAt(0, -0.78, 0);
+    } else if (puzzleType === "runes") {
+      camera.position.set(0, 1.32, 6.85);
+      camera.lookAt(0, -0.58, 0);
+    } else {
+      camera.position.set(0, 4.75, 7.35);
+      camera.lookAt(0, -1.18, 0);
+    }
 
-    // Dynamic 3-point Museum Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Dynamic 4-point + Hemisphere Museum Restorer Lighting
+    const ambientLight = new THREE.AmbientLight(0xfffaf0, 0.65);
     scene.add(ambientLight);
 
-    const keySpot = new THREE.SpotLight(0xfffaed, 2.2, 20, Math.PI / 4, 0.35, 1);
-    keySpot.position.set(5, 7, 5);
-    keySpot.castShadow = true;
+    const hemiLight = new THREE.HemisphereLight(0xfff6e5, 0x162725, 0.82);
+    scene.add(hemiLight);
+
+    const keySpot = new THREE.SpotLight(0xfffaed, 2.8, 24, Math.PI / 3.4, 0.45, 1);
+    keySpot.position.set(4.6, 7.2, 5.8);
+    keySpot.castShadow = !isSoftwareWebGL;
     scene.add(keySpot);
 
-    const rimLight = new THREE.DirectionalLight(0x3de0c8, 1.2);
-    rimLight.position.set(-6, 2, -4);
+    const frontLight = new THREE.DirectionalLight(0xfff2d8, 1.75);
+    frontLight.position.set(-2.2, 2.4, 6.4);
+    scene.add(frontLight);
+
+    const rimLight = new THREE.DirectionalLight(0x3de0c8, 1.35);
+    rimLight.position.set(-5.8, 3.2, -4.5);
     scene.add(rimLight);
 
-    const fillLight = new THREE.DirectionalLight(0xb88735, 0.6);
-    fillLight.position.set(0, -4, 4);
+    const fillLight = new THREE.DirectionalLight(0xd4a44c, 0.85);
+    fillLight.position.set(3.2, -2.5, 4.2);
     scene.add(fillLight);
 
     // Initialize Workshop Scene based on puzzleType

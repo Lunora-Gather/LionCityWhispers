@@ -1189,24 +1189,48 @@ export class World3DEnvironment {
         house.add(pillarCol);
       }
 
-      // 3. Transitional archway profile spanning between colonnade columns
-      const archBeam = new THREE.Mesh(new THREE.BoxGeometry(sh.width - 0.2, 0.32, 0.42), accentMat);
-      archBeam.position.set(0, 2.74, -2.9);
-      house.add(archBeam);
-
-      // Molded curved arch spandrel
+      // 3. Transitional Five-Foot-Way segmental archway spandrel spanning between colonnade columns (flush in XY plane!)
       const archSpan = sh.width * 0.84;
-      const archCurve = new THREE.Mesh(
-        new THREE.CylinderGeometry(archSpan * 0.42, archSpan * 0.42, 0.38, 16, 1, false, 0, Math.PI),
-        accentMat
-      );
-      archCurve.rotation.z = Math.PI;
-      archCurve.position.set(0, 2.82, -2.9);
-      house.add(archCurve);
+      const halfArchW = (sh.width - 0.16) * 0.5;
+      const innerArchHalf = archSpan * 0.44;
+      const spandrelShape = new THREE.Shape();
+      spandrelShape.moveTo(-halfArchW, 2.26);
+      spandrelShape.lineTo(-innerArchHalf, 2.26);
+      for (let s = 0; s <= 16; s++) {
+        const t = s / 16;
+        const ang = Math.PI * (1 - t);
+        spandrelShape.lineTo(Math.cos(ang) * innerArchHalf, 2.26 + Math.sin(ang) * 0.42);
+      }
+      spandrelShape.lineTo(halfArchW, 2.26);
+      spandrelShape.lineTo(halfArchW, 2.90);
+      spandrelShape.lineTo(-halfArchW, 2.90);
+      spandrelShape.closePath();
 
-      // Keystone on the arcade arch
-      const arcadeKeystone = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.46), trimMat);
-      arcadeKeystone.position.set(0, 2.76, -2.9);
+      const spandrelGeo = new THREE.ExtrudeGeometry(spandrelShape, {
+        depth: 0.38,
+        bevelEnabled: true,
+        bevelThickness: 0.02,
+        bevelSize: 0.02,
+        bevelSegments: 2
+      });
+      spandrelGeo.translate(0, 0, -0.19);
+      const archSpandrel = new THREE.Mesh(spandrelGeo, accentMat);
+      archSpandrel.position.set(0, 0, -2.9);
+      archSpandrel.castShadow = true;
+      archSpandrel.receiveShadow = true;
+      house.add(archSpandrel);
+
+      // Molded archivolt trim & keystone on the Five-Foot-Way arch
+      const archivolt = new THREE.Mesh(
+        new THREE.TorusGeometry(innerArchHalf, 0.045, 8, 24, Math.PI),
+        trimMat
+      );
+      archivolt.scale.set(1.0, 0.42 / innerArchHalf, 1.0);
+      archivolt.position.set(0, 2.26, -3.10);
+      house.add(archivolt);
+
+      const arcadeKeystone = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.32, 0.44), trimMat);
+      arcadeKeystone.position.set(0, 2.72, -2.9);
       house.add(arcadeKeystone);
 
       // 4. Carved hanging fretwork valance (老字号雕花挂落)
@@ -1342,12 +1366,12 @@ export class World3DEnvironment {
       house.add(lanternPivot);
       this.shophouseLanternPivots.push(lanternPivot);
 
-      // Traditional gold-embossed signboard above arcade
+      // Traditional gold-embossed signboard above arcade (proud of corbels so zero overlap!)
       const signBoard = new THREE.Mesh(
-        new THREE.BoxGeometry(sh.width * 0.68, 0.68, 0.14),
+        new THREE.BoxGeometry(sh.width * 0.68, 0.68, 0.12),
         new THREE.MeshStandardMaterial({ color: 0x1c140d, roughness: 0.85 })
       );
-      signBoard.position.set(0, 2.85, -3.15);
+      signBoard.position.set(0, 2.78, -3.28);
       house.add(signBoard);
 
       const signFace = new THREE.Mesh(
@@ -1360,7 +1384,7 @@ export class World3DEnvironment {
         })
       );
       signFace.rotation.y = Math.PI;
-      signFace.position.set(0, 2.85, -3.23);
+      signFace.position.set(0, 2.78, -3.35);
       house.add(signFace);
 
       // -------------------------------------------------------------
@@ -1576,41 +1600,42 @@ export class World3DEnvironment {
           winGroup.add(jamb);
         }
 
-        // 3. Rectangular window opening with interior amber glow
+        // 3. Rectangular window opening with warm interior amber glow (facing -Z riverfront!)
         const pane = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.62), windowGlowMat);
-        pane.position.set(0, -0.15, -0.05);
+        pane.rotation.y = Math.PI;
+        pane.position.set(0, -0.15, -0.02);
         winGroup.add(pane);
 
         // 4. Semi-Circular Sunburst Fanlight Transom (半圆太阳辐射纹明窗)
         const fanlightY = 0.85;
-        // Outer semicircular arch surround
         const fanArch = new THREE.Mesh(
           new THREE.TorusGeometry(0.58, 0.06, 8, 20, Math.PI),
           accentMat
         );
-        fanArch.position.set(0, fanlightY, -0.03);
+        fanArch.position.set(0, fanlightY, -0.05);
         winGroup.add(fanArch);
 
-        // Glowing fanlight glass pane
+        // Glowing fanlight glass pane facing -Z riverfront
         const fanGlass = new THREE.Mesh(
           new THREE.CircleGeometry(0.56, 20, 0, Math.PI),
           fanlightGlowMat
         );
-        fanGlass.position.set(0, fanlightY, -0.04);
+        fanGlass.rotation.y = Math.PI;
+        fanGlass.position.set(0, fanlightY, -0.03);
         winGroup.add(fanGlass);
 
         // Keystone atop fanlight arch
         const fanKeystone = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.16), trimMat);
-        fanKeystone.position.set(0, fanlightY + 0.6, -0.02);
+        fanKeystone.position.set(0, fanlightY + 0.6, -0.06);
         winGroup.add(fanKeystone);
 
-        // Sunburst radial wooden spokes (7 rays)
+        // Sunburst radial wooden spokes (7 rays proud on -Z front face)
         const fanHub = new THREE.Mesh(
           new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12, 1, false, 0, Math.PI),
           woodTrimMat
         );
-        fanHub.rotation.x = Math.PI / 2;
-        fanHub.position.set(0, fanlightY, -0.02);
+        fanHub.rotation.x = -Math.PI / 2;
+        fanHub.position.set(0, fanlightY, -0.05);
         winGroup.add(fanHub);
 
         const rayAngles = [0.26, 0.65, 1.05, 1.57, 2.09, 2.49, 2.88];
@@ -1620,7 +1645,7 @@ export class World3DEnvironment {
           spoke.position.set(
             Math.cos(ang) * (spokeLen / 2 + 0.06),
             fanlightY + Math.sin(ang) * (spokeLen / 2 + 0.06),
-            -0.02
+            -0.055
           );
           spoke.rotation.z = ang - Math.PI / 2;
           winGroup.add(spoke);
@@ -1628,16 +1653,16 @@ export class World3DEnvironment {
 
         // Horizontal transom bar separating fanlight from lower shutters
         const transomBar = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.12, 0.12), woodTrimMat);
-        transomBar.position.set(0, fanlightY - 0.04, -0.02);
+        transomBar.position.set(0, fanlightY - 0.04, -0.06);
         winGroup.add(transomBar);
 
-        // 5. 3D French Louvered Shutters (Left & Right Leaves, Ajar with Angled Slats & Hinges)
+        // 5. 3D French Louvered Shutters opening outward toward -Z riverfront!
         const leafW = 0.56;
         const leafH = 1.62;
 
         const shutterLeaves = [
-          { side: -1, angle: -0.32, hingeX: -0.58 }, // Left leaf slightly open
-          { side: 1, angle: 0.32, hingeX: 0.58 }     // Right leaf slightly open
+          { side: -1, angle: 0.34, hingeX: -0.58 }, // Left leaf swung outward toward -Z
+          { side: 1, angle: -0.34, hingeX: 0.58 }   // Right leaf swung outward toward -Z
         ];
 
         for (const leafCfg of shutterLeaves) {
@@ -1723,30 +1748,43 @@ export class World3DEnvironment {
       pedimentGroup.position.set(0, sh.height + 0.28, -3.22);
 
       if (idx === 0) {
-        // Shop 1: 同德堂药行 (Tong De Tang) - Baroque Segmental Arched Pediment
-        const archR = sh.width * 0.42;
-        const archedParapet = new THREE.Mesh(
-          new THREE.CylinderGeometry(archR, archR, 0.24, 24, 1, false, 0, Math.PI),
-          accentMat
-        );
-        archedParapet.rotation.x = Math.PI / 2;
-        archedParapet.position.set(0, 0.5, 0);
+        // Shop 1: 同德堂药行 (Tong De Tang) - Baroque Segmental Arched Pediment (flush XY extrusion!)
+        const archR = sh.width * 0.38;
+        const paraShape = new THREE.Shape();
+        paraShape.moveTo(-sh.width * 0.46, 0);
+        paraShape.lineTo(sh.width * 0.46, 0);
+        paraShape.lineTo(sh.width * 0.46, 0.36);
+        paraShape.lineTo(archR, 0.36);
+        paraShape.absarc(0, 0.36, archR, 0, Math.PI, false);
+        paraShape.lineTo(-sh.width * 0.46, 0.36);
+        paraShape.closePath();
+
+        const paraGeo = new THREE.ExtrudeGeometry(paraShape, {
+          depth: 0.24,
+          bevelEnabled: true,
+          bevelThickness: 0.02,
+          bevelSize: 0.02,
+          bevelSegments: 2,
+          curveSegments: 24
+        });
+        paraGeo.translate(0, 0, -0.12);
+        const archedParapet = new THREE.Mesh(paraGeo, accentMat);
         pedimentGroup.add(archedParapet);
 
         const archedMolding = new THREE.Mesh(
-          new THREE.TorusGeometry(archR, 0.08, 8, 24, Math.PI),
+          new THREE.TorusGeometry(archR, 0.065, 8, 24, Math.PI),
           trimMat
         );
-        archedMolding.position.set(0, 0.5, 0.06);
+        archedMolding.position.set(0, 0.36, -0.14);
         pedimentGroup.add(archedMolding);
 
-        // Herbal relief medallion crest
+        // Herbal relief medallion crest on -Z riverfront face
         const crestMedallion = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.48, 0.48, 0.08, 24),
+          new THREE.CylinderGeometry(0.46, 0.46, 0.08, 24),
           crestMat
         );
-        crestMedallion.rotation.x = Math.PI / 2;
-        crestMedallion.position.set(0, 0.82, 0.1);
+        crestMedallion.rotation.x = -Math.PI / 2;
+        crestMedallion.position.set(0, 0.86, -0.15);
         pedimentGroup.add(crestMedallion);
 
         // Flanking urn finials on corner parapets
@@ -1785,13 +1823,13 @@ export class World3DEnvironment {
           pedimentGroup.add(volute);
         }
 
-        // Circular louvered oculus with spice crest
+        // Circular louvered oculus with spice crest on -Z riverfront face
         const spiceCrest = new THREE.Mesh(
           new THREE.CylinderGeometry(0.42, 0.42, 0.08, 24),
           crestMat
         );
-        spiceCrest.rotation.x = Math.PI / 2;
-        spiceCrest.position.set(0, 0.75, 0.1);
+        spiceCrest.rotation.x = -Math.PI / 2;
+        spiceCrest.position.set(0, 0.75, -0.15);
         pedimentGroup.add(spiceCrest);
 
         // Carved pineapple / nutmeg finial at apex
@@ -1803,40 +1841,52 @@ export class World3DEnvironment {
         pineFinial.position.set(0, 1.72, 0);
         pedimentGroup.add(pineFinial);
       } else if (idx === 2) {
-        // Shop 3: 南洋航运 (Nanyang Shipping) - Neoclassical Triangular Pediment
+        // Shop 3: 南洋航运 (Nanyang Shipping) - Neoclassical Triangular Pediment (true extruded triangle!)
         const pedBase = new THREE.Mesh(new THREE.BoxGeometry(sh.width + 0.15, 0.32, 0.26), accentMat);
         pedBase.position.set(0, 0.16, 0);
         pedimentGroup.add(pedBase);
 
-        // Triangular pediment tympanum
-        const triWidth = sh.width * 0.88;
-        const triHeight = 1.25;
-        const pedTympanum = new THREE.Mesh(
-          new THREE.ConeGeometry(triWidth * 0.5, triHeight, 4),
-          facadeMat
-        );
-        pedTympanum.rotation.y = Math.PI / 4;
-        pedTympanum.scale.set(1.0, 1.0, 0.22);
-        pedTympanum.position.set(0, 0.32 + triHeight / 2, 0);
+        const triHalfW = sh.width * 0.45;
+        const triHeight = 1.22;
+        const triShape = new THREE.Shape();
+        triShape.moveTo(-triHalfW, 0);
+        triShape.lineTo(triHalfW, 0);
+        triShape.lineTo(0, triHeight);
+        triShape.closePath();
+        const triGeo = new THREE.ExtrudeGeometry(triShape, {
+          depth: 0.22,
+          bevelEnabled: true,
+          bevelThickness: 0.025,
+          bevelSize: 0.025,
+          bevelSegments: 2
+        });
+        triGeo.translate(0, 0, -0.11);
+        const pedTympanum = new THREE.Mesh(triGeo, facadeMat);
+        pedTympanum.position.set(0, 0.32, 0);
         pedimentGroup.add(pedTympanum);
 
-        // Raking dentils & cornices
-        const rakeCornice = new THREE.Mesh(new THREE.BoxGeometry(sh.width * 0.94, 0.1, 0.3), trimMat);
-        rakeCornice.position.set(0, 0.34, 0.08);
-        pedimentGroup.add(rakeCornice);
+        // Raking cornices framing the triangular pediment
+        const rakeLen = Math.hypot(triHalfW, triHeight) + 0.08;
+        const rakeAng = Math.atan2(triHeight, triHalfW);
+        for (const side of [-1, 1]) {
+          const rake = new THREE.Mesh(new THREE.BoxGeometry(rakeLen, 0.11, 0.30), trimMat);
+          rake.position.set(side * triHalfW * 0.5, 0.32 + triHeight * 0.5, -0.02);
+          rake.rotation.z = side < 0 ? rakeAng : -rakeAng;
+          pedimentGroup.add(rake);
+        }
 
-        // Maritime crest medallion (anchor & helm)
+        // Maritime crest medallion (anchor & helm) on -Z riverfront face
         const maritimeCrest = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.44, 0.44, 0.08, 24),
+          new THREE.CylinderGeometry(0.40, 0.40, 0.08, 24),
           crestMat
         );
-        maritimeCrest.rotation.x = Math.PI / 2;
-        maritimeCrest.position.set(0, 0.76, 0.1);
+        maritimeCrest.rotation.x = -Math.PI / 2;
+        maritimeCrest.position.set(0, 0.72, -0.15);
         pedimentGroup.add(maritimeCrest);
 
         // Apex acroterion
         const apexAcroterion = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 10), trimMat);
-        apexAcroterion.position.set(0, 1.62, 0);
+        apexAcroterion.position.set(0, 1.66, 0);
         pedimentGroup.add(apexAcroterion);
       } else {
         // Shop 4: 合兴茶庄 (Hop Hing Tea House) - Swan-Neck Scrolled Baroque Pediment
@@ -1851,7 +1901,7 @@ export class World3DEnvironment {
             trimMat
           );
           scroll1.rotation.z = sx < 0 ? -0.4 : Math.PI + 0.4;
-          scroll1.position.set(sx * 1.3, 0.75, 0.04);
+          scroll1.position.set(sx * 1.3, 0.75, -0.06);
           pedimentGroup.add(scroll1);
         }
 
@@ -1864,8 +1914,8 @@ export class World3DEnvironment {
           new THREE.CylinderGeometry(0.42, 0.42, 0.08, 24),
           crestMat
         );
-        teaCrest.rotation.x = Math.PI / 2;
-        teaCrest.position.set(0, 0.55, 0.1);
+        teaCrest.rotation.x = -Math.PI / 2;
+        teaCrest.position.set(0, 0.55, -0.15);
         pedimentGroup.add(teaCrest);
 
         // Celadon porcelain tea urn
@@ -1961,7 +2011,7 @@ export class World3DEnvironment {
         roofGroup.add(rearBarrelRib);
       }
 
-      // 3. Minnan Swept Ridge Beam (起翘屋脊)
+      // 3. Minnan Swept Ridge Beam & Stepped Gable Firewall Parapets (起翘屋脊与马头封火山墙)
       const ridgeBeam = new THREE.Mesh(
         new THREE.BoxGeometry(sh.width + 0.4, 0.26, 0.36),
         terraRoofRidgeMat
@@ -1969,19 +2019,40 @@ export class World3DEnvironment {
       ridgeBeam.position.set(0, 1.55, -0.55);
       roofGroup.add(ridgeBeam);
 
-      // Swept upturned ridge crest ends (起翘)
-      for (const rx of [-sh.width / 2 - 0.1, sh.width / 2 + 0.1]) {
-        const sweptFin = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.4, 0.34), terraRoofRidgeMat);
-        sweptFin.position.set(rx, 1.72, -0.55);
-        roofGroup.add(sweptFin);
+      // Stepped gable party-wall enclosures closing the triangular attic voids on left & right ends
+      const gableShape = new THREE.Shape();
+      gableShape.moveTo(-3.45, 0);
+      gableShape.lineTo(2.45, 0);
+      gableShape.lineTo(2.45, 0.42);
+      gableShape.lineTo(1.25, 1.08);
+      gableShape.lineTo(-0.55, 1.72);
+      gableShape.lineTo(-2.15, 1.05);
+      gableShape.lineTo(-3.45, 0.38);
+      gableShape.closePath();
+      const gableGeo = new THREE.ExtrudeGeometry(gableShape, {
+        depth: 0.18,
+        bevelEnabled: false
+      });
+      gableGeo.translate(0, 0, -0.09);
+      gableGeo.rotateY(Math.PI / 2);
 
-        // Curved scroll acroterion / coiled dragon-carp finial (卷草端饰)
+      for (const gx of [-sh.width / 2, sh.width / 2]) {
+        const gableWall = new THREE.Mesh(gableGeo, facadeMat);
+        gableWall.castShadow = true;
+        gableWall.receiveShadow = true;
+        gableWall.position.set(gx, 0, 0);
+        roofGroup.add(gableWall);
+
+        const gableCoping = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.44, 0.44), accentMat);
+        gableCoping.position.set(gx, 1.74, -0.55);
+        roofGroup.add(gableCoping);
+
         const acroterion = new THREE.Mesh(
-          new THREE.TorusGeometry(0.28, 0.065, 8, 16, Math.PI * 1.35),
+          new THREE.TorusGeometry(0.22, 0.052, 8, 16, Math.PI * 1.35),
           goldLeafMat
         );
-        acroterion.rotation.z = rx < 0 ? 0.3 : Math.PI - 0.3;
-        acroterion.position.set(rx, 1.95, -0.55);
+        acroterion.rotation.z = gx < 0 ? 0.3 : Math.PI - 0.3;
+        acroterion.position.set(gx, 2.02, -0.55);
         roofGroup.add(acroterion);
       }
 
@@ -2032,21 +2103,47 @@ export class World3DEnvironment {
         barometer.position.set(0.8, 1.7, -0.16);
         house.add(barometer);
       } else if (idx === 3) {
-        // 合兴茶庄: Antique celadon tea canisters on display shelf
-        const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 0.22), woodTrimMat);
-        shelf.position.set(0.85, 1.35, -0.15);
-        house.add(shelf);
+        // 合兴茶庄: Framed Peranakan Teakwood Tea-Caddy Display Cabinet (replaces floating plank!)
+        const teaCabinet = new THREE.Group();
+        teaCabinet.position.set(1.52, 1.52, -0.15);
 
-        const celadonMat = new THREE.MeshStandardMaterial({ color: 0x6e9987, roughness: 0.3, metalness: 0.1 });
-        for (let t = 0; t < 3; t++) {
-          const teaJar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 10), celadonMat);
-          teaJar.position.set(0.55 + t * 0.3, 1.49, -0.15);
-          house.add(teaJar);
+        const cabBack = new THREE.Mesh(new THREE.BoxGeometry(1.16, 1.02, 0.04), woodTrimMat);
+        teaCabinet.add(cabBack);
 
-          const jarLid = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.05, 10), goldLeafMat);
-          jarLid.position.set(0.55 + t * 0.3, 1.62, -0.15);
-          house.add(jarLid);
+        const cabTopCrown = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.09, 0.24), woodTrimMat);
+        cabTopCrown.position.set(0, 0.52, -0.08);
+        teaCabinet.add(cabTopCrown);
+
+        for (const sy of [-0.46, 0.02]) {
+          const shelfBoard = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.05, 0.22), woodTrimMat);
+          shelfBoard.position.set(0, sy, -0.07);
+          teaCabinet.add(shelfBoard);
         }
+
+        for (const sx of [-0.56, 0.56]) {
+          const stile = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.02, 0.20), woodTrimMat);
+          stile.position.set(sx, 0, -0.06);
+          teaCabinet.add(stile);
+        }
+
+        const celadonMat = new THREE.MeshStandardMaterial({ color: 0x6e9987, roughness: 0.26, metalness: 0.1 });
+        const pewterMat = new THREE.MeshStandardMaterial({ color: 0x8f999c, roughness: 0.32, metalness: 0.72 });
+        for (const [rowIdx, ry] of [[0, -0.32], [1, 0.16]] as const) {
+          for (let t = 0; t < 3; t++) {
+            const jx = -0.34 + t * 0.34;
+            const teaJar = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.078, 0.084, 0.22, 12),
+              (rowIdx + t) % 2 === 0 ? celadonMat : pewterMat
+            );
+            teaJar.position.set(jx, ry, -0.08);
+            teaCabinet.add(teaJar);
+
+            const jarLid = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.086, 0.045, 12), goldLeafMat);
+            jarLid.position.set(jx, ry + 0.13, -0.08);
+            teaCabinet.add(jarLid);
+          }
+        }
+        house.add(teaCabinet);
       }
 
       shophouseGroup.add(house);
@@ -3091,44 +3188,52 @@ export class World3DEnvironment {
     groundPodium.receiveShadow = true;
     museum.add(groundPodium);
 
-    const teapotHedgeMat = new THREE.MeshStandardMaterial({ color: 0x2e6b34, roughness: 0.76 });
-    const blossomRedMat = new THREE.MeshStandardMaterial({ color: 0xd9385a, roughness: 0.58 });
-    const blossomGoldMat = new THREE.MeshStandardMaterial({ color: 0xf5c242, roughness: 0.54 });
-    const urnFootGeo = new THREE.CylinderGeometry(0.16, 0.20, 0.10, 12);
-    const urnBodyGeo = new THREE.CylinderGeometry(0.24, 0.14, 0.36, 14);
-    const urnRimGeo = new THREE.TorusGeometry(0.24, 0.032, 8, 16);
-    const topiaryGeo = new THREE.SphereGeometry(0.22, 12, 10);
-    const blossomGeo = new THREE.SphereGeometry(0.055, 6, 6);
+    // Sculpted LatheGeometry Neoclassical Medici Stone Urn Finial (replaces primitive sphere-pot)
+    const urnProfile = [
+      new THREE.Vector2(0.001, -0.22),
+      new THREE.Vector2(0.18, -0.22),
+      new THREE.Vector2(0.16, -0.15),
+      new THREE.Vector2(0.07, -0.08),
+      new THREE.Vector2(0.10, -0.02),
+      new THREE.Vector2(0.22, 0.08),
+      new THREE.Vector2(0.24, 0.20),
+      new THREE.Vector2(0.19, 0.26),
+      new THREE.Vector2(0.25, 0.30),
+      new THREE.Vector2(0.16, 0.34),
+      new THREE.Vector2(0.09, 0.42),
+      new THREE.Vector2(0.04, 0.50),
+      new THREE.Vector2(0.001, 0.54)
+    ];
+    const classicalUrnGeo = new THREE.LatheGeometry(urnProfile, 20);
+    const urnHandleGeo = new THREE.TorusGeometry(0.075, 0.018, 6, 12, Math.PI * 1.25);
     const createTopiaryUrn = (scale = 1.0) => {
       const urnGroup = new THREE.Group();
-      const foot = new THREE.Mesh(urnFootGeo, colMat);
-      foot.position.y = -0.18;
-      urnGroup.add(foot);
-      const body = new THREE.Mesh(urnBodyGeo, colMat);
-      body.position.y = 0.02;
+      const body = new THREE.Mesh(classicalUrnGeo, colMat);
       body.castShadow = true;
       urnGroup.add(body);
-      const rim = new THREE.Mesh(urnRimGeo, colMat);
-      rim.rotation.x = Math.PI / 2;
-      rim.position.y = 0.20;
-      urnGroup.add(rim);
-      const foliage = new THREE.Mesh(topiaryGeo, teapotHedgeMat);
-      foliage.position.y = 0.34;
-      foliage.castShadow = true;
-      urnGroup.add(foliage);
-      for (let b = 0; b < 4; b++) {
-        const bAng = (b / 4) * Math.PI * 2 + 0.4;
-        const blossom = new THREE.Mesh(blossomGeo, b % 2 === 0 ? blossomRedMat : blossomGoldMat);
-        blossom.position.set(Math.cos(bAng) * 0.17, 0.36 + (b % 2) * 0.06, Math.sin(bAng) * 0.17);
-        urnGroup.add(blossom);
+      for (const side of [-1, 1]) {
+        const handle = new THREE.Mesh(urnHandleGeo, goldOrnamentMat);
+        handle.position.set(side * 0.21, 0.20, 0);
+        handle.rotation.z = side < 0 ? Math.PI * 0.4 : -Math.PI * 1.4;
+        urnGroup.add(handle);
       }
       urnGroup.scale.setScalar(scale);
       return urnGroup;
     };
 
-    const frontWinPedGeo = new THREE.ConeGeometry(1.05, 0.48, 4);
-    frontWinPedGeo.rotateY(Math.PI / 4);
-    frontWinPedGeo.scale(1.2, 1.0, 0.28);
+    const winPedShape = new THREE.Shape();
+    winPedShape.moveTo(-0.92, 0);
+    winPedShape.lineTo(0.92, 0);
+    winPedShape.lineTo(0, 0.44);
+    winPedShape.closePath();
+    const frontWinPedGeo = new THREE.ExtrudeGeometry(winPedShape, {
+      depth: 0.26,
+      bevelEnabled: true,
+      bevelThickness: 0.025,
+      bevelSize: 0.025,
+      bevelSegments: 2
+    });
+    frontWinPedGeo.translate(0, 0, -0.13);
 
     // East & West Symmetrical Pavilion Wings (双翼展厅附楼)
     for (const [wingX, rotY] of [
@@ -3235,35 +3340,99 @@ export class World3DEnvironment {
     cofferCeiling.position.set(0, 5.48, -0.6);
     porticoGroup.add(cofferCeiling);
 
-    // 6 Fluted Ionic Portico Columns
-    const colGeo = new THREE.CylinderGeometry(0.34, 0.38, 5.2, 16);
+    // 6 True 16-Fluted Entasis Ionic Portico Columns + Lathe Attic Bases
+    const colRadial = 48;
+    const colRings = 14;
+    const colPos: number[] = [];
+    const colUvs: number[] = [];
+    const colIndices: number[] = [];
+    for (let j = 0; j <= colRings; j++) {
+      const v = j / colRings;
+      const y = -2.42 + v * 4.88;
+      // Classical entasis swell peaking at 1/3 height, tapering toward necking
+      const rEntasis = 0.385 * (1 - v * 0.13) + Math.sin(v * Math.PI) * 0.016;
+      const fluteStrength = v > 0.04 && v < 0.96 ? 0.018 : 0.0;
+      for (let i = 0; i <= colRadial; i++) {
+        const u = i / colRadial;
+        const theta = u * Math.PI * 2;
+        const flute = rEntasis - fluteStrength * Math.max(0, Math.cos(theta * 16));
+        colPos.push(Math.cos(theta) * flute, y, Math.sin(theta) * flute);
+        colUvs.push(u, v);
+      }
+    }
+    const colStride = colRadial + 1;
+    for (let j = 0; j < colRings; j++) {
+      for (let i = 0; i < colRadial; i++) {
+        const a = j * colStride + i;
+        const b = a + 1;
+        const c = (j + 1) * colStride + i;
+        const d = c + 1;
+        colIndices.push(a, c, b);
+        colIndices.push(b, c, d);
+      }
+    }
+    const colGeo = new THREE.BufferGeometry();
+    colGeo.setAttribute("position", new THREE.Float32BufferAttribute(colPos, 3));
+    colGeo.setAttribute("uv", new THREE.Float32BufferAttribute(colUvs, 2));
+    colGeo.setIndex(colIndices);
+    colGeo.computeVertexNormals();
+
+    const atticBaseGeo = new THREE.LatheGeometry(
+      [
+        new THREE.Vector2(0.56, -0.18),
+        new THREE.Vector2(0.56, -0.06),
+        new THREE.Vector2(0.50, 0.0),
+        new THREE.Vector2(0.44, 0.06),
+        new THREE.Vector2(0.49, 0.12),
+        new THREE.Vector2(0.40, 0.18)
+      ],
+      24
+    );
+
     for (let i = 0; i < 6; i++) {
       const colX = -5.0 + i * 2.0;
       const col = new THREE.Group();
       col.position.set(colX, 2.6, 0.4);
 
-      // Torus column plinth base
-      const colBase = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.52, 0.22, 16), colMat);
-      colBase.position.y = -2.5;
+      const plinthBlock = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.16, 1.14), rusticatedMat);
+      plinthBlock.position.y = -2.52;
+      col.add(plinthBlock);
+
+      const colBase = new THREE.Mesh(atticBaseGeo, colMat);
+      colBase.position.y = -2.38;
       col.add(colBase);
 
-      // Fluted shaft
       const shaft = new THREE.Mesh(colGeo, colMat);
       shaft.castShadow = true;
+      shaft.receiveShadow = true;
       col.add(shaft);
 
-      // Ionic Capital with Sculpted Double Volute Horns (爱奥尼双向立体卷涡)
+      // Ionic Capital with Astragal Ring, Echinus & Sculpted Double Volute Scrolls
       const capGroup = new THREE.Group();
-      capGroup.position.y = 2.55;
+      capGroup.position.y = 2.52;
 
-      const abacus = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.9), colMat);
+      const astragal = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.032, 8, 24), goldOrnamentMat);
+      astragal.rotation.x = Math.PI / 2;
+      astragal.position.y = -0.12;
+      capGroup.add(astragal);
+
+      const echinus = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.35, 0.14, 24), colMat);
+      echinus.position.y = -0.04;
+      capGroup.add(echinus);
+
+      const abacus = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.12, 0.92), colMat);
+      abacus.position.y = 0.06;
       capGroup.add(abacus);
 
-      for (const vx of [-0.35, 0.35]) {
-        const volute = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.05, 8, 16), colMat);
-        volute.rotation.y = Math.PI / 2;
-        volute.position.set(vx, -0.08, 0);
-        capGroup.add(volute);
+      for (const vx of [-0.38, 0.38]) {
+        for (const vz of [-0.28, 0.28]) {
+          const volute = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.045, 8, 18), colMat);
+          volute.position.set(vx, -0.05, vz);
+          capGroup.add(volute);
+          const eyeBoss = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), goldOrnamentMat);
+          eyeBoss.position.set(vx, -0.05, vz + (vz > 0 ? 0.04 : -0.04));
+          capGroup.add(eyeBoss);
+        }
       }
       col.add(capGroup);
 
@@ -3338,17 +3507,37 @@ export class World3DEnvironment {
       porticoGroup.add(ray);
     }
 
+    // Curved Classical Olive-Laurel Swag Branches flanking the Tympanum Medallion (replaces sideways cones!)
+    const laurelLeafGeo = new THREE.SphereGeometry(0.075, 8, 6);
+    laurelLeafGeo.scale(1.7, 0.45, 0.35);
     for (const side of [-1, 1]) {
-      const garlandWing = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.16, 1.35, 8), goldOrnamentMat);
-      garlandWing.rotation.z = side * (Math.PI / 2 - 0.25);
-      garlandWing.position.set(side * 1.25, 6.45, 1.02);
-      porticoGroup.add(garlandWing);
+      const swagCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 0.68, 6.46, 1.04),
+        new THREE.Vector3(side * 1.45, 6.24, 1.05),
+        new THREE.Vector3(side * 2.28, 6.32, 1.04),
+        new THREE.Vector3(side * 2.95, 6.18, 1.02)
+      ]);
+      const swagStem = new THREE.Mesh(
+        new THREE.TubeGeometry(swagCurve, 16, 0.032, 8, false),
+        goldOrnamentMat
+      );
+      porticoGroup.add(swagStem);
+
+      for (let lf = 1; lf <= 6; lf++) {
+        const pt = swagCurve.getPoint(lf / 7);
+        for (const upDown of [-1, 1]) {
+          const leaf = new THREE.Mesh(laurelLeafGeo, goldOrnamentMat);
+          leaf.position.set(pt.x, pt.y + upDown * 0.065, pt.z + 0.02);
+          leaf.rotation.z = side * (upDown * 0.45 - 0.12);
+          porticoGroup.add(leaf);
+        }
+      }
     }
 
-    // Classical Acroterion Finial at Pediment Apex
-    const apexAcroterion = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.12, 0.48, 12), goldOrnamentMat);
-    apexAcroterion.position.set(0, 8.42, 1.02);
-    porticoGroup.add(apexAcroterion);
+    // Classical Palmette Acroterion Finials at Pediment Apex & Eaves
+    const apexUrn = createTopiaryUrn(0.85);
+    apexUrn.position.set(0, 8.38, 0.98);
+    porticoGroup.add(apexUrn);
 
     /* ============================================================== */
     /* 6.3 Double-Tiered Octagonal Drum & Verdigris Ribbed Dome       */
@@ -4187,52 +4376,83 @@ export class World3DEnvironment {
       }
     }
 
-    // 16 Carved Lotus Petal Upright Collar (仰莲瓣雕花托座)
-    for (let p = 0; p < 16; p++) {
-      const pAngle = (p / 16) * Math.PI * 2;
-      const petal = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.22, 4), sumeruStoneMat);
-      petal.position.set(Math.cos(pAngle) * 1.3, 0.9, Math.sin(pAngle) * 0.95);
-      petal.rotation.x = Math.sin(pAngle) * 0.35;
-      petal.rotation.z = -Math.cos(pAngle) * 0.35;
-      altarGroup.add(petal);
+    // Sculpted Sumeru Lotus Stele Plinth Collar hugging the Stele Foot (replaces scattered floor cones!)
+    const steleLotusBase = new THREE.Mesh(new THREE.BoxGeometry(2.16, 0.22, 0.64), sumeruStoneMat);
+    steleLotusBase.position.set(0, 0.96, 0);
+    altarGroup.add(steleLotusBase);
+
+    const lotusPetalGeo = new THREE.SphereGeometry(0.10, 10, 8);
+    lotusPetalGeo.scale(1.0, 1.35, 0.55);
+    for (let px = -0.88; px <= 0.89; px += 0.22) {
+      for (const pz of [-0.31, 0.31]) {
+        const petal = new THREE.Mesh(lotusPetalGeo, bronzeMat);
+        petal.position.set(px, 0.98, pz);
+        altarGroup.add(petal);
+      }
     }
 
-    // 8.2 Historical Singapore Stone Stele with Double-Dragon Crest (螭首双龙古石碑)
-    const steleBody = new THREE.Mesh(new THREE.BoxGeometry(1.85, 2.8, 0.34), steleSandstoneMat);
-    steleBody.position.set(0, 2.3, 0);
+    // 8.2 Historical Singapore Stone Stele with Sculpted Chishou Double-Dragon Arch Crown (螭首双龙古石碑)
+    const steleBody = new THREE.Mesh(new THREE.BoxGeometry(1.85, 2.72, 0.34), steleSandstoneMat);
+    steleBody.position.set(0, 2.34, 0);
     steleBody.castShadow = true;
     altarGroup.add(steleBody);
 
     // Chamfered stone side borders (石碑外缘浮雕立柱)
     for (const sx of [-0.95, 0.95]) {
-      const border = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.8, 0.38), sumeruStoneMat);
-      border.position.set(sx, 2.3, 0);
+      const border = new THREE.Mesh(new THREE.BoxGeometry(0.10, 2.74, 0.38), sumeruStoneMat);
+      border.position.set(sx, 2.34, 0);
       altarGroup.add(border);
     }
 
-    // Dragon-Crested Crown Headpiece (螭首双龙抱额)
-    const steleCrown = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.92, 0.92, 0.36, 16, 1, false, 0, Math.PI),
-      sumeruStoneMat
-    );
-    steleCrown.position.set(0, 3.7, 0);
-    steleCrown.rotation.z = -Math.PI / 2;
-    steleCrown.rotation.y = Math.PI / 2;
+    // Extruded Chishou Double-Dragon Arched Crown Headpiece properly aligned in XY plane!
+    const crownShape = new THREE.Shape();
+    crownShape.moveTo(-1.02, 0);
+    crownShape.lineTo(1.02, 0);
+    crownShape.lineTo(1.02, 0.20);
+    crownShape.absarc(0, 0.20, 1.02, 0, Math.PI, false);
+    crownShape.closePath();
+    const crownGeo = new THREE.ExtrudeGeometry(crownShape, {
+      depth: 0.38,
+      bevelEnabled: true,
+      bevelThickness: 0.035,
+      bevelSize: 0.03,
+      bevelSegments: 2,
+      curveSegments: 24
+    });
+    crownGeo.translate(0, 0, -0.19);
+    const steleCrown = new THREE.Mesh(crownGeo, sumeruStoneMat);
+    steleCrown.position.set(0, 3.66, 0);
+    steleCrown.castShadow = true;
     altarGroup.add(steleCrown);
+
+    // Coiled Twin Dragon Relief Scrolls on Crown Front & Back cradling the Sacred Pearl
+    const dragonScrollGeo = new THREE.TorusGeometry(0.32, 0.055, 8, 18, Math.PI * 1.45);
+    for (const side of [-1, 1]) {
+      for (const fz of [-0.21, 0.21]) {
+        const scroll = new THREE.Mesh(dragonScrollGeo, bronzeMat);
+        scroll.position.set(side * 0.44, 4.18, fz);
+        scroll.rotation.z = side < 0 ? 0.35 : Math.PI - 0.35;
+        altarGroup.add(scroll);
+      }
+    }
 
     // Sacred Golden Flaming Pearl atop stele (额头摩尼宝珠)
     const jewelOrbMat = new THREE.MeshStandardMaterial({
       color: 0xffd700,
       roughness: 0.2,
       metalness: 0.9,
-      emissive: 0x112222,
-      emissiveIntensity: 0.1
+      emissive: 0x332205,
+      emissiveIntensity: 0.24
     });
+    const lotusSeat = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.14, 0.10, 12), bronzeMat);
+    lotusSeat.position.set(0, 4.88, 0);
+    altarGroup.add(lotusSeat);
+
     const jewelOrb = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 12, 12),
+      new THREE.SphereGeometry(0.18, 16, 16),
       jewelOrbMat
     );
-    jewelOrb.position.set(0, 4.4, 0);
+    jewelOrb.position.set(0, 5.05, 0);
     altarGroup.add(jewelOrb);
     this.runeSteleJewelMat = jewelOrbMat;
 
@@ -4594,25 +4814,25 @@ export class World3DEnvironment {
     gateGroup.add(gearOuter);
     this.harborGears.push(gearOuter);
 
-    // 12 Gear Teeth Nodes on Outer Astrolabe Ring (12枚外缘精密铜齿)
-    for (let t = 0; t < 12; t++) {
-      const tAngle = (t / 12) * Math.PI * 2;
-      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.18), darkBrassMat);
-      tooth.position.set(0, 4.3 + Math.sin(tAngle) * 1.45, Math.cos(tAngle) * 1.45);
+    // 16 Gear Teeth Nodes on Outer Astrolabe Ring (correctly relative to gearOuter local origin!)
+    for (let t = 0; t < 16; t++) {
+      const tAngle = (t / 16) * Math.PI * 2;
+      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.14), darkBrassMat);
+      tooth.position.set(Math.cos(tAngle) * 1.54, Math.sin(tAngle) * 1.54, 0);
+      tooth.rotation.z = tAngle;
       gearOuter.add(tooth);
     }
 
-    // Inner Sun & Moon Epicycle Cogwheel (内层反向啮合日月齿轮 - 旋转齿轮2)
-    const gearInner = new THREE.Mesh(new THREE.TorusGeometry(0.92, 0.08, 12, 24), brassMat);
+    // Inner Sun & Moon Epicycle Cogwheel + 8-Point Brass Compass Rose (内层反向啮合日月星盘 - 旋转齿轮2)
+    const gearInner = new THREE.Mesh(new THREE.TorusGeometry(0.96, 0.075, 12, 32), brassMat);
     gearInner.position.set(0, 4.3, 0);
     gearInner.rotation.y = Math.PI / 2;
     gateGroup.add(gearInner);
     this.harborGears.push(gearInner);
 
-    // 4 Brass Cross Spokes linking Inner Gear (4根十字铜轮辐)
-    for (let sp = 0; sp < 2; sp++) {
-      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.8, 8), darkBrassMat);
-      spoke.rotation.x = sp * (Math.PI / 2);
+    for (let sp = 0; sp < 4; sp++) {
+      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 1.88, 8), darkBrassMat);
+      spoke.rotation.z = sp * (Math.PI / 4);
       gearInner.add(spoke);
     }
 
@@ -4627,15 +4847,21 @@ export class World3DEnvironment {
       gateGroup.add(weightBob);
     }
 
-    // Glowing Celestial Star Ruby Core (中心发光星光红宝石晶核)
+    // Sculpted Crown-Cut Star Ruby Cabochon inside Gilt Lotus Collet (中心星光红宝石枢机)
     const rubyMat = new THREE.MeshStandardMaterial({
       color: 0xdc143c,
-      roughness: 0.12,
-      metalness: 0.88,
+      roughness: 0.14,
+      metalness: 0.42,
       emissive: 0x990022,
-      emissiveIntensity: 0.6
+      emissiveIntensity: 0.65
     });
-    const ruby = new THREE.Mesh(new THREE.DodecahedronGeometry(0.38), rubyMat);
+    const rubyCollet = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.055, 10, 24), brassMat);
+    rubyCollet.position.set(0, 4.3, 0);
+    rubyCollet.rotation.y = Math.PI / 2;
+    gateGroup.add(rubyCollet);
+
+    const ruby = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 2), rubyMat);
+    ruby.scale.set(0.62, 1.0, 1.0);
     ruby.position.set(0, 4.3, 0);
     gateGroup.add(ruby);
 
@@ -5031,43 +5257,49 @@ export class World3DEnvironment {
     }
 
     /* ============================================================== */
-    /* 11.2 Continuous S-Curve Lofted Merlion Body & Imbricated Scales */
+    /* 11.2 Heroic S-Curve Lofted Merlion Body, Tail Fluke & Scales   */
     /* ============================================================== */
     const bodyRoot = new THREE.Group();
     bodyRoot.position.set(0, 0, 0);
     merlionGroup.add(bodyRoot);
 
-    // Multi-tiered foaming wave surge collar at the foot of the Merlion
-    const surgeCollarLower = new THREE.Mesh(new THREE.TorusGeometry(1.52, 0.24, 14, 36), stoneMat);
-    surgeCollarLower.rotation.x = Math.PI / 2 - 0.16;
-    surgeCollarLower.position.set(0, 1.32, -0.28);
-    surgeCollarLower.castShadow = true;
-    bodyRoot.add(surgeCollarLower);
+    // Sculpted Multi-Tiered Undulating Wave Surge Collar around the Coiled Tail Base (replaces egg spheres!)
+    for (let ring = 0; ring < 2; ring++) {
+      const waveGeo = new THREE.CylinderGeometry(1.22 + ring * 0.28, 1.48 + ring * 0.30, 0.26 - ring * 0.05, 36);
+      const wPos = waveGeo.attributes.position;
+      for (let i = 0; i < wPos.count; i++) {
+        const vx = wPos.getX(i);
+        const vy = wPos.getY(i);
+        const vz = wPos.getZ(i);
+        const ang = Math.atan2(vz, vx);
+        const ripple = vy > 0 ? 0.09 * Math.sin(ang * 7 + ring * 1.4) + 0.04 * Math.cos(ang * 11) : 0;
+        wPos.setXYZ(i, vx * (1 + 0.05 * Math.cos(ang * 5)), vy + ripple, vz * (1 + 0.05 * Math.sin(ang * 5)));
+      }
+      waveGeo.computeVertexNormals();
+      const waveCollar = new THREE.Mesh(waveGeo, ring === 0 ? stoneMat : darkStoneMat);
+      waveCollar.position.set(0, 1.42 - ring * 0.12, -0.22);
+      waveCollar.castShadow = true;
+      waveCollar.receiveShadow = true;
+      bodyRoot.add(waveCollar);
+    }
 
-    const surgeCollarUpper = new THREE.Mesh(new THREE.TorusGeometry(1.38, 0.16, 12, 32), darkStoneMat);
-    surgeCollarUpper.rotation.x = Math.PI / 2 - 0.20;
-    surgeCollarUpper.position.set(0, 1.48, -0.30);
-    surgeCollarUpper.castShadow = true;
-    bodyRoot.add(surgeCollarUpper);
-
-    // Single continuous S-curve lofted Merlion body mesh (zero stacked-cylinder seams!)
+    // Authentic Lim Nang Seng S-Curve Merlion Spine: coiled tail (-Z) -> athletic waist -> proud thrust-forward lion chest (+Z) -> regal neck
     const merlionSpine = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 1.24, -0.34),
-      new THREE.Vector3(0, 1.85, -0.36),
-      new THREE.Vector3(0, 2.58, -0.10),
-      new THREE.Vector3(0, 3.38, 0.20),
-      new THREE.Vector3(0, 4.18, 0.36),
-      new THREE.Vector3(0, 4.92, 0.44)
+      new THREE.Vector3(0, 1.32, -0.82),
+      new THREE.Vector3(0, 1.72, -0.46),
+      new THREE.Vector3(0, 2.42, -0.02),
+      new THREE.Vector3(0, 3.26, 0.36),
+      new THREE.Vector3(0, 4.08, 0.42),
+      new THREE.Vector3(0, 4.82, 0.34)
     ]);
 
     const radialSegs = 56;
-    const heightRings = 44;
+    const heightRings = 46;
     const merlionPositions: number[] = [];
     const merlionUvs: number[] = [];
     const merlionIndices: number[] = [];
-    const upVec = new THREE.Vector3(0, 1, 0);
+    const rightAxis = new THREE.Vector3(1, 0, 0);
     const tangent = new THREE.Vector3();
-    const rightAxis = new THREE.Vector3();
     const forwardAxis = new THREE.Vector3();
     const ringCenter = new THREE.Vector3();
 
@@ -5075,49 +5307,48 @@ export class World3DEnvironment {
       const v = j / heightRings;
       merlionSpine.getPoint(v, ringCenter);
       merlionSpine.getTangent(v, tangent).normalize();
-      rightAxis.crossVectors(upVec, tangent);
-      if (rightAxis.lengthSq() < 1e-6) rightAxis.set(1, 0, 0);
-      else rightAxis.normalize();
-      forwardAxis.crossVectors(tangent, rightAxis).normalize();
+      // Right-handed frame: rightAxis = +X, tangent ≈ +Y, so forwardAxis = rightAxis × tangent?
+      // Wait: (+1,0,0) × (0,1,0) = (0,0,+1) (+Z riverward front)!
+      forwardAxis.crossVectors(rightAxis, tangent).normalize();
 
-      // Organic anatomical radius taper from wide caudal base to athletic waist, proud lion chest, and neck collar
+      // Athletic Merlion silhouette: flared wave-mounted tail base -> slender fish waist -> broad lion chest -> muscular neck
+      const waistPinch = Math.exp(-Math.pow((v - 0.34) / 0.18, 2)) * 0.18;
+      const chestPectoralSwell = Math.exp(-Math.pow((v - 0.68) / 0.17, 2)) * 0.24;
       const baseR =
-        1.48 * Math.pow(1 - v, 2.2) +
-        1.12 * 3 * v * Math.pow(1 - v, 2) +
-        1.08 * 3 * v * v * (1 - v) +
-        0.78 * Math.pow(v, 3);
-
-      // Chest expansion in the upper-mid torso (v around 0.58..0.82)
-      const chestPectoralSwell = Math.exp(-Math.pow((v - 0.68) / 0.16, 2)) * 0.12;
+        1.16 * Math.pow(1 - v, 2.4) +
+        0.74 * 3 * v * Math.pow(1 - v, 2) +
+        0.82 * 3 * v * v * (1 - v) +
+        0.64 * Math.pow(v, 3) -
+        waistPinch;
 
       for (let i = 0; i <= radialSegs; i++) {
         const u = i / radialSegs;
         const theta = u * Math.PI * 2;
-        const cosT = Math.cos(theta); // X lateral
-        const sinT = Math.sin(theta); // Z forward (+1 is riverward front, -1 is dorsal back)
+        const cosT = Math.cos(theta); // +X lateral
+        const sinT = Math.sin(theta); // +Z riverward front (+1), -Z dorsal spine (-1)
 
-        // Imbricated scalloped fish-scale relief along lower & mid body (v < 0.74)
-        const scaleZone = Math.max(0, Math.min(1, (0.76 - v) / 0.18));
-        const tierPhase = v * 9.0;
+        // Imbricated scalloped fish-scale tiers along lower & mid body (v < 0.66)
+        const scaleZone = Math.max(0, Math.min(1, (0.68 - v) / 0.18));
+        const tierPhase = v * 10.0;
         const tierFrac = tierPhase - Math.floor(tierPhase);
-        const stagger = Math.floor(tierPhase) % 2 === 0 ? 0 : Math.PI / 8;
+        const stagger = Math.floor(tierPhase) % 2 === 0 ? 0 : Math.PI / 9;
         const scaleScallop =
           scaleZone *
-          0.075 *
-          (1 - tierFrac * 0.78) *
-          Math.abs(Math.cos(theta * 8 + stagger));
+          0.055 *
+          (1 - tierFrac * 0.75) *
+          Math.abs(Math.cos(theta * 9 + stagger));
 
-        // Proud lion chest sternum & pectoral contour on front (+sinT) in upper torso
+        // Proud lion sternum & twin pectoral muscles on riverward front (+sinT)
         const pectoralContour =
-          v > 0.52 && sinT > 0
-            ? Math.sin((v - 0.52) / 0.48 * Math.PI) * Math.pow(sinT, 2) * (0.09 - 0.04 * Math.cos(theta * 4))
+          v > 0.48 && sinT > 0
+            ? Math.sin(((v - 0.48) / 0.52) * Math.PI) * Math.pow(sinT, 2) * (0.14 - 0.04 * Math.cos(theta * 4))
             : 0;
 
-        // Dorsal spinal ridge along back (-sinT)
-        const dorsalSpine = sinT < -0.6 ? Math.pow((-sinT - 0.6) / 0.4, 2) * 0.06 * (1 - v * 0.5) : 0;
+        // Tapered dorsal ridge along back (-sinT)
+        const dorsalSpine = sinT < -0.55 ? Math.pow((-sinT - 0.55) / 0.45, 2) * 0.065 * (1 - v * 0.45) : 0;
 
-        const rX = (baseR + chestPectoralSwell * 0.8 + scaleScallop) * 0.96;
-        const rZ = baseR + chestPectoralSwell * 1.15 + scaleScallop + pectoralContour + dorsalSpine;
+        const rX = (baseR + chestPectoralSwell * 0.78 + scaleScallop) * 0.94;
+        const rZ = baseR + chestPectoralSwell * 1.05 + scaleScallop + pectoralContour + dorsalSpine;
 
         const lx = cosT * rX;
         const lz = sinT * rZ;
@@ -5131,6 +5362,7 @@ export class World3DEnvironment {
       }
     }
 
+    // Outward-pointing normals: (+dv) × (+du) => triangles (a, c, b) and (b, c, d)!
     const merlionStride = radialSegs + 1;
     for (let j = 0; j < heightRings; j++) {
       for (let i = 0; i < radialSegs; i++) {
@@ -5138,8 +5370,8 @@ export class World3DEnvironment {
         const b = a + 1;
         const c = (j + 1) * merlionStride + i;
         const d = c + 1;
-        merlionIndices.push(a, b, d);
-        merlionIndices.push(a, d, c);
+        merlionIndices.push(a, c, b);
+        merlionIndices.push(b, c, d);
       }
     }
 
@@ -5153,9 +5385,9 @@ export class World3DEnvironment {
     const merlionScaleMat = new THREE.MeshStandardMaterial({
       map: merlionScaleTex,
       bumpMap: merlionScaleTex,
-      bumpScale: 0.045,
-      color: 0xf4efe4,
-      roughness: 0.62,
+      bumpScale: 0.04,
+      color: 0xf4f0e6,
+      roughness: 0.48,
       metalness: 0.04
     });
 
@@ -5164,153 +5396,171 @@ export class World3DEnvironment {
     merlionBodyMesh.receiveShadow = true;
     bodyRoot.add(merlionBodyMesh);
 
-    // Sculpted Sweeping Lion Mane Mantle Curls around upper neck (雄狮颈部层叠卷云鬃毛浮雕)
-    const maneLockGeo = new THREE.TorusGeometry(0.16, 0.058, 10, 18, Math.PI * 1.45);
-    for (let ring = 0; ring < 2; ring++) {
-      const lockCount = 12;
-      const ringY = 4.68 - ring * 0.22;
-      const ringZ = 0.40 - ring * 0.04;
-      const ringR = 0.72 + ring * 0.05;
+    // Sweeping Sculpted Lion Shoulder Mane Tiers (smooth rounded stone locks hugging the neck — zero spikes!)
+    const shoulderLockGeo = new THREE.CapsuleGeometry(0.11, 0.28, 8, 12);
+    shoulderLockGeo.scale(1.05, 1.0, 0.62);
+    for (let tier = 0; tier < 3; tier++) {
+      const lockCount = 14;
+      const ringY = 4.62 - tier * 0.30;
+      const ringZ = 0.34 - tier * 0.03;
+      const ringR = 0.64 + tier * 0.06;
       for (let lk = 0; lk < lockCount; lk++) {
-        const ang = ((lk + (ring % 2) * 0.5) / lockCount) * Math.PI * 2;
-        // Leave front throat center (+Z, ang near PI/2) slightly parted so roaring chin curls lead into chest
-        if (ring === 0 && Math.abs(ang - Math.PI / 2) < 0.32) continue;
-        const lx = Math.cos(ang) * ringR * 0.94;
+        const ang = ((lk + (tier % 2) * 0.5) / lockCount) * Math.PI * 2;
+        if (tier === 0 && Math.abs(ang - Math.PI / 2) < 0.36) continue;
+        const lx = Math.cos(ang) * ringR * 0.92;
         const lz = ringZ + Math.sin(ang) * ringR * 1.02;
-        const maneLock = new THREE.Mesh(maneLockGeo, stoneMat);
+        const maneLock = new THREE.Mesh(shoulderLockGeo, tier % 2 === 0 ? stoneMat : darkStoneMat);
         maneLock.position.set(lx, ringY, lz);
-        maneLock.rotation.set(0.35, -ang + Math.PI / 2, 0.25);
+        maneLock.rotation.order = "YXZ";
+        maneLock.rotation.y = -ang + Math.PI / 2;
+        maneLock.rotation.x = -0.26;
         maneLock.castShadow = true;
         bodyRoot.add(maneLock);
       }
     }
 
-    // Sculpted Serrated Dorsal Ridge Fin (背脊背鳍) along back curve
+    // Sculpted Serrated Dorsal Ridge Fin (背脊背鳍) sweeping up the lower-mid back
     const dorsalShape = new THREE.Shape();
     dorsalShape.moveTo(0, 0);
-    dorsalShape.quadraticCurveTo(-0.35, 0.4, -0.58, 0.85);
-    dorsalShape.lineTo(-0.42, 0.9);
-    dorsalShape.quadraticCurveTo(-0.62, 1.3, -0.68, 1.65);
-    dorsalShape.lineTo(-0.48, 1.7);
-    dorsalShape.quadraticCurveTo(-0.6, 2.05, -0.62, 2.3);
-    dorsalShape.quadraticCurveTo(-0.25, 1.7, 0, 1.1);
+    dorsalShape.quadraticCurveTo(-0.28, 0.36, -0.46, 0.78);
+    dorsalShape.lineTo(-0.30, 0.84);
+    dorsalShape.quadraticCurveTo(-0.48, 1.22, -0.52, 1.56);
+    dorsalShape.lineTo(-0.34, 1.62);
+    dorsalShape.quadraticCurveTo(-0.44, 1.92, -0.42, 2.15);
+    dorsalShape.quadraticCurveTo(-0.14, 1.65, 0, 1.15);
     dorsalShape.closePath();
 
     const dorsalGeo = new THREE.ExtrudeGeometry(dorsalShape, {
-      depth: 0.09,
-      bevelEnabled: true,
-      bevelThickness: 0.03,
-      bevelSize: 0.03,
-      bevelSegments: 3
-    });
-    const dorsalMesh = new THREE.Mesh(dorsalGeo, stoneMat);
-    dorsalMesh.position.set(0.045, 2.05, -0.52);
-    dorsalMesh.rotation.y = -Math.PI / 2;
-    dorsalMesh.castShadow = true;
-    bodyRoot.add(dorsalMesh);
-
-    // Bifurcated Caudal Mermaid Tail Fins (后侧分叉鱼尾鳍 - 扇形波浪浮雕)
-    const caudalShape = new THREE.Shape();
-    caudalShape.moveTo(0, 0);
-    caudalShape.quadraticCurveTo(0.28, 0.35, 0.62, 0.92);
-    caudalShape.quadraticCurveTo(0.45, 0.98, 0.24, 0.72);
-    caudalShape.quadraticCurveTo(0.08, 0.38, 0, 0);
-
-    const caudalGeo = new THREE.ExtrudeGeometry(caudalShape, {
       depth: 0.08,
       bevelEnabled: true,
       bevelThickness: 0.025,
       bevelSize: 0.025,
+      bevelSegments: 2
+    });
+    dorsalGeo.translate(0, 0, -0.04);
+    const dorsalMesh = new THREE.Mesh(dorsalGeo, stoneMat);
+    dorsalMesh.position.set(0, 1.95, -0.48);
+    dorsalMesh.rotation.y = -Math.PI / 2;
+    dorsalMesh.castShadow = true;
+    bodyRoot.add(dorsalMesh);
+
+    // Majestic Cresting Bifurcated Caudal Tail Flukes rising gracefully behind the coiled tail base
+    const caudalShape = new THREE.Shape();
+    caudalShape.moveTo(0, 0);
+    caudalShape.quadraticCurveTo(0.38, 0.28, 0.92, 0.98);
+    caudalShape.quadraticCurveTo(0.84, 1.26, 0.56, 1.34);
+    caudalShape.quadraticCurveTo(0.36, 1.12, 0.22, 0.86);
+    caudalShape.quadraticCurveTo(0.08, 0.45, 0, 0);
+    caudalShape.closePath();
+
+    const caudalGeo = new THREE.ExtrudeGeometry(caudalShape, {
+      depth: 0.09,
+      bevelEnabled: true,
+      bevelThickness: 0.028,
+      bevelSize: 0.025,
       bevelSegments: 3
     });
+    caudalGeo.translate(0, 0, -0.045);
 
-    for (const [side, rotZ] of [
-      [1, 0.42],
-      [-1, -0.42]
-    ]) {
+    // Curved Caudal Peduncle Stem sweeping up from (-0.82) into the twin tail flukes
+    const tailStemCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 1.42, -0.78),
+      new THREE.Vector3(0, 1.68, -1.22),
+      new THREE.Vector3(0, 2.18, -1.42)
+    ]);
+    const tailStemMesh = new THREE.Mesh(
+      new THREE.TubeGeometry(tailStemCurve, 14, 0.30, 14, false),
+      merlionScaleMat
+    );
+    tailStemMesh.castShadow = true;
+    bodyRoot.add(tailStemMesh);
+
+    for (const side of [-1, 1]) {
       const caudalFluke = new THREE.Mesh(caudalGeo, stoneMat);
-      caudalFluke.position.set(side * 0.44, 1.62, -1.24);
-      caudalFluke.rotation.set(-0.35, side * 0.42, rotZ);
+      caudalFluke.position.set(side * 0.14, 2.08, -1.42);
+      caudalFluke.rotation.set(-0.28, side * 0.38, side * 0.22);
       caudalFluke.scale.set(side * 1.18, 1.18, 1.0);
       caudalFluke.castShadow = true;
       bodyRoot.add(caudalFluke);
     }
 
     /* ============================================================== */
-    /* 11.3 Sculpted Roaring Lion Head, Contoured Muzzle & Fangs      */
+    /* 11.3 Commanding Chiseled Lion Head, Swept Mane & Roaring Jaws  */
     /* ============================================================== */
     const headGroup = new THREE.Group();
-    headGroup.position.set(0, 5.0, 0.45);
+    headGroup.position.set(0, 4.98, 0.36);
+    headGroup.scale.setScalar(1.12);
     merlionGroup.add(headGroup);
 
     // High-segment Sculpted Cranium & Temporal Dome (28x24 segments)
     const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.84, 28, 24), stoneMat);
     cranium.position.set(0, 0.06, -0.02);
-    cranium.scale.set(0.96, 1.02, 1.08);
+    cranium.scale.set(0.98, 1.02, 1.10);
     cranium.castShadow = true;
     headGroup.add(cranium);
 
     // Sculpted Cheekbone & Zygomatic Arches (左右狮颊隆起肌群)
-    for (const cx of [-0.40, 0.40]) {
-      const cheekArch = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 14), stoneMat);
-      cheekArch.position.set(cx, -0.02, 0.28);
-      cheekArch.scale.set(0.70, 0.82, 1.08);
+    for (const cx of [-0.42, 0.42]) {
+      const cheekArch = new THREE.Mesh(new THREE.SphereGeometry(0.30, 16, 14), stoneMat);
+      cheekArch.position.set(cx, -0.02, 0.30);
+      cheekArch.scale.set(0.76, 0.85, 1.10);
       cheekArch.castShadow = true;
       headGroup.add(cheekArch);
     }
 
-    // Curved Supraorbital Brow Arches (雕刻感狮王眉弓)
-    for (const bx of [-0.26, 0.26]) {
-      const brow = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.18, 8, 14), darkStoneMat);
-      brow.position.set(bx, 0.28, 0.56);
-      brow.rotation.set(0.18, bx > 0 ? -0.25 : 0.25, Math.PI / 2 + (bx > 0 ? -0.18 : 0.18));
+    // Bold Chiseled Supraorbital Brow Arches
+    for (const bx of [-0.28, 0.28]) {
+      const brow = new THREE.Mesh(new THREE.CapsuleGeometry(0.095, 0.24, 8, 14), darkStoneMat);
+      brow.position.set(bx, 0.30, 0.58);
+      brow.rotation.set(0.18, bx > 0 ? -0.28 : 0.28, Math.PI / 2 + (bx > 0 ? -0.22 : 0.22));
       headGroup.add(brow);
     }
 
-    // Contoured Broad Upper Muzzle / Nasal Bridge
-    const snoutBridge = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.34, 12, 20), stoneMat);
-    snoutBridge.rotation.x = Math.PI / 2 - 0.14;
-    snoutBridge.scale.set(1.24, 1.0, 0.84);
-    snoutBridge.position.set(0, 0.01, 0.50);
+    // Contoured Broad Upper Muzzle / Nasal Bridge integrated smoothly into cranium
+    const snoutBridge = new THREE.Mesh(new THREE.CapsuleGeometry(0.30, 0.28, 12, 20), stoneMat);
+    snoutBridge.rotation.x = Math.PI / 2 - 0.16;
+    snoutBridge.scale.set(1.24, 1.0, 0.80);
+    snoutBridge.position.set(0, 0.02, 0.44);
     snoutBridge.castShadow = true;
     headGroup.add(snoutBridge);
 
-    // Sculpted Broad Lion Nose Pad (如意形狮鼻头与鼻翼)
-    const nosePad = new THREE.Mesh(new THREE.SphereGeometry(0.185, 16, 12), darkStoneMat);
-    nosePad.scale.set(1.36, 0.74, 0.72);
-    nosePad.position.set(0, 0.09, 0.84);
+    // Sculpted Broad Lion Nose Pad
+    const nosePad = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 12), darkStoneMat);
+    nosePad.scale.set(1.36, 0.72, 0.72);
+    nosePad.position.set(0, 0.09, 0.74);
     headGroup.add(nosePad);
 
-    // Integrated Whisker Muzzle Contours tucked smoothly below nasal bridge
-    for (const wx of [-0.145, 0.145]) {
+    // Integrated Whisker Muzzle Contours
+    for (const wx of [-0.155, 0.155]) {
       const whiskerPad = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 14), stoneMat);
-      whiskerPad.position.set(wx, -0.055, 0.67);
-      whiskerPad.scale.set(0.92, 0.72, 1.02);
+      whiskerPad.position.set(wx, -0.055, 0.60);
+      whiskerPad.scale.set(0.95, 0.72, 0.96);
       whiskerPad.castShadow = true;
       headGroup.add(whiskerPad);
     }
 
-    // Deep Open Roaring Mouth Cavity (recessed inside throat so muzzle & fangs frame the water jet cleanly)
-    const mouthCavity = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.20, 0.32, 16), mouthInteriorMat);
+    // Deep Open Roaring Mouth Cavity
+    const mouthCavity = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.21, 0.34, 16), mouthInteriorMat);
     mouthCavity.rotation.x = Math.PI / 2;
-    mouthCavity.scale.set(1.10, 1.0, 0.76);
-    mouthCavity.position.set(0, -0.15, 0.56);
+    mouthCavity.scale.set(1.12, 1.0, 0.78);
+    mouthCavity.position.set(0, -0.15, 0.50);
     headGroup.add(mouthCavity);
 
-    // Sculpted Curved Lower Jaw (Mandible) with Rounded Chin & Beard Curls
-    const lowerJaw = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.34, 12, 18), stoneMat);
+    // Sculpted Curved Lower Jaw (Mandible) integrated under roaring jaws
+    const lowerJaw = new THREE.Mesh(new THREE.CapsuleGeometry(0.20, 0.28, 12, 18), stoneMat);
     lowerJaw.rotation.x = Math.PI / 2 + 0.22;
-    lowerJaw.scale.set(1.24, 1.0, 0.62);
-    lowerJaw.position.set(0, -0.35, 0.58);
+    lowerJaw.scale.set(1.22, 1.0, 0.58);
+    lowerJaw.position.set(0, -0.33, 0.48);
     lowerJaw.castShadow = true;
     headGroup.add(lowerJaw);
 
-    // Sculpted Chin Tuft Curls under lower mandible
+    const chinTuftGeo = new THREE.CapsuleGeometry(0.075, 0.16, 6, 10);
+    chinTuftGeo.scale(0.9, 1.0, 0.65);
     for (const jx of [-0.14, 0, 0.14]) {
-      const chinCurl = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.045, 8, 14, Math.PI * 1.3), darkStoneMat);
-      chinCurl.position.set(jx, -0.46, 0.64 - Math.abs(jx) * 0.2);
-      chinCurl.rotation.set(0.5, jx * 1.2, 0);
-      headGroup.add(chinCurl);
+      const chinTuft = new THREE.Mesh(chinTuftGeo, darkStoneMat);
+      chinTuft.position.set(jx, -0.45, 0.48 - Math.abs(jx) * 0.14);
+      chinTuft.rotation.set(0.35, 0, jx * 0.35);
+      headGroup.add(chinTuft);
     }
 
     // Crimson Tongue in lower jaw
@@ -5320,18 +5570,18 @@ export class World3DEnvironment {
     );
     tongue.rotation.x = Math.PI / 2 + 0.15;
     tongue.scale.set(1.15, 1.0, 0.35);
-    tongue.position.set(0, -0.25, 0.60);
+    tongue.position.set(0, -0.24, 0.52);
     headGroup.add(tongue);
 
-    // 4 Chiseled White Canine Fangs + Incisor Row
-    for (const fx of [-0.17, 0.17]) {
-      const upperFang = new THREE.Mesh(new THREE.ConeGeometry(0.050, 0.18, 12), fangMat);
-      upperFang.position.set(fx, -0.10, 0.78);
+    // 4 Chiseled White Canine Fangs
+    for (const fx of [-0.175, 0.175]) {
+      const upperFang = new THREE.Mesh(new THREE.ConeGeometry(0.052, 0.19, 12), fangMat);
+      upperFang.position.set(fx, -0.10, 0.68);
       upperFang.rotation.x = Math.PI - 0.08;
       headGroup.add(upperFang);
 
-      const lowerFang = new THREE.Mesh(new THREE.ConeGeometry(0.044, 0.16, 12), fangMat);
-      lowerFang.position.set(fx * 0.86, -0.23, 0.73);
+      const lowerFang = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 12), fangMat);
+      lowerFang.position.set(fx * 0.86, -0.23, 0.63);
       lowerFang.rotation.x = 0.12;
       headGroup.add(lowerFang);
     }
@@ -5342,17 +5592,17 @@ export class World3DEnvironment {
       darkStoneMat
     );
     spout.rotation.x = Math.PI / 2;
-    spout.position.set(0, -0.12, 0.66);
+    spout.position.set(0, -0.12, 0.56);
     headGroup.add(spout);
 
-    // Chiseled Almond Eyes & Eyelid Hoods
-    for (const ex of [-0.32, 0.32]) {
-      const eyeLid = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.032, 8, 16, Math.PI), darkStoneMat);
+    // Chiseled Almond Eyes & Eyelid Hoods (brought forward slightly so clearly visible from 3/4 view!)
+    for (const ex of [-0.36, 0.36]) {
+      const eyeLid = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.034, 8, 16, Math.PI), darkStoneMat);
       eyeLid.position.set(ex, 0.18, 0.56);
-      eyeLid.rotation.y = ex > 0 ? 0.32 : -0.32;
+      eyeLid.rotation.y = ex > 0 ? 0.38 : -0.38;
       headGroup.add(eyeLid);
 
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 12), eyeMat);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.068, 12, 12), eyeMat);
       pupil.position.set(ex, 0.15, 0.56);
       headGroup.add(pupil);
     }
@@ -5379,55 +5629,31 @@ export class World3DEnvironment {
     }
 
     /* ============================================================== */
-    /* 11.4 28 Layered Sculpted Mane Curls (传统狮鬃卷云浮雕满铺领圈)   */
+    /* 11.4 Swept Architectural Stone Mane Locks (流线型浮雕石鬃披肩)   */
     /* ============================================================== */
-    const curlGeo = new THREE.TorusGeometry(0.19, 0.072, 10, 20, Math.PI * 1.55);
-    const curlConfigs = [
-      // Crown curls between ears
-      { x: -0.22, y: 0.68, z: -0.15, rx: -0.3, ry: 0, rz: 0.2 },
-      { x: 0.22, y: 0.68, z: -0.15, rx: -0.3, ry: 0, rz: -0.2 },
-      { x: 0.0, y: 0.72, z: 0.05, rx: 0.1, ry: 0, rz: 0.0 },
+    const headManeGeo = new THREE.CapsuleGeometry(0.125, 0.32, 8, 12);
+    headManeGeo.scale(1.05, 1.0, 0.58);
 
-      // Cheek curls cascading down jawline (Left side)
-      { x: -0.58, y: 0.22, z: 0.32, rx: 0.2, ry: -0.6, rz: 0.4 },
-      { x: -0.62, y: -0.05, z: 0.25, rx: 0.1, ry: -0.7, rz: 0.5 },
-      { x: -0.55, y: -0.28, z: 0.18, rx: 0.0, ry: -0.8, rz: 0.6 },
-      { x: -0.66, y: 0.08, z: -0.05, rx: 0.1, ry: -1.1, rz: 0.3 },
-
-      // Cheek curls cascading down jawline (Right side)
-      { x: 0.58, y: 0.22, z: 0.32, rx: 0.2, ry: 0.6, rz: -0.4 },
-      { x: 0.62, y: -0.05, z: 0.25, rx: 0.1, ry: 0.7, rz: -0.5 },
-      { x: 0.55, y: -0.28, z: 0.18, rx: 0.0, ry: 0.8, rz: -0.6 },
-      { x: 0.66, y: 0.08, z: -0.05, rx: 0.1, ry: 1.1, rz: -0.3 },
-
-      // Full-circle Neck & Chest Mantle Curls (bridging head to lofted neck seamlessly)
-      { x: -0.44, y: -0.52, z: 0.16, rx: 0.2, ry: -0.4, rz: 0.3 },
-      { x: 0.44, y: -0.52, z: 0.16, rx: 0.2, ry: 0.4, rz: -0.3 },
-      { x: -0.22, y: -0.64, z: 0.26, rx: 0.3, ry: -0.2, rz: 0.2 },
-      { x: 0.22, y: -0.64, z: 0.26, rx: 0.3, ry: 0.2, rz: -0.2 },
-      { x: 0.0, y: -0.68, z: 0.30, rx: 0.35, ry: 0, rz: 0.0 },
-      { x: -0.56, y: -0.46, z: -0.18, rx: 0.1, ry: -0.9, rz: 0.4 },
-      { x: 0.56, y: -0.46, z: -0.18, rx: 0.1, ry: 0.9, rz: -0.4 },
-
-      // Nape of neck & spine cascade
-      { x: -0.34, y: 0.32, z: -0.62, rx: -0.4, ry: -0.3, rz: 0.1 },
-      { x: 0.34, y: 0.32, z: -0.62, rx: -0.4, ry: 0.3, rz: -0.1 },
-      { x: 0.0, y: 0.22, z: -0.72, rx: -0.5, ry: 0, rz: 0.0 },
-      { x: -0.26, y: -0.15, z: -0.68, rx: -0.3, ry: -0.2, rz: 0.2 },
-      { x: 0.26, y: -0.15, z: -0.68, rx: -0.3, ry: 0.2, rz: -0.2 },
-      { x: 0.0, y: -0.42, z: -0.68, rx: -0.2, ry: 0, rz: 0.0 },
-      { x: -0.38, y: -0.58, z: -0.52, rx: -0.25, ry: -0.5, rz: 0.2 },
-      { x: 0.38, y: -0.58, z: -0.52, rx: -0.25, ry: 0.5, rz: -0.2 },
-      { x: 0.0, y: -0.72, z: -0.62, rx: -0.2, ry: 0, rz: 0.0 }
+    const maneCrownArcs = [
+      { count: 11, y: 0.48, r: 0.72, zOff: -0.06, tilt: -0.52 },
+      { count: 13, y: 0.14, r: 0.78, zOff: -0.08, tilt: -0.36 },
+      { count: 14, y: -0.22, r: 0.76, zOff: -0.05, tilt: -0.24 }
     ];
-
-    for (let cIdx = 0; cIdx < curlConfigs.length; cIdx++) {
-      const cc = curlConfigs[cIdx];
-      const curl = new THREE.Mesh(curlGeo, stoneMat);
-      curl.position.set(cc.x, cc.y, cc.z);
-      curl.rotation.set(cc.rx, cc.ry, cc.rz);
-      curl.castShadow = true;
-      headGroup.add(curl);
+    for (let row = 0; row < maneCrownArcs.length; row++) {
+      const arc = maneCrownArcs[row];
+      for (let m = 0; m < arc.count; m++) {
+        const frac = m / (arc.count - 1);
+        const ang = Math.PI * 0.76 + frac * Math.PI * 1.48;
+        const mx = Math.cos(ang) * arc.r * 0.94;
+        const mz = arc.zOff + Math.sin(ang) * arc.r * 1.02;
+        const lock = new THREE.Mesh(headManeGeo, (row + m) % 2 === 0 ? stoneMat : darkStoneMat);
+        lock.position.set(mx, arc.y, mz);
+        lock.rotation.order = "YXZ";
+        lock.rotation.y = -ang + Math.PI / 2;
+        lock.rotation.x = arc.tilt;
+        lock.castShadow = true;
+        headGroup.add(lock);
+      }
     }
 
     /* ============================================================== */
@@ -6781,34 +7007,34 @@ export class World3DEnvironment {
       banyanGroup.add(rootPivot);
     }
 
-    // 6. Lush Layered Sculpted Botanical Cloud Canopy Clusters (14 clusters with wind breathing)
+    // 6. Sunlit Stratified Tropical Botanical Cloud Canopy Clusters (14 clusters exposing gnarled boughs cleanly!)
     const canopyConfigs = [
-      // Lower outer clusters
-      { pos: [-3.2, 5.4, 1.8], rad: 2.8, col: 0x184422 },
-      { pos: [3.0, 5.2, -2.0], rad: 3.0, col: 0x184422 },
-      { pos: [-2.0, 5.6, -2.8], rad: 2.7, col: 0x1e4f2a },
-      { pos: [2.6, 5.5, 2.4], rad: 2.9, col: 0x1e4f2a },
-      { pos: [-3.5, 5.2, -0.6], rad: 2.5, col: 0x184422 },
-      { pos: [3.4, 5.4, 0.8], rad: 2.6, col: 0x1e4f2a },
-      // Mid canopy body
-      { pos: [0, 6.4, 0], rad: 3.8, col: 0x246234 },
-      { pos: [-2.0, 6.2, 1.0], rad: 3.2, col: 0x246234 },
-      { pos: [1.8, 6.3, -0.8], rad: 3.4, col: 0x286938 },
-      { pos: [0.6, 6.5, 1.8], rad: 2.8, col: 0x286938 },
-      { pos: [-1.2, 6.3, -1.8], rad: 2.7, col: 0x246234 },
-      // Upper crown apex (sunlit warm moss lime green)
-      { pos: [-0.8, 7.5, 0.5], rad: 2.5, col: 0x367c42 },
-      { pos: [1.0, 7.6, -0.4], rad: 2.4, col: 0x3c8548 },
-      { pos: [0, 7.8, 0], rad: 2.2, col: 0x449452 }
+      // Lower outer umbrella pads (rich jade-emerald, lifted slightly so gnarled boughs & aerial roots shine)
+      { pos: [-3.4, 5.75, 1.9], rad: 2.35, col: 0x2c6e38 },
+      { pos: [3.2, 5.65, -2.1], rad: 2.50, col: 0x2c6e38 },
+      { pos: [-2.2, 5.85, -2.9], rad: 2.30, col: 0x347b40 },
+      { pos: [2.8, 5.80, 2.5], rad: 2.45, col: 0x347b40 },
+      { pos: [-3.6, 5.65, -0.6], rad: 2.15, col: 0x2c6e38 },
+      { pos: [3.5, 5.75, 0.8], rad: 2.25, col: 0x347b40 },
+      // Mid canopy foliage tiers (warm sunlit tropical emerald)
+      { pos: [0, 6.75, 0], rad: 3.15, col: 0x3e8d48 },
+      { pos: [-2.1, 6.55, 1.1], rad: 2.65, col: 0x43944c },
+      { pos: [1.9, 6.65, -0.9], rad: 2.75, col: 0x489c50 },
+      { pos: [0.7, 6.85, 1.9], rad: 2.35, col: 0x489c50 },
+      { pos: [-1.3, 6.65, -1.9], rad: 2.30, col: 0x3e8d48 },
+      // Upper crown sunlit chartreuse-lime apex
+      { pos: [-0.9, 7.75, 0.5], rad: 2.15, col: 0x56ad59 },
+      { pos: [1.0, 7.85, -0.4], rad: 2.05, col: 0x60b861 },
+      { pos: [0, 8.15, 0], rad: 1.90, col: 0x6ec66b }
     ];
     const banyanLeafTex = getBanyanLeafTexture();
     canopyConfigs.forEach((cfg, cIdx) => {
       const mat = new THREE.MeshStandardMaterial({
         map: banyanLeafTex,
         color: cfg.col,
-        emissive: 0x0b2412,
-        emissiveIntensity: 0.16,
-        roughness: 0.78
+        emissive: 0x103018,
+        emissiveIntensity: 0.18,
+        roughness: 0.72
       });
       // High-resolution indexed organic botanical cloud pad (smooth normals + harmonic lobing!)
       const foliageGeo = new THREE.SphereGeometry(cfg.rad, 24, 18);
@@ -6952,45 +7178,107 @@ export class World3DEnvironment {
         crownGroup.add(coconut);
       }
 
-      // 11 Arching & Drooping Pinnate Feather Palm Fronds (双层自然下垂弧形羽状椰叶，含弯曲叶轴与14对羽状小叶)
-      const leafletGeo = new THREE.ConeGeometry(0.068, 0.56, 4);
-      leafletGeo.scale(0.32, 1.0, 1.0);
-      for (let f = 0; f < 11; f++) {
-        const isUpper = f < 5;
+      // 13 Graceful Arching & Drooping Feathered Pinnate Palm Fronds (single unified V-ribbon BufferGeometry per frond — zero toothpick sticks!)
+      const buildPalmFrondBladeGeo = (length: number, archLift: number, droopEnd: number): THREE.BufferGeometry => {
+        const positions: number[] = [];
+        const indices: number[] = [];
+
+        const spineCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(length * 0.30, archLift, 0),
+          new THREE.Vector3(length * 0.68, archLift * 0.25 + droopEnd * 0.28, 0),
+          new THREE.Vector3(length, droopEnd, 0)
+        ]);
+
+        // Tapered central rachis rib + 22 pairs of dense overlapping curved ribbon leaflets
+        const pairs = 22;
+        let vOffset = 0;
+        for (let p = 1; p <= pairs; p++) {
+          const u = p / (pairs + 1);
+          const rootPt = spineCurve.getPoint(u);
+          const env = Math.sin(Math.pow(u, 0.75) * Math.PI);
+          const bladeLen = (0.22 + 0.68 * env) * (length / 2.4);
+          const bladeHalfW = 0.042 * (0.55 + 0.45 * env);
+          const sweepX = bladeLen * (0.34 + 0.28 * u);
+
+          for (const side of [-1, 1]) {
+            const midX = rootPt.x + sweepX * 0.48;
+            const midY = rootPt.y - bladeLen * 0.22;
+            const midZ = side * bladeLen * 0.56;
+
+            const tipX = rootPt.x + sweepX;
+            const tipY = rootPt.y - bladeLen * 0.68;
+            const tipZ = side * bladeLen * 0.92;
+
+            // 5-vertex tapered curved leaflet ribbon (2 quads -> 3 triangles)
+            positions.push(
+              rootPt.x - bladeHalfW * 0.6, rootPt.y + 0.015, side * 0.012,
+              rootPt.x + bladeHalfW * 0.6, rootPt.y + 0.015, side * 0.012,
+              midX - bladeHalfW, midY, midZ,
+              midX + bladeHalfW, midY, midZ,
+              tipX, tipY, tipZ
+            );
+
+            indices.push(
+              vOffset + 0, vOffset + 2, vOffset + 1,
+              vOffset + 1, vOffset + 2, vOffset + 3,
+              vOffset + 2, vOffset + 4, vOffset + 3
+            );
+            vOffset += 5;
+          }
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geo.setIndex(indices);
+        geo.computeVertexNormals();
+        return geo;
+      };
+
+      const upperFrondGeo = buildPalmFrondBladeGeo(2.35, 0.48, -0.45);
+      const lowerFrondGeo = buildPalmFrondBladeGeo(2.55, 0.22, -0.96);
+      const palmUpperLeafMat = new THREE.MeshStandardMaterial({
+        color: 0x4ca64c,
+        roughness: 0.48,
+        side: THREE.DoubleSide
+      });
+      const palmLowerLeafMat = new THREE.MeshStandardMaterial({
+        color: 0x35823b,
+        roughness: 0.54,
+        side: THREE.DoubleSide
+      });
+
+      for (let f = 0; f < 13; f++) {
+        const isUpper = f < 6;
         const fAng = isUpper
-          ? (f / 5) * Math.PI * 2 + 0.3
-          : ((f - 5) / 6) * Math.PI * 2;
+          ? (f / 6) * Math.PI * 2 + 0.28
+          : ((f - 6) / 7) * Math.PI * 2;
 
         const frondArm = new THREE.Group();
-        frondArm.position.y = isUpper ? 0.24 : 0.14;
+        frondArm.position.y = isUpper ? 0.26 : 0.14;
         frondArm.rotation.y = fAng;
+        frondArm.rotation.x = (f % 3 - 1) * 0.05;
 
-        // Curved central rachis spine (叶轴)
         const rachisCurve = new THREE.CatmullRomCurve3([
           new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(0.65, isUpper ? 0.26 : 0.08, 0),
-          new THREE.Vector3(1.42, isUpper ? 0.06 : -0.22, 0),
-          new THREE.Vector3(2.15, isUpper ? -0.45 : -0.78, 0)
+          new THREE.Vector3(0.72, isUpper ? 0.48 : 0.22, 0),
+          new THREE.Vector3(1.62, isUpper ? 0.02 : -0.22, 0),
+          new THREE.Vector3(isUpper ? 2.35 : 2.55, isUpper ? -0.45 : -0.96, 0)
         ]);
-        const rachisGeo = new THREE.TubeGeometry(rachisCurve, 12, 0.022, 6, false);
-        const rachisMesh = new THREE.Mesh(rachisGeo, frondMat);
+        const rachisMesh = new THREE.Mesh(
+          new THREE.TubeGeometry(rachisCurve, 12, 0.024, 6, false),
+          palmLowerLeafMat
+        );
         rachisMesh.castShadow = true;
         frondArm.add(rachisMesh);
 
-        // 7 pairs of feathered pinnate leaflets along both sides of the curved rachis
-        for (let p = 1; p <= 7; p++) {
-          const u = p / 7.5;
-          const pt = rachisCurve.getPoint(u);
-          const scaleFactor = Math.sin(u * Math.PI) * 0.75 + 0.35;
-          for (const side of [-1, 1]) {
-            const leaflet = new THREE.Mesh(leafletGeo, frondMat);
-            leaflet.position.set(pt.x + 0.08, pt.y - 0.12 * scaleFactor, side * 0.18 * scaleFactor);
-            leaflet.scale.set(1.0, scaleFactor, 1.0);
-            leaflet.rotation.set(side * 1.12, side * -0.35, -0.35 - u * 0.45);
-            leaflet.castShadow = true;
-            frondArm.add(leaflet);
-          }
-        }
+        const bladeMesh = new THREE.Mesh(
+          isUpper ? upperFrondGeo : lowerFrondGeo,
+          isUpper ? palmUpperLeafMat : palmLowerLeafMat
+        );
+        bladeMesh.castShadow = true;
+        bladeMesh.receiveShadow = true;
+        frondArm.add(bladeMesh);
 
         crownGroup.add(frondArm);
       }
@@ -7367,63 +7655,87 @@ export class World3DEnvironment {
       this.curatorNPCGroup.add(shoeGroup);
     }
 
-    // 14.2 Contoured Multi-Ring Lofted Trench Coat & Peranakan Kebaya Collar
+    // 14.2 Tailored Two-Piece Archival Trench Blazer & Pleated Batik-Silk Midi Skirt (replaces wide bell cone!)
     const coatGroup = new THREE.Group();
     coatGroup.position.set(0, 1.06, 0);
     this.curatorNPCGroup.add(coatGroup);
 
-    const coatTorsoGeo = this.createAnatomicalGarmentGeometry(0.41, 0.265, 0.295, 1.12, 0.68);
+    // Pleated Batik-Burgundy Midi Skirt beneath blazer hem
+    const midiSkirtGeo = new THREE.CylinderGeometry(0.22, 0.275, 0.46, 32);
+    const skirtPos = midiSkirtGeo.attributes.position;
+    for (let i = 0; i < skirtPos.count; i++) {
+      const vx = skirtPos.getX(i);
+      const vy = skirtPos.getY(i);
+      const vz = skirtPos.getZ(i);
+      const ang = Math.atan2(vz, vx);
+      const pleat = 1 + 0.032 * Math.cos(ang * 12) * Math.max(0, (0.23 - vy) / 0.46);
+      skirtPos.setXYZ(i, vx * pleat, vy, vz * 0.76 * pleat);
+    }
+    midiSkirtGeo.computeVertexNormals();
+    const midiSkirtMesh = new THREE.Mesh(midiSkirtGeo, kebayaSilkMat);
+    midiSkirtMesh.position.y = -0.34;
+    midiSkirtMesh.castShadow = true;
+    coatGroup.add(midiSkirtMesh);
+
+    const skirtGoldBorder = new THREE.Mesh(new THREE.TorusGeometry(0.276, 0.011, 8, 32), kebayaGoldTrimMat);
+    skirtGoldBorder.rotation.x = Math.PI / 2;
+    skirtGoldBorder.scale.set(1.0, 0.76, 1.0);
+    skirtGoldBorder.position.y = -0.56;
+    coatGroup.add(skirtGoldBorder);
+
+    // Tailored Peplum Archival Blazer Jacket
+    const coatTorsoGeo = this.createAnatomicalGarmentGeometry(0.295, 0.228, 0.268, 0.80, 0.70);
     const coatTorsoMesh = new THREE.Mesh(coatTorsoGeo, trenchMat);
-    coatTorsoMesh.position.y = 0.03;
+    coatTorsoMesh.position.y = 0.16;
     coatTorsoMesh.castShadow = true;
     coatTorsoMesh.receiveShadow = true;
     coatGroup.add(coatTorsoMesh);
 
-    // Coat hem trim ring
-    const skirtHem = new THREE.Mesh(new THREE.TorusGeometry(0.405, 0.016, 8, 28), lapelMat);
+    // Blazer peplum hem trim
+    const skirtHem = new THREE.Mesh(new THREE.TorusGeometry(0.292, 0.013, 8, 28), lapelMat);
     skirtHem.rotation.x = Math.PI / 2;
     skirtHem.scale.set(1.0, 0.72, 1.0);
-    skirtHem.position.y = -0.52;
+    skirtHem.position.y = -0.23;
     coatGroup.add(skirtHem);
 
-    // Right shoulder storm flap (gun flap - 1930s trench coat detail)
-    const stormFlap = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.20, 0.022), lapelMat);
-    stormFlap.position.set(0.13, 0.36, 0.195);
-    stormFlap.rotation.set(-0.12, 0.12, 0.05);
+    // Right shoulder storm flap
+    const stormFlap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.17, 0.018), lapelMat);
+    stormFlap.position.set(0.115, 0.36, 0.178);
+    stormFlap.rotation.set(-0.12, 0.14, 0.05);
     coatGroup.add(stormFlap);
 
     // Cinched Leather Waist Belt with Brass Buckle
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.275, 0.280, 0.075, 24), leatherMat);
-    belt.scale.set(1.02, 1.0, 0.70);
-    belt.position.set(0, -0.06, 0);
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.236, 0.240, 0.068, 24), leatherMat);
+    belt.scale.set(1.02, 1.0, 0.72);
+    belt.position.set(0, -0.02, 0);
     coatGroup.add(belt);
 
-    const beltBuckle = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.088, 0.035), brassMat);
-    beltBuckle.position.set(0, -0.06, 0.195);
+    const beltBuckle = new THREE.Mesh(new THREE.BoxGeometry(0.088, 0.078, 0.032), brassMat);
+    beltBuckle.position.set(0, -0.02, 0.176);
     coatGroup.add(beltBuckle);
 
     // Peranakan Kebaya Silk Collar & Gold Embroidery Trim peaking through lapels
     for (const [kSide, kRot] of [[-1, 0.22], [1, -0.22]]) {
-      const kebayaPanel = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.34, 0.022), kebayaSilkMat);
-      kebayaPanel.position.set(kSide * 0.052, 0.32, 0.195);
+      const kebayaPanel = new THREE.Mesh(new THREE.BoxGeometry(0.068, 0.30, 0.020), kebayaSilkMat);
+      kebayaPanel.position.set(kSide * 0.048, 0.33, 0.176);
       kebayaPanel.rotation.set(-0.14, 0, kRot);
       coatGroup.add(kebayaPanel);
 
-      const goldTrim = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.34, 0.026), kebayaGoldTrimMat);
-      goldTrim.position.set(kSide * 0.024, 0.32, 0.20);
+      const goldTrim = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.30, 0.024), kebayaGoldTrimMat);
+      goldTrim.position.set(kSide * 0.022, 0.33, 0.180);
       goldTrim.rotation.set(-0.14, 0, kRot);
       coatGroup.add(goldTrim);
 
-      const floralAccent = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), kebayaTealAccentMat);
-      floralAccent.position.set(kSide * 0.042, 0.26, 0.205);
+      const floralAccent = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 8), kebayaTealAccentMat);
+      floralAccent.position.set(kSide * 0.038, 0.27, 0.185);
       coatGroup.add(floralAccent);
     }
 
     // Traditional Peranakan Kerosang (3-tier gold filigree brooch set fastening the kebaya)
-    for (const [ky, kr] of [[0.25, 0.020], [0.18, 0.017], [0.11, 0.017]]) {
+    for (const [ky, kr] of [[0.26, 0.018], [0.19, 0.015], [0.12, 0.015]]) {
       const kerosang = new THREE.Mesh(new THREE.SphereGeometry(kr, 10, 10), brassMat);
       kerosang.scale.set(1.0, 1.0, 0.55);
-      kerosang.position.set(0, ky, 0.212);
+      kerosang.position.set(0, ky, 0.192);
       coatGroup.add(kerosang);
     }
 
@@ -7432,54 +7744,55 @@ export class World3DEnvironment {
       [1, -0.18],
       [-1, 0.18]
     ]) {
-      const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.34, 0.030), lapelMat);
-      lapel.position.set(side * 0.105, 0.30, 0.195);
-      lapel.rotation.set(-0.14, side * 0.12, rotZ);
+      const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.31, 0.024), lapelMat);
+      lapel.position.set(side * 0.092, 0.31, 0.178);
+      lapel.rotation.set(-0.14, side * 0.14, rotZ);
       coatGroup.add(lapel);
 
-      const epaulette = new THREE.Mesh(new THREE.CapsuleGeometry(0.028, 0.11, 6, 10), lapelMat);
-      epaulette.rotation.z = Math.PI / 2 + side * -0.18;
+      const epaulette = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.095, 6, 10), lapelMat);
+      epaulette.rotation.z = Math.PI / 2 + side * -0.20;
       epaulette.scale.set(1.0, 1.0, 0.45);
-      epaulette.position.set(side * 0.23, 0.50, 0);
+      epaulette.position.set(side * 0.195, 0.49, 0);
       coatGroup.add(epaulette);
 
-      const epauletteButton = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), brassMat);
-      epauletteButton.position.set(side * 0.17, 0.52, 0);
+      const epauletteButton = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), brassMat);
+      epauletteButton.position.set(side * 0.145, 0.51, 0);
       coatGroup.add(epauletteButton);
     }
 
     // Double-breasted brass button columns down front
-    for (const by of [0.36, 0.22, 0.08]) {
-      for (const bx of [-0.07, 0.07]) {
-        const button = new THREE.Mesh(new THREE.SphereGeometry(0.020, 8, 8), brassMat);
-        button.position.set(bx, by, 0.205);
+    for (const by of [0.35, 0.21, 0.08]) {
+      for (const bx of [-0.062, 0.062]) {
+        const button = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 8), brassMat);
+        button.position.set(bx, by, 0.186);
         coatGroup.add(button);
       }
     }
 
     // Curator Museum ID Badge pinned to left lapel
-    const badge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.11, 0.022), brassMat);
-    badge.position.set(0.14, 0.34, 0.21);
+    const badge = new THREE.Mesh(new THREE.BoxGeometry(0.068, 0.095, 0.018), brassMat);
+    badge.position.set(0.125, 0.34, 0.192);
     coatGroup.add(badge);
 
-    // 14.3 Red Cashmere Scarf with Knotted Tail
+    // 14.3 Refined Silk Cravat Collar & Soft Knotted Drape (replaces thick red neck tire!)
     const scarfGroup = new THREE.Group();
     scarfGroup.position.set(0, 1.60, 0);
     this.curatorNPCGroup.add(scarfGroup);
 
-    const scarfCollar = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.058, 12, 24), scarfMat);
+    const scarfCollar = new THREE.Mesh(new THREE.TorusGeometry(0.118, 0.024, 10, 24), scarfMat);
     scarfCollar.rotation.x = Math.PI / 2;
-    scarfCollar.scale.set(1.0, 0.86, 1.0);
+    scarfCollar.scale.set(1.0, 0.88, 1.0);
     scarfGroup.add(scarfCollar);
 
-    const scarfKnot = new THREE.Mesh(new THREE.SphereGeometry(0.068, 12, 12), scarfMat);
-    scarfKnot.position.set(0.04, -0.04, 0.16);
+    const scarfKnot = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), scarfMat);
+    scarfKnot.scale.set(1.1, 0.85, 0.75);
+    scarfKnot.position.set(0.025, -0.035, 0.125);
     scarfGroup.add(scarfKnot);
 
-    const scarfTail = new THREE.Mesh(new THREE.CapsuleGeometry(0.042, 0.22, 8, 12), scarfMat);
-    scarfTail.scale.set(1.15, 1.0, 0.38);
-    scarfTail.position.set(0.05, -0.17, 0.18);
-    scarfTail.rotation.z = -0.12;
+    const scarfTail = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.16, 8, 12), scarfMat);
+    scarfTail.scale.set(1.15, 1.0, 0.32);
+    scarfTail.position.set(0.032, -0.13, 0.145);
+    scarfTail.rotation.z = -0.14;
     scarfGroup.add(scarfTail);
 
     // 14.4 Sculpted Head, Facial Features, 1930s Marcel Hair Waves & Spectacles
@@ -7584,146 +7897,151 @@ export class World3DEnvironment {
     hairpinFinial.position.set(Math.cos(0.7) * 0.17, 0.09 + Math.sin(0.7) * 0.17, -0.205);
     headGroup.add(hairpinFinial);
 
-    // Wireframe Round Spectacles
-    const glassesBridge = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.044, 8), glassesMat);
+    // Delicate Vintage Gold-Wire Round Spectacles (replaces thick goggle rings!)
+    const glassesBridge = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.036, 8), glassesMat);
     glassesBridge.rotation.z = Math.PI / 2;
-    glassesBridge.position.set(0, 0.032, 0.205);
+    glassesBridge.position.set(0, 0.034, 0.204);
     headGroup.add(glassesBridge);
 
-    for (const gx of [-0.066, 0.066]) {
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.054, 0.010, 8, 20), glassesMat);
+    for (const gx of [-0.064, 0.064]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.044, 0.0052, 8, 24), glassesMat);
       rim.position.set(gx, 0.032, 0.198);
       headGroup.add(rim);
 
-      const templeArm = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.19, 6), glassesMat);
+      const templeArm = new THREE.Mesh(new THREE.CylinderGeometry(0.0038, 0.0038, 0.18, 6), glassesMat);
       templeArm.rotation.x = Math.PI / 2;
-      templeArm.position.set(gx > 0 ? 0.118 : -0.118, 0.032, 0.10);
+      templeArm.position.set(gx > 0 ? 0.108 : -0.108, 0.032, 0.105);
       headGroup.add(templeArm);
     }
 
-    // 14.5 Articulated Capsule Arms, Sloped Shoulder/Elbow Joints & Sculpted Hands
-    const shoulderCapL = new THREE.Mesh(new THREE.SphereGeometry(0.080, 14, 12), trenchMat);
+    // 14.5 Tailored Articulated Capsule Arms, Flush Joints & Sculpted Hands
+    const shoulderCapL = new THREE.Mesh(new THREE.SphereGeometry(0.068, 14, 12), trenchMat);
     shoulderCapL.scale.set(0.88, 0.76, 0.88);
-    shoulderCapL.position.set(-0.26, 1.48, 0.0);
+    shoulderCapL.position.set(-0.23, 1.49, 0.0);
     shoulderCapL.castShadow = true;
     this.curatorNPCGroup.add(shoulderCapL);
 
-    const upperArmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.068, 0.24, 8, 14), trenchMat);
-    upperArmL.position.set(-0.28, 1.34, 0.03);
-    upperArmL.rotation.set(-0.18, 0, -0.10);
+    const upperArmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.058, 0.24, 8, 14), trenchMat);
+    upperArmL.position.set(-0.25, 1.35, 0.02);
+    upperArmL.rotation.set(-0.18, 0, -0.08);
     upperArmL.castShadow = true;
     this.curatorNPCGroup.add(upperArmL);
 
-    const elbowL = new THREE.Mesh(new THREE.SphereGeometry(0.066, 12, 10), trenchMat);
-    elbowL.position.set(-0.29, 1.18, 0.07);
+    const elbowL = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 10), trenchMat);
+    elbowL.position.set(-0.26, 1.20, 0.06);
     this.curatorNPCGroup.add(elbowL);
 
-    const forearmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.062, 0.22, 8, 14), trenchMat);
-    forearmL.position.set(-0.25, 1.07, 0.16);
-    forearmL.rotation.set(-0.62, 0.28, 0.22);
+    const forearmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.22, 8, 14), trenchMat);
+    forearmL.position.set(-0.22, 1.10, 0.15);
+    forearmL.rotation.set(-0.78, 0.32, 0.24);
     forearmL.castShadow = true;
     this.curatorNPCGroup.add(forearmL);
 
-    const cuffTabL = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.015, 8, 16), lapelMat);
-    cuffTabL.position.set(-0.23, 0.99, 0.22);
-    cuffTabL.rotation.set(0.95, 0.28, 0.22);
+    const cuffTabL = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 8, 16), lapelMat);
+    cuffTabL.position.set(-0.19, 1.03, 0.22);
+    cuffTabL.rotation.set(0.82, 0.32, 0.24);
     this.curatorNPCGroup.add(cuffTabL);
 
-    // Sculpted Left Hand holding archival clipboard
+    // Sculpted Left Hand cradling angled archival leather folio
     const handLGroup = new THREE.Group();
-    handLGroup.position.set(-0.21, 0.96, 0.24);
-    handLGroup.rotation.set(-0.35, 0.15, -0.15);
+    handLGroup.position.set(-0.17, 1.00, 0.24);
+    handLGroup.rotation.set(-0.55, 0.20, -0.15);
 
-    const palmL = new THREE.Mesh(new THREE.SphereGeometry(0.044, 12, 10), skinMat);
+    const palmL = new THREE.Mesh(new THREE.SphereGeometry(0.040, 12, 10), skinMat);
     palmL.scale.set(0.85, 0.55, 1.12);
     handLGroup.add(palmL);
 
-    const thumbL = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.036, 4, 8), skinMat);
-    thumbL.position.set(0.035, 0.015, -0.01);
+    const thumbL = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, 0.032, 4, 8), skinMat);
+    thumbL.position.set(0.032, 0.015, -0.01);
     thumbL.rotation.set(0.2, -0.3, -0.6);
     handLGroup.add(thumbL);
 
     for (let f = 0; f < 4; f++) {
-      const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.010, 0.042, 4, 8), skinMat);
-      finger.position.set(0.022 - f * 0.015, -0.015, 0.035);
+      const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.009, 0.038, 4, 8), skinMat);
+      finger.position.set(0.020 - f * 0.013, -0.014, 0.032);
       finger.rotation.set(0.4, 0, 0);
       handLGroup.add(finger);
     }
     this.curatorNPCGroup.add(handLGroup);
 
-    // Leather clipboard / archival ledger with brass clamp & inscribed rubbing notes
+    // Angled Leather Archival Folio with Gilt Spine & Inscribed Rubbing Sheet (natural reading tilt!)
     const clipboardGroup = new THREE.Group();
-    clipboardGroup.position.set(-0.14, 1.14, 0.27);
-    clipboardGroup.rotation.set(-0.38, 0.18, -0.10);
+    clipboardGroup.position.set(-0.15, 1.08, 0.26);
+    clipboardGroup.rotation.set(-0.88, 0.28, -0.18);
 
-    const clipboard = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 0.032), leatherMat);
+    const clipboard = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.36, 0.026), leatherMat);
+    clipboard.castShadow = true;
     clipboardGroup.add(clipboard);
 
-    const clipClamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.038), brassMat);
-    clipClamp.position.set(0, 0.19, 0.01);
+    const giltSpine = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.365, 0.032), brassMat);
+    giltSpine.position.set(-0.13, 0, 0);
+    clipboardGroup.add(giltSpine);
+
+    const clipClamp = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.032, 0.034), brassMat);
+    clipClamp.position.set(0, 0.165, 0.006);
     clipboardGroup.add(clipClamp);
 
-    const paper = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.34, 0.008), paperMat);
-    paper.position.set(0, -0.01, 0.018);
+    const paper = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.29, 0.008), paperMat);
+    paper.position.set(0.01, -0.01, 0.015);
     clipboardGroup.add(paper);
 
     for (let li = 0; li < 5; li++) {
-      const lineW = li === 0 ? 0.14 : (li === 4 ? 0.12 : 0.19);
-      const inkLine = new THREE.Mesh(new THREE.BoxGeometry(lineW, 0.009, 0.004), inkLineMat);
-      inkLine.position.set(li === 0 ? 0 : -0.015, 0.10 - li * 0.048, 0.023);
+      const lineW = li === 0 ? 0.12 : (li === 4 ? 0.10 : 0.16);
+      const inkLine = new THREE.Mesh(new THREE.BoxGeometry(lineW, 0.008, 0.004), inkLineMat);
+      inkLine.position.set(li === 0 ? 0.01 : -0.005, 0.085 - li * 0.042, 0.020);
       clipboardGroup.add(inkLine);
     }
-    const redSeal = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.036, 0.005), kebayaSilkMat);
-    redSeal.position.set(0.075, -0.11, 0.023);
+    const redSeal = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.032, 0.005), kebayaSilkMat);
+    redSeal.position.set(0.068, -0.095, 0.020);
     clipboardGroup.add(redSeal);
 
     this.curatorNPCGroup.add(clipboardGroup);
 
-    // Right Arm: Spherical shoulder cap -> Capsule upper arm -> Spherical elbow -> Capsule forearm holding briefcase
-    const shoulderCapR = new THREE.Mesh(new THREE.SphereGeometry(0.082, 14, 12), trenchMat);
-    shoulderCapR.position.set(0.26, 1.48, 0.0);
+    // Right Arm: Flush shoulder & elbow joints holding leather archival briefcase
+    const shoulderCapR = new THREE.Mesh(new THREE.SphereGeometry(0.068, 14, 12), trenchMat);
+    shoulderCapR.position.set(0.23, 1.49, 0.0);
     shoulderCapR.scale.set(0.88, 0.76, 0.88);
     shoulderCapR.castShadow = true;
     this.curatorNPCGroup.add(shoulderCapR);
 
-    const upperArmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.072, 0.25, 8, 14), trenchMat);
-    upperArmR.position.set(0.31, 1.35, 0.01);
-    upperArmR.rotation.set(0.06, 0, 0.14);
+    const upperArmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.058, 0.25, 8, 14), trenchMat);
+    upperArmR.position.set(0.27, 1.35, 0.01);
+    upperArmR.rotation.set(0.06, 0, 0.12);
     upperArmR.castShadow = true;
     this.curatorNPCGroup.add(upperArmR);
 
-    const elbowR = new THREE.Mesh(new THREE.SphereGeometry(0.070, 12, 10), trenchMat);
-    elbowR.position.set(0.35, 1.19, 0.02);
+    const elbowR = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 10), trenchMat);
+    elbowR.position.set(0.30, 1.20, 0.02);
     this.curatorNPCGroup.add(elbowR);
 
-    const forearmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.064, 0.22, 8, 14), trenchMat);
-    forearmR.position.set(0.39, 1.06, 0.04);
-    forearmR.rotation.set(0.12, 0, 0.16);
+    const forearmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.22, 8, 14), trenchMat);
+    forearmR.position.set(0.33, 1.07, 0.035);
+    forearmR.rotation.set(0.10, 0, 0.12);
     forearmR.castShadow = true;
     this.curatorNPCGroup.add(forearmR);
 
-    const cuffTabR = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.015, 8, 16), lapelMat);
-    cuffTabR.position.set(0.43, 0.98, 0.045);
-    cuffTabR.rotation.set(Math.PI / 2 + 0.12, 0, 0.18);
+    const cuffTabR = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 8, 16), lapelMat);
+    cuffTabR.position.set(0.355, 0.98, 0.045);
+    cuffTabR.rotation.set(Math.PI / 2 + 0.10, 0, 0.14);
     this.curatorNPCGroup.add(cuffTabR);
 
     // Sculpted Right Hand gripping briefcase handle
     const handRGroup = new THREE.Group();
-    handRGroup.position.set(0.45, 0.95, 0.05);
+    handRGroup.position.set(0.37, 0.94, 0.05);
     handRGroup.rotation.y = 0.15;
 
-    const palmR = new THREE.Mesh(new THREE.SphereGeometry(0.044, 12, 10), skinMat);
+    const palmR = new THREE.Mesh(new THREE.SphereGeometry(0.040, 12, 10), skinMat);
     palmR.scale.set(0.85, 0.55, 1.12);
     handRGroup.add(palmR);
 
-    const thumbR = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.036, 4, 8), skinMat);
-    thumbR.position.set(-0.035, 0.015, -0.01);
+    const thumbR = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, 0.032, 4, 8), skinMat);
+    thumbR.position.set(-0.032, 0.014, -0.01);
     thumbR.rotation.set(0.2, 0.3, 0.6);
     handRGroup.add(thumbR);
 
     for (let f = 0; f < 4; f++) {
-      const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.010, 0.042, 4, 8), skinMat);
-      finger.position.set(-0.022 + f * 0.015, -0.018, 0.035);
+      const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.009, 0.038, 4, 8), skinMat);
+      finger.position.set(-0.020 + f * 0.013, -0.016, 0.032);
       finger.rotation.set(1.2, 0, 0);
       handRGroup.add(finger);
     }
@@ -7731,7 +8049,7 @@ export class World3DEnvironment {
 
     // Archival Leather Briefcase
     const briefcaseGroup = new THREE.Group();
-    briefcaseGroup.position.set(0.46, 0.82, 0.05);
+    briefcaseGroup.position.set(0.38, 0.80, 0.05);
     briefcaseGroup.rotation.y = 0.15;
 
     const briefcaseBody = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.38, 0.48), leatherMat);
@@ -7882,8 +8200,8 @@ export class World3DEnvironment {
     torsoGroup.position.set(0, 1.25, 0);
     this.boatmanNPCGroup.add(torsoGroup);
 
-    // Anatomically contoured Samfoo tunic body (zero circular tin-can silhouette!)
-    const tunicGeo = this.createAnatomicalGarmentGeometry(0.355, 0.285, 0.335, 0.92, 0.66);
+    // Anatomically contoured Samfoo tunic body (tailored hem — zero bell-cone flare!)
+    const tunicGeo = this.createAnatomicalGarmentGeometry(0.295, 0.262, 0.305, 0.90, 0.68);
     const tunicBody = new THREE.Mesh(tunicGeo, tunicMat);
     tunicBody.castShadow = true;
     tunicBody.receiveShadow = true;

@@ -115,6 +115,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
   const sceneLightsRef = useRef<{
     scene: THREE.Scene;
     keySpot: THREE.SpotLight;
+    frontLight: THREE.DirectionalLight;
     fillSpot: THREE.DirectionalLight;
     rimLight: THREE.DirectionalLight;
   } | null>(null);
@@ -156,49 +157,106 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
       scene.environment = studioEnvRT.texture;
     }
 
-    // Studio Ambient & Spot Lighting
-    const ambientLight = new THREE.AmbientLight(0xd9ecd9, 0.95);
+    // Studio Museum Gallery 4-Point + Hemisphere Lighting
+    const ambientLight = new THREE.AmbientLight(0xe4efe9, 0.72);
     scene.add(ambientLight);
 
-    const keySpot = new THREE.SpotLight(0xfff1cf, 3.8);
-    keySpot.position.set(4, 6, 5);
-    keySpot.angle = Math.PI / 4;
-    keySpot.penumbra = 0.5;
-    keySpot.castShadow = true;
+    const hemiLight = new THREE.HemisphereLight(0xfff6e5, 0x162927, 0.88);
+    scene.add(hemiLight);
+
+    const keySpot = new THREE.SpotLight(0xfff1cf, 3.6);
+    keySpot.position.set(3.8, 5.6, 5.2);
+    keySpot.angle = Math.PI / 3.5;
+    keySpot.penumbra = 0.55;
+    keySpot.castShadow = !isSoftwareWebGL;
     scene.add(keySpot);
 
-    const fillSpot = new THREE.DirectionalLight(0x2bc7ab, 1.4);
-    fillSpot.position.set(-5, -2, -3);
+    const frontLight = new THREE.DirectionalLight(0xfff4df, 1.95);
+    frontLight.position.set(-2.4, 1.8, 5.8);
+    scene.add(frontLight);
+
+    const fillSpot = new THREE.DirectionalLight(0x2bc7ab, 1.25);
+    fillSpot.position.set(-5, -1.5, -3);
     scene.add(fillSpot);
 
-    const rimLight = new THREE.DirectionalLight(0xd1a95d, 2.0);
-    rimLight.position.set(0, 5, -4);
+    const rimLight = new THREE.DirectionalLight(0xd1a95d, 2.1);
+    rimLight.position.set(0.5, 4.8, -4.5);
     scene.add(rimLight);
 
-    sceneLightsRef.current = { scene, keySpot, fillSpot, rimLight };
+    sceneLightsRef.current = { scene, keySpot, frontLight, fillSpot, rimLight };
 
-    // Pedestal disk
-    const pedestalGeo = new THREE.CylinderGeometry(2.4, 2.7, 0.2, 48);
-    const pedestalMat = new THREE.MeshStandardMaterial({
-      color: 0x091413,
-      roughness: 0.4,
-      metalness: 0.8
-    });
-    const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
-    pedestal.position.y = -2.1;
-    pedestal.receiveShadow = true;
-    scene.add(pedestal);
+    // Stepped Museum Exhibition Plinth & Velvet Turntable
+    const pedestalGroup = new THREE.Group();
+    pedestalGroup.position.y = -2.05;
+    scene.add(pedestalGroup);
 
-    const pedestalRingGeo = new THREE.TorusGeometry(2.5, 0.03, 8, 48);
-    const pedestalRingMat = new THREE.MeshStandardMaterial({
-      color: 0xd1a95d,
-      emissive: 0xd1a95d,
-      emissiveIntensity: 0.4
-    });
-    const pedestalRing = new THREE.Mesh(pedestalRingGeo, pedestalRingMat);
-    pedestalRing.rotation.x = Math.PI / 2;
-    pedestalRing.position.y = -2.0;
-    scene.add(pedestalRing);
+    const pedestalDisposables: Array<{ dispose: () => void }> = [];
+    const trackDisp = <T extends { dispose: () => void }>(item: T): T => {
+      pedestalDisposables.push(item);
+      return item;
+    };
+
+    const plinthMat = trackDisp(
+      new THREE.MeshStandardMaterial({
+        color: 0x0d1918,
+        roughness: 0.36,
+        metalness: 0.62
+      })
+    );
+    const velvetMat = trackDisp(
+      new THREE.MeshStandardMaterial({
+        color: 0x132e29,
+        roughness: 0.9,
+        metalness: 0.06
+      })
+    );
+    const pedestalBrassMat = trackDisp(
+      new THREE.MeshStandardMaterial({
+        color: 0xd8b164,
+        emissive: 0x5d4418,
+        emissiveIntensity: 0.32,
+        roughness: 0.26,
+        metalness: 0.86
+      })
+    );
+
+    const baseStep = new THREE.Mesh(
+      trackDisp(new THREE.CylinderGeometry(2.48, 2.74, 0.16, 64)),
+      plinthMat
+    );
+    baseStep.position.y = -0.12;
+    baseStep.receiveShadow = true;
+    pedestalGroup.add(baseStep);
+
+    const upperDeck = new THREE.Mesh(
+      trackDisp(new THREE.CylinderGeometry(2.14, 2.34, 0.16, 64)),
+      plinthMat
+    );
+    upperDeck.position.y = 0.03;
+    upperDeck.receiveShadow = true;
+    pedestalGroup.add(upperDeck);
+
+    const velvetPad = new THREE.Mesh(
+      trackDisp(new THREE.CylinderGeometry(1.88, 1.94, 0.05, 64)),
+      velvetMat
+    );
+    velvetPad.position.y = 0.125;
+    velvetPad.receiveShadow = true;
+    pedestalGroup.add(velvetPad);
+
+    for (const [radius, tube, ry] of [
+      [2.52, 0.026, -0.04],
+      [2.16, 0.024, 0.11],
+      [1.90, 0.016, 0.15]
+    ] as const) {
+      const ring = new THREE.Mesh(
+        trackDisp(new THREE.TorusGeometry(radius, tube, 10, 64)),
+        pedestalBrassMat
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = ry;
+      pedestalGroup.add(ring);
+    }
 
     // Build Current 3D Artifact Model
     const artifactHandle = createArtifact3D(activeId);
@@ -299,10 +357,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
       domElement.removeEventListener("wheel", onWheel);
 
       artifactHandle.dispose();
-      pedestalGeo.dispose();
-      pedestalMat.dispose();
-      pedestalRingGeo.dispose();
-      pedestalRingMat.dispose();
+      for (const d of pedestalDisposables) d.dispose();
       studioEnvRT?.dispose();
       renderer.dispose();
       if (container.contains(domElement)) {
@@ -318,9 +373,10 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
       handleRef.current.setUvMode(uvMode);
     }
     if (sceneLightsRef.current) {
-      const { scene, keySpot, fillSpot, rimLight } = sceneLightsRef.current;
+      const { scene, keySpot, frontLight, fillSpot, rimLight } = sceneLightsRef.current;
       scene.background = getMuseumBackdropTexture(uvMode);
       keySpot.color.setHex(uvMode ? 0x7c4dff : 0xfff1cf);
+      frontLight.color.setHex(uvMode ? 0x8e6bff : 0xfff4df);
       fillSpot.color.setHex(uvMode ? 0x00f2fe : 0x2bc7ab);
       rimLight.color.setHex(uvMode ? 0x3de0c8 : 0xd1a95d);
     }

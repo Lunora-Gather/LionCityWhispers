@@ -29,28 +29,86 @@ function createAstrolabeDialTexture(ringIndex: number): THREE.CanvasTexture {
 
   ctx.clearRect(0, 0, 512, 512);
 
-  // Concentric division marks
-  ctx.strokeStyle = "rgba(255, 215, 0, 0.75)";
-  ctx.lineWidth = 3;
+  // Subtle engraved concentric rings
+  for (const r of [188, 212, 238]) {
+    ctx.strokeStyle = "rgba(68, 42, 12, 0.55)";
+    ctx.lineWidth = r === 212 ? 2.2 : 1.3;
+    ctx.beginPath();
+    ctx.arc(256, 256, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
-  const count = ringIndex === 0 ? 24 : ringIndex === 1 ? 16 : 8;
+  // Precision division graduations + bright inlaid gold major markers
+  const count = ringIndex === 0 ? 48 : ringIndex === 1 ? 32 : 24;
   for (let i = 0; i < count; i++) {
     const angle = (i * Math.PI * 2) / count;
-    const r1 = 200;
-    const r2 = 235;
+    const major = i % 4 === 0;
+    const r1 = major ? 186 : 208;
+    const r2 = 240;
+    ctx.strokeStyle = major ? "rgba(255, 226, 132, 0.92)" : "rgba(74, 46, 14, 0.68)";
+    ctx.lineWidth = major ? 3.2 : 1.6;
     ctx.beginPath();
     ctx.moveTo(256 + Math.cos(angle) * r1, 256 + Math.sin(angle) * r1);
     ctx.lineTo(256 + Math.cos(angle) * r2, 256 + Math.sin(angle) * r2);
     ctx.stroke();
   }
 
-  // Target pointer star marker at target position
-  ctx.fillStyle = "#ffd700";
-  ctx.shadowColor = "#ffaa00";
-  ctx.shadowBlur = 8;
-  ctx.beginPath();
-  ctx.arc(256, 38, 10, 0, Math.PI * 2);
-  ctx.fill();
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createStarWellTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d")!;
+
+  const grad = ctx.createRadialGradient(256, 256, 20, 256, 256, 256);
+  grad.addColorStop(0, "#1c2827");
+  grad.addColorStop(0.65, "#111a19");
+  grad.addColorStop(1, "#090f0f");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Engraved celestial azimuth circles & rhumb lines
+  ctx.strokeStyle = "rgba(212, 172, 92, 0.34)";
+  ctx.lineWidth = 1.4;
+  for (const r of [64, 118, 174, 226]) {
+    ctx.beginPath();
+    ctx.arc(256, 256, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  for (let a = 0; a < 16; a++) {
+    const ang = (a * Math.PI) / 8;
+    ctx.beginPath();
+    ctx.moveTo(256 + Math.cos(ang) * 42, 256 + Math.sin(ang) * 42);
+    ctx.lineTo(256 + Math.cos(ang) * 244, 256 + Math.sin(ang) * 244);
+    ctx.stroke();
+  }
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createRosewoodTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d")!;
+
+  const grad = ctx.createLinearGradient(0, 0, 256, 256);
+  grad.addColorStop(0, "#3a2016");
+  grad.addColorStop(0.5, "#2b160e");
+  grad.addColorStop(1, "#1e0f09");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 256);
+
+  for (let y = 0; y < 256; y += 4) {
+    ctx.strokeStyle = y % 8 === 0 ? "rgba(92, 48, 30, 0.34)" : "rgba(20, 9, 5, 0.3)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(256, y + Math.sin(y * 0.08) * 6);
+    ctx.stroke();
+  }
 
   return new THREE.CanvasTexture(canvas);
 }
@@ -61,145 +119,195 @@ export function createAstrolabeWorkshop(onSolved?: () => void): AstrolabeWorksho
   const materials: THREE.Material[] = [];
   const textures: THREE.Texture[] = [];
 
-  const brassMaterial = new THREE.MeshStandardMaterial({
-    color: 0xc8963e,
-    roughness: 0.35,
-    metalness: 0.85
-  });
-  materials.push(brassMaterial);
+  const trackGeo = <T extends THREE.BufferGeometry>(g: T): T => {
+    geometries.push(g);
+    return g;
+  };
+  const trackMat = <T extends THREE.Material>(m: T): T => {
+    materials.push(m);
+    return m;
+  };
+  const trackTex = <T extends THREE.Texture>(t: T): T => {
+    textures.push(t);
+    return t;
+  };
 
-  const goldAccentMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffd700,
-    emissive: 0x553300,
-    roughness: 0.2,
-    metalness: 0.95
-  });
-  materials.push(goldAccentMaterial);
+  const brassMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0xd6a64c,
+      roughness: 0.30,
+      metalness: 0.78
+    })
+  );
 
-  const boxWoodMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1f140e,
-    roughness: 0.65,
-    metalness: 0.2
-  });
-  materials.push(boxWoodMaterial);
+  const copperGearMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0xc5713d,
+      roughness: 0.32,
+      metalness: 0.76
+    })
+  );
 
-  const jadeJewelMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1d7f73,
-    emissive: 0x0a4038,
-    emissiveIntensity: 0.5,
-    roughness: 0.1,
-    metalness: 0.3
-  });
-  materials.push(jadeJewelMaterial);
+  const goldAccentMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0xf7cf68,
+      emissive: 0x4a3008,
+      emissiveIntensity: 0.24,
+      roughness: 0.22,
+      metalness: 0.88
+    })
+  );
 
-  // Octagonal Box Base with Stepped Plinth & Recessed Dial Bed
-  const lowerPlinthGeo = new THREE.CylinderGeometry(3.85, 4.05, 0.26, 8);
-  geometries.push(lowerPlinthGeo);
-  const lowerPlinthMesh = new THREE.Mesh(lowerPlinthGeo, boxWoodMaterial);
+  const woodTex = trackTex(createRosewoodTexture());
+  const boxWoodMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      map: woodTex,
+      color: 0x5c3626,
+      roughness: 0.46,
+      metalness: 0.16
+    })
+  );
+
+  const jadeJewelMaterial = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x2cd4b6,
+      emissive: 0x0e5e4f,
+      emissiveIntensity: 0.55,
+      roughness: 0.12,
+      metalness: 0.22
+    })
+  );
+
+  // 1. Stepped Octagonal Rosewood & Brass Treasure Box Case
+  const lowerPlinthMesh = new THREE.Mesh(trackGeo(new THREE.CylinderGeometry(3.88, 4.10, 0.26, 8)), boxWoodMaterial);
   lowerPlinthMesh.position.y = -0.98;
   lowerPlinthMesh.receiveShadow = true;
   root.add(lowerPlinthMesh);
 
-  const boxGeo = new THREE.CylinderGeometry(3.6, 3.8, 0.76, 8);
-  geometries.push(boxGeo);
-  const boxMesh = new THREE.Mesh(boxGeo, boxWoodMaterial);
+  const boxMesh = new THREE.Mesh(trackGeo(new THREE.CylinderGeometry(3.62, 3.82, 0.76, 8)), boxWoodMaterial);
   boxMesh.position.y = -0.52;
   boxMesh.receiveShadow = true;
   root.add(boxMesh);
 
-  // Recessed Dark Bronze Dial Well Bed
-  const dialWellGeo = new THREE.CylinderGeometry(3.32, 3.32, 0.08, 48);
-  geometries.push(dialWellGeo);
-  const dialWellMat = new THREE.MeshStandardMaterial({
-    color: 0x120d09,
-    roughness: 0.45,
-    metalness: 0.72
-  });
-  materials.push(dialWellMat);
-  const dialWellMesh = new THREE.Mesh(dialWellGeo, dialWellMat);
+  // Engraved Celestial Star-Chart Well Bed
+  const starWellTex = trackTex(createStarWellTexture());
+  const dialWellMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      map: starWellTex,
+      roughness: 0.42,
+      metalness: 0.62
+    })
+  );
+  const dialWellMesh = new THREE.Mesh(trackGeo(new THREE.CylinderGeometry(3.36, 3.36, 0.08, 56)), dialWellMat);
   dialWellMesh.position.y = -0.14;
   root.add(dialWellMesh);
 
-  // 8 Brass Octagonal Corner Mount Brackets
-  const bracketGeo = new THREE.BoxGeometry(0.32, 0.82, 0.24);
-  geometries.push(bracketGeo);
+  // 8 Sculpted Brass Octagonal Corner Clasps & Rivet Studs
+  const bracketGeo = trackGeo(new THREE.BoxGeometry(0.34, 0.84, 0.26));
+  const studGeo = trackGeo(new THREE.SphereGeometry(0.048, 10, 10));
   for (let b = 0; b < 8; b++) {
     const bAng = (b * Math.PI) / 4 + Math.PI / 8;
-    const bracket = new THREE.Mesh(bracketGeo, brassMaterial);
-    bracket.position.set(Math.cos(bAng) * 3.64, -0.50, Math.sin(bAng) * 3.64);
-    bracket.rotation.y = -bAng + Math.PI / 2;
-    root.add(bracket);
+    const bracketGroup = new THREE.Group();
+    bracketGroup.position.set(Math.cos(bAng) * 3.66, -0.50, Math.sin(bAng) * 3.66);
+    bracketGroup.rotation.y = -bAng + Math.PI / 2;
+    bracketGroup.add(new THREE.Mesh(bracketGeo, brassMaterial));
+    for (const sy of [-0.26, 0.26]) {
+      const stud = new THREE.Mesh(studGeo, goldAccentMaterial);
+      stud.position.set(0, sy, 0.13);
+      bracketGroup.add(stud);
+    }
+    root.add(bracketGroup);
   }
 
-  // Brass Rim Bezel with 32 Knurled Tactile Ridges
-  const rimGeo = new THREE.TorusGeometry(3.52, 0.11, 16, 48);
-  geometries.push(rimGeo);
-  const rimMesh = new THREE.Mesh(rimGeo, goldAccentMaterial);
+  // Outer Brass Bezel & 32 Knurled Tactile Grips
+  const rimMesh = new THREE.Mesh(trackGeo(new THREE.TorusGeometry(3.52, 0.11, 16, 56)), goldAccentMaterial);
   rimMesh.rotation.x = Math.PI / 2;
   rimMesh.position.y = -0.12;
   root.add(rimMesh);
 
-  const knurlGeo = new THREE.BoxGeometry(0.08, 0.14, 0.16);
-  geometries.push(knurlGeo);
+  const knurlGeo = trackGeo(new THREE.BoxGeometry(0.08, 0.14, 0.16));
   for (let k = 0; k < 32; k++) {
     const kAng = (k * Math.PI * 2) / 32;
-    const knurl = new THREE.Mesh(knurlGeo, brassMaterial);
+    const knurl = new THREE.Mesh(knurlGeo, copperGearMaterial);
     knurl.position.set(Math.cos(kAng) * 3.60, -0.12, Math.sin(kAng) * 3.60);
     knurl.rotation.y = -kAng;
     root.add(knurl);
   }
 
-  // Meridian Zero Guide Line
-  const meridianGeo = new THREE.BoxGeometry(0.08, 0.06, 5.8);
-  geometries.push(meridianGeo);
-  const meridianMat = new THREE.MeshStandardMaterial({
-    color: 0x3de0c8,
-    emissive: 0x1d7f73,
-    emissiveIntensity: 0.7,
-    roughness: 0.2
-  });
-  materials.push(meridianMat);
-  const meridian = new THREE.Mesh(meridianGeo, meridianMat);
-  meridian.position.set(0, 0.12, 0);
+  // Front (+Z) Meridian Zero Alignment Bridge & Target Star Clasp
+  const meridianMat = trackMat(
+    new THREE.MeshStandardMaterial({
+      color: 0x3de0c8,
+      emissive: 0x187d70,
+      emissiveIntensity: 0.72,
+      roughness: 0.2,
+      metalness: 0.65
+    })
+  );
+  const meridian = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.065, 0.055, 3.35)), meridianMat);
+  meridian.position.set(0, 0.16, 1.85);
   root.add(meridian);
 
-  // Center Faceted Jade Cabochon & 6-Prong Gold Bezel Core
-  const coreBaseGeo = new THREE.CylinderGeometry(0.52, 0.58, 0.22, 24);
-  geometries.push(coreBaseGeo);
-  const coreBaseMesh = new THREE.Mesh(coreBaseGeo, goldAccentMaterial);
+  const frontClasp = new THREE.Mesh(trackGeo(new THREE.ConeGeometry(0.18, 0.30, 4)), goldAccentMaterial);
+  frontClasp.rotation.x = -Math.PI / 2;
+  frontClasp.rotation.y = Math.PI / 4;
+  frontClasp.position.set(0, 0.16, 3.48);
+  root.add(frontClasp);
+
+  // 2. Center Lathe-Cut Imperial Jade Cabochon & 8-Petal Lotus Collet
+  const coreBaseMesh = new THREE.Mesh(trackGeo(new THREE.CylinderGeometry(0.50, 0.58, 0.22, 32)), goldAccentMaterial);
   coreBaseMesh.position.y = 0.08;
   root.add(coreBaseMesh);
 
-  const coreGeo = new THREE.DodecahedronGeometry(0.42, 1);
-  coreGeo.scale(1.0, 0.62, 1.0);
-  geometries.push(coreGeo);
-  const coreMesh = new THREE.Mesh(coreGeo, jadeJewelMaterial);
-  coreMesh.position.y = 0.22;
+  const cabochonPts = [
+    new THREE.Vector2(0.001, 0.22),
+    new THREE.Vector2(0.20, 0.20),
+    new THREE.Vector2(0.36, 0.11),
+    new THREE.Vector2(0.42, 0.0),
+    new THREE.Vector2(0.001, 0.0)
+  ];
+  const coreMesh = new THREE.Mesh(trackGeo(new THREE.LatheGeometry(cabochonPts, 28)), jadeJewelMaterial);
+  coreMesh.position.y = 0.17;
   root.add(coreMesh);
 
-  const prongGeo = new THREE.BoxGeometry(0.06, 0.22, 0.08);
-  geometries.push(prongGeo);
-  for (let p = 0; p < 6; p++) {
-    const pAng = (p * Math.PI * 2) / 6;
+  const prongGeo = trackGeo(new THREE.BoxGeometry(0.055, 0.20, 0.075));
+  for (let p = 0; p < 8; p++) {
+    const pAng = (p * Math.PI * 2) / 8;
     const prong = new THREE.Mesh(prongGeo, goldAccentMaterial);
-    prong.position.set(Math.cos(pAng) * 0.44, 0.20, Math.sin(pAng) * 0.44);
+    prong.position.set(Math.cos(pAng) * 0.43, 0.22, Math.sin(pAng) * 0.43);
     prong.rotation.y = -pAng;
-    prong.rotation.x = 0.22;
+    prong.rotation.x = 0.25;
     root.add(prong);
   }
 
-  // 3 Concentric Rings Config:
-  // Target angles matching LockPuzzle.ts logic: 90 deg (PI/2), 180 deg (PI), 270 deg (3PI/2)
+  // 3. Three Concentric Geared Astrolabe Rings (targets: 90°, 180°, 270°)
   const ringConfigs = [
     { index: 0, label: "外环·星宿 (Outer)", innerR: 2.3, outerR: 3.1, target: Math.PI / 2, initial: 0 },
     { index: 1, label: "中环·度规 (Middle)", innerR: 1.45, outerR: 2.2, target: Math.PI, initial: Math.PI / 3 },
     { index: 2, label: "内环·潮相 (Inner)", innerR: 0.6, outerR: 1.35, target: (3 * Math.PI) / 2, initial: (2 * Math.PI) / 3 }
   ];
 
+  // Sculpted faceted diamond astrolabe star-pointer geometry
+  const pointerShape = new THREE.Shape();
+  pointerShape.moveTo(0, 0.24);
+  pointerShape.lineTo(0.11, -0.02);
+  pointerShape.lineTo(0, -0.14);
+  pointerShape.lineTo(-0.11, -0.02);
+  pointerShape.closePath();
+  const pointerExtrudeGeo = trackGeo(
+    new THREE.ExtrudeGeometry(pointerShape, {
+      depth: 0.055,
+      bevelEnabled: true,
+      bevelThickness: 0.015,
+      bevelSize: 0.012,
+      bevelSegments: 2
+    })
+  );
+  pointerExtrudeGeo.rotateX(Math.PI / 2);
+
   const rings: Astrolabe3DRing[] = [];
   const selectionHalos: THREE.Mesh[] = [];
   const pinMaterials: THREE.MeshStandardMaterial[] = [];
-  let selectedIndex: number | null = 0;
   let solved = false;
 
   for (const cfg of ringConfigs) {
@@ -207,22 +315,22 @@ export function createAstrolabeWorkshop(onSolved?: () => void): AstrolabeWorksho
     ringGroup.position.y = 0.05 + cfg.index * 0.04;
     ringGroup.rotation.y = cfg.initial;
 
-    // True 3D Extruded & Beveled Annular Mechanical Ring Body (zero edge-on vanishing)
     const annularShape = new THREE.Shape();
     annularShape.absarc(0, 0, cfg.outerR, 0, Math.PI * 2, false);
     const holePath = new THREE.Path();
     holePath.absarc(0, 0, cfg.innerR, 0, Math.PI * 2, true);
     annularShape.holes.push(holePath);
 
-    const extrudedRingGeo = new THREE.ExtrudeGeometry(annularShape, {
-      depth: 0.08,
-      bevelEnabled: true,
-      bevelThickness: 0.018,
-      bevelSize: 0.016,
-      bevelSegments: 2,
-      curveSegments: 48
-    });
-    geometries.push(extrudedRingGeo);
+    const extrudedRingGeo = trackGeo(
+      new THREE.ExtrudeGeometry(annularShape, {
+        depth: 0.08,
+        bevelEnabled: true,
+        bevelThickness: 0.018,
+        bevelSize: 0.016,
+        bevelSegments: 2,
+        curveSegments: 56
+      })
+    );
     const extrudedRingMesh = new THREE.Mesh(extrudedRingGeo, brassMaterial);
     extrudedRingMesh.rotation.x = Math.PI / 2;
     extrudedRingMesh.position.y = 0.04;
@@ -230,112 +338,76 @@ export function createAstrolabeWorkshop(onSolved?: () => void): AstrolabeWorksho
     extrudedRingMesh.receiveShadow = true;
     ringGroup.add(extrudedRingMesh);
 
-    // Top engraved dial scale face positioned cleanly atop the 3D beveled ring
-    const discGeo = new THREE.RingGeometry(cfg.innerR + 0.02, cfg.outerR - 0.02, 48);
-    geometries.push(discGeo);
-
-    const dialTex = createAstrolabeDialTexture(cfg.index);
-    textures.push(dialTex);
-
-    const discMat = new THREE.MeshStandardMaterial({
-      map: dialTex,
-      color: 0xd8a64e,
-      roughness: 0.28,
-      metalness: 0.88,
-      transparent: true
-    });
-    materials.push(discMat);
-
-    const discMesh = new THREE.Mesh(discGeo, discMat);
+    const dialTex = trackTex(createAstrolabeDialTexture(cfg.index));
+    const discMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        map: dialTex,
+        color: 0xe6bb64,
+        roughness: 0.28,
+        metalness: 0.78,
+        transparent: true
+      })
+    );
+    const discMesh = new THREE.Mesh(trackGeo(new THREE.RingGeometry(cfg.innerR + 0.02, cfg.outerR - 0.02, 56)), discMat);
     discMesh.rotation.x = -Math.PI / 2;
-    discMesh.position.y = 0.062;
+    discMesh.position.y = 0.064;
     ringGroup.add(discMesh);
 
-    // Outer & inner decorative beveled brass borders
-    const borderGeo = new THREE.TorusGeometry(cfg.outerR, 0.032, 10, 48);
-    geometries.push(borderGeo);
-    const borderMesh = new THREE.Mesh(borderGeo, goldAccentMaterial);
+    const borderMesh = new THREE.Mesh(trackGeo(new THREE.TorusGeometry(cfg.outerR, 0.028, 10, 56)), goldAccentMaterial);
     borderMesh.rotation.x = Math.PI / 2;
-    borderMesh.position.y = 0.045;
+    borderMesh.position.y = 0.048;
     ringGroup.add(borderMesh);
 
-    const innerBorderGeo = new THREE.TorusGeometry(cfg.innerR, 0.026, 10, 48);
-    geometries.push(innerBorderGeo);
-    const innerBorderMesh = new THREE.Mesh(innerBorderGeo, goldAccentMaterial);
+    const innerBorderMesh = new THREE.Mesh(trackGeo(new THREE.TorusGeometry(cfg.innerR, 0.024, 10, 56)), goldAccentMaterial);
     innerBorderMesh.rotation.x = Math.PI / 2;
-    innerBorderMesh.position.y = 0.045;
+    innerBorderMesh.position.y = 0.048;
     ringGroup.add(innerBorderMesh);
 
-    // Extruded mechanical gear teeth on ALL 3 concentric rings (24 outer, 16 middle, 12 inner)
-    if (cfg.index === 0) {
-      const toothGeo = new THREE.BoxGeometry(0.13, 0.09, 0.14);
-      geometries.push(toothGeo);
-      for (let t = 0; t < 24; t++) {
-        const tAngle = (t * Math.PI * 2) / 24;
-        const tooth = new THREE.Mesh(toothGeo, goldAccentMaterial);
-        tooth.position.set(Math.cos(tAngle) * (cfg.outerR + 0.06), 0.02, Math.sin(tAngle) * (cfg.outerR + 0.06));
-        tooth.rotation.y = -tAngle;
-        ringGroup.add(tooth);
-      }
-    } else if (cfg.index === 1) {
-      const toothGeo = new THREE.BoxGeometry(0.10, 0.08, 0.11);
-      geometries.push(toothGeo);
-      for (let t = 0; t < 16; t++) {
-        const tAngle = (t * Math.PI * 2) / 16;
-        const tooth = new THREE.Mesh(toothGeo, goldAccentMaterial);
-        tooth.position.set(Math.cos(tAngle) * (cfg.innerR - 0.045), 0.02, Math.sin(tAngle) * (cfg.innerR - 0.045));
-        tooth.rotation.y = -tAngle;
-        ringGroup.add(tooth);
-      }
-    } else if (cfg.index === 2) {
-      const toothGeo = new THREE.BoxGeometry(0.085, 0.075, 0.095);
-      geometries.push(toothGeo);
-      for (let t = 0; t < 12; t++) {
-        const tAngle = (t * Math.PI * 2) / 12;
-        const tooth = new THREE.Mesh(toothGeo, goldAccentMaterial);
-        tooth.position.set(Math.cos(tAngle) * (cfg.outerR + 0.045), 0.02, Math.sin(tAngle) * (cfg.outerR + 0.045));
-        tooth.rotation.y = -tAngle;
-        ringGroup.add(tooth);
-      }
+    // Physical gear teeth along meshing edges
+    const toothCount = cfg.index === 0 ? 28 : cfg.index === 1 ? 20 : 14;
+    const toothRadius = cfg.index === 1 ? cfg.innerR - 0.045 : cfg.outerR + 0.055;
+    const toothGeo = trackGeo(new THREE.BoxGeometry(0.11, 0.08, 0.12));
+    for (let t = 0; t < toothCount; t++) {
+      const tAngle = (t * Math.PI * 2) / toothCount;
+      const tooth = new THREE.Mesh(toothGeo, copperGearMaterial);
+      tooth.position.set(Math.cos(tAngle) * toothRadius, 0.02, Math.sin(tAngle) * toothRadius);
+      tooth.rotation.y = -tAngle;
+      ringGroup.add(tooth);
     }
 
-    // Indicator needle node on the ring positioned at -cfg.target so when ring.rotation.y === cfg.target,
-    // all 3 indicator needles physically align along the front (+Z) Meridian Zero Guide Line!
-    const pinGeo = new THREE.ConeGeometry(0.13, 0.34, 16);
-    geometries.push(pinGeo);
-    const pinMat = new THREE.MeshStandardMaterial({
-      color: 0xffd700,
-      emissive: 0x664400,
-      emissiveIntensity: 0.6,
-      roughness: 0.2,
-      metalness: 0.95
-    });
-    materials.push(pinMat);
-    pinMaterials.push(pinMat);
-    const pinMesh = new THREE.Mesh(pinGeo, pinMat);
-    const pinR = cfg.outerR - 0.2;
-    pinMesh.position.set(
-      -Math.sin(cfg.target) * pinR,
-      0.11,
-      Math.cos(cfg.target) * pinR
+    // Faceted Golden Star-Pointer Pin positioned at -cfg.target so ring.rotation.y === cfg.target aligns on +Z!
+    const pinMat = trackMat(
+      new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        emissive: 0x664400,
+        emissiveIntensity: 0.65,
+        roughness: 0.2,
+        metalness: 0.92
+      })
     );
-    pinMesh.rotation.order = "YXZ";
-    pinMesh.rotation.y = -cfg.target;
-    pinMesh.rotation.x = -Math.PI / 2;
-    ringGroup.add(pinMesh);
+    pinMaterials.push(pinMat);
 
-    // Glowing turquoise selection ring indicator
-    const selHaloGeo = new THREE.TorusGeometry((cfg.innerR + cfg.outerR) * 0.5, 0.032, 12, 48);
-    geometries.push(selHaloGeo);
-    const selHaloMat = new THREE.MeshBasicMaterial({
-      color: 0x3de0c8,
-      transparent: true,
-      opacity: cfg.index === 0 ? 0.8 : 0
-    });
-    materials.push(selHaloMat);
-    const selHalo = new THREE.Mesh(selHaloGeo, selHaloMat);
+    const pinR = (cfg.innerR + cfg.outerR) * 0.5;
+    const pinHolder = new THREE.Group();
+    pinHolder.position.set(-Math.sin(cfg.target) * pinR, 0.12, Math.cos(cfg.target) * pinR);
+    pinHolder.rotation.y = -cfg.target;
+    pinHolder.add(new THREE.Mesh(pointerExtrudeGeo, pinMat));
+    ringGroup.add(pinHolder);
+
+    // Turquoise Selection Halo
+    const selHaloMat = trackMat(
+      new THREE.MeshBasicMaterial({
+        color: 0x3de0c8,
+        transparent: true,
+        opacity: cfg.index === 0 ? 0.82 : 0
+      })
+    );
+    const selHalo = new THREE.Mesh(
+      trackGeo(new THREE.TorusGeometry((cfg.innerR + cfg.outerR) * 0.5, 0.032, 12, 56)),
+      selHaloMat
+    );
     selHalo.rotation.x = Math.PI / 2;
-    selHalo.position.y = 0.08;
+    selHalo.position.y = 0.082;
     ringGroup.add(selHalo);
     selectionHalos.push(selHalo);
 
@@ -351,22 +423,31 @@ export function createAstrolabeWorkshop(onSolved?: () => void): AstrolabeWorksho
     });
   }
 
-  // 4 Corner Hydraulic Retractable Locking Bolts
-  const boltMeshes: THREE.Mesh[] = [];
-  const boltPositions = [
-    [-2.5, 0.1, -2.5],
-    [2.5, 0.1, -2.5],
-    [-2.5, 0.1, 2.5],
-    [2.5, 0.1, 2.5]
+  // 4. Four Corner Stepped Hydraulic Locking Pistons inside Bolted Brass Sleeves
+  const boltMeshes: THREE.Group[] = [];
+  const sleeveGeo = trackGeo(new THREE.CylinderGeometry(0.28, 0.32, 0.24, 8));
+  const pistonShaftGeo = trackGeo(new THREE.CylinderGeometry(0.16, 0.16, 0.52, 8));
+  const pistonCapGeo = trackGeo(new THREE.CylinderGeometry(0.21, 0.18, 0.12, 8));
+  const boltPositions: Array<[number, number, number]> = [
+    [-2.42, -0.02, -2.42],
+    [2.42, -0.02, -2.42],
+    [-2.42, -0.02, 2.42],
+    [2.42, -0.02, 2.42]
   ];
 
-  for (const bp of boltPositions) {
-    const boltGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.6, 16);
-    geometries.push(boltGeo);
-    const boltMesh = new THREE.Mesh(boltGeo, goldAccentMaterial);
-    boltMesh.position.set(bp[0], bp[1], bp[2]);
-    root.add(boltMesh);
-    boltMeshes.push(boltMesh);
+  for (const [bx, by, bz] of boltPositions) {
+    const sleeve = new THREE.Mesh(sleeveGeo, copperGearMaterial);
+    sleeve.position.set(bx, by, bz);
+    root.add(sleeve);
+
+    const pistonGroup = new THREE.Group();
+    pistonGroup.position.set(bx, 0.16, bz);
+    pistonGroup.add(new THREE.Mesh(pistonShaftGeo, goldAccentMaterial));
+    const cap = new THREE.Mesh(pistonCapGeo, brassMaterial);
+    cap.position.y = 0.28;
+    pistonGroup.add(cap);
+    root.add(pistonGroup);
+    boltMeshes.push(pistonGroup);
   }
 
   function normalizeAngle(a: number): number {
@@ -380,7 +461,6 @@ export function createAstrolabeWorkshop(onSolved?: () => void): AstrolabeWorksho
     const targetNorm = normalizeAngle(ring.targetAngle);
     const diff = Math.abs(currentNorm - targetNorm);
     const minDiff = Math.min(diff, Math.PI * 2 - diff);
-    // Alignment tolerance: ~18 degrees (0.32 radians)
     return minDiff < 0.32;
   }
 
@@ -397,22 +477,19 @@ export function createAstrolabeWorkshop(onSolved?: () => void): AstrolabeWorksho
     root,
     rings,
     update: (_time: number, _delta: number) => {
-      // Gentle jewel pulse
       if (solved) {
-        jadeJewelMaterial.emissiveIntensity = 0.8 + Math.sin(_time * 0.005) * 0.3;
-        // Retract bolts downward smoothly
+        jadeJewelMaterial.emissiveIntensity = 0.85 + Math.sin(_time * 0.005) * 0.3;
         for (const bolt of boltMeshes) {
-          if (bolt.position.y > -0.2) {
-            bolt.position.y -= _delta * 0.5;
+          if (bolt.position.y > -0.22) {
+            bolt.position.y -= _delta * 0.55;
           }
         }
       }
     },
     selectRing: (index: number | null) => {
-      selectedIndex = index;
       for (let i = 0; i < selectionHalos.length; i++) {
         const mat = selectionHalos[i].material as THREE.MeshBasicMaterial;
-        mat.opacity = i === index ? 0.8 : 0;
+        mat.opacity = i === index ? 0.82 : 0;
       }
     },
     rotateRing: (index: number, angleDelta: number) => {

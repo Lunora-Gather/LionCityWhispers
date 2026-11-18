@@ -973,7 +973,7 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
     this.guest1ShoulderPivot.add(this.guest1ElbowPivot);
 
     const elbowBall1 = new THREE.Mesh(
-      new THREE.SphereGeometry(0.044, 14, 12),
+      new THREE.SphereGeometry(0.037, 14, 12),
       skinMat
     );
     this.guest1ElbowPivot.add(elbowBall1);
@@ -1400,7 +1400,7 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
     this.guest2ShoulderPivot.add(this.guest2ElbowPivot);
 
     const elbowBall2 = new THREE.Mesh(
-      new THREE.SphereGeometry(0.044, 14, 12),
+      new THREE.SphereGeometry(0.037, 14, 12),
       skinMat
     );
     this.guest2ElbowPivot.add(elbowBall2);
@@ -1681,8 +1681,8 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
       cuff.position.y = -0.35;
       legGroup.add(cuff);
 
-      const kneeCap = new THREE.Mesh(new THREE.SphereGeometry(0.062, 14, 12), skinTannedMat);
-      kneeCap.position.set(0, -0.37, 0.01);
+      const kneeCap = new THREE.Mesh(new THREE.SphereGeometry(0.054, 14, 12), skinTannedMat);
+      kneeCap.position.set(0, -0.37, 0.008);
       legGroup.add(kneeCap);
 
       const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.056, 0.22, 8, 18), skinTannedMat);
@@ -1836,7 +1836,7 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
     leftArmCuff1.position.set(0, -0.04, 0.01);
     leftArm1.add(leftArmCuff1);
 
-    const leftElbowJoint1 = new THREE.Mesh(new THREE.SphereGeometry(0.056, 14, 12), skinTannedMat);
+    const leftElbowJoint1 = new THREE.Mesh(new THREE.SphereGeometry(0.050, 14, 12), skinTannedMat);
     leftElbowJoint1.position.set(0, -0.26, 0.08);
     leftArm1.add(leftElbowJoint1);
 
@@ -1867,7 +1867,7 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
     rightArmCuff1.position.set(0, -0.04, 0.01);
     rightArm1.add(rightArmCuff1);
 
-    const rightElbowJoint1 = new THREE.Mesh(new THREE.SphereGeometry(0.056, 14, 12), skinTannedMat);
+    const rightElbowJoint1 = new THREE.Mesh(new THREE.SphereGeometry(0.050, 14, 12), skinTannedMat);
     rightElbowJoint1.position.set(-0.02, -0.22, 0.06);
     rightArm1.add(rightElbowJoint1);
 
@@ -2036,8 +2036,8 @@ export class World3DLifeScenes implements LifeScenesLifecycle {
       fringe.position.y = -0.34;
       legGroup.add(fringe);
 
-      const kneeCap2 = new THREE.Mesh(new THREE.SphereGeometry(0.064, 14, 12), skinTannedMat);
-      kneeCap2.position.set(0, -0.36, 0.01);
+      const kneeCap2 = new THREE.Mesh(new THREE.SphereGeometry(0.056, 14, 12), skinTannedMat);
+      kneeCap2.position.set(0, -0.36, 0.008);
       legGroup.add(kneeCap2);
 
       const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.058, 0.22, 8, 18), skinTannedMat);
