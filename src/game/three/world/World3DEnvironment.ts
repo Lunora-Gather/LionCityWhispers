@@ -246,9 +246,29 @@ export class World3DEnvironment {
   // Macro Investigation Mode (Milestone 3 - Feature 13)
   private isMacroMode = false;
   private macroWeight = 0.0;
+  private softwareRenderMode = false;
+  private waterNormalFrame = 0;
 
   public setMacroInvestigation(active: boolean): void {
     this.isMacroMode = active;
+  }
+
+  /**
+   * Disables GPU-intensive shadow maps and per-pixel secondary point lights when running
+   * on a CPU software WebGL rasterizer (e.g. SwiftShader in headless CI), preserving 100%
+   * full quality on all hardware GPUs while preventing CPU fragment shader starvation.
+   */
+  public enableSoftwareRenderFastPath(): void {
+    this.softwareRenderMode = true;
+    if (this.sunLight) {
+      this.sunLight.castShadow = false;
+    }
+    for (let i = 0; i < this.pointLights.length; i++) {
+      this.pointLights[i].visible = false;
+    }
+    for (let i = 0; i < this.lanternLights.length; i++) {
+      this.lanternLights[i].visible = false;
+    }
   }
 
   constructor() {
@@ -8814,7 +8834,9 @@ export class World3DEnvironment {
       }
       pos.needsUpdate = true;
       if (colAttr) colAttr.needsUpdate = true;
-      this.waterGeo.computeVertexNormals();
+      if (!this.softwareRenderMode || ((++this.waterNormalFrame & 7) === 0)) {
+        this.waterGeo.computeVertexNormals();
+      }
 
       if (this.riverBedCausticsTexture) {
         this.riverBedCausticsTexture.offset.x = (time * 0.04) % 1.0;

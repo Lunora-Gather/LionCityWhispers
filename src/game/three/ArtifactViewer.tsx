@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { createArtifact3D, type Artifact3DHandle } from "./artifactModels";
-import { getEquirectEnvTexture, getMuseumBackdropTexture } from "./world/World3DTextures";
+import { getEquirectEnvTexture, getMuseumBackdropTexture, isSoftwareWebGLRenderer } from "./world/World3DTextures";
 import type { ArtifactId } from "../state";
 import type { Locale } from "@/data/i18n";
 import { Layers, Lightbulb, Rotate3d, Sparkles, Volume2, X } from "lucide-react";
@@ -138,19 +138,23 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     camera.lookAt(0, -0.1, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    const isSoftwareWebGL = isSoftwareWebGLRenderer(renderer);
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(isSoftwareWebGL ? 1 : Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = !isSoftwareWebGL;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.18;
     container.appendChild(renderer.domElement);
 
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    const studioEnvRT = pmrem.fromEquirectangular(getEquirectEnvTexture("studio"));
-    pmrem.dispose();
-    scene.environment = studioEnvRT.texture;
+    let studioEnvRT: THREE.WebGLRenderTarget | null = null;
+    if (!isSoftwareWebGL) {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      studioEnvRT = pmrem.fromEquirectangular(getEquirectEnvTexture("studio"));
+      pmrem.dispose();
+      scene.environment = studioEnvRT.texture;
+    }
 
     // Studio Ambient & Spot Lighting
     const ambientLight = new THREE.AmbientLight(0xd9ecd9, 0.95);
@@ -299,7 +303,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
       pedestalMat.dispose();
       pedestalRingGeo.dispose();
       pedestalRingMat.dispose();
-      studioEnvRT.dispose();
+      studioEnvRT?.dispose();
       renderer.dispose();
       if (container.contains(domElement)) {
         container.removeChild(domElement);

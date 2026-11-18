@@ -2094,6 +2094,25 @@ export function getMuseumBackdropTexture(uvMode = false): THREE.CanvasTexture {
   return texture;
 }
 
+/**
+ * Detect CPU software WebGL rasterizers (e.g., SwiftShader / llvmpipe in headless Linux VMs)
+ * so heavy GPU-only passes (2048x2048 PCFSoftShadowMap, cubemap PMREM blurs, 16+ point lights)
+ * do not stall main-thread event processing when no hardware GPU is present.
+ * Returns false on all real desktop/mobile hardware GPUs.
+ */
+export function isSoftwareWebGLRenderer(renderer: THREE.WebGLRenderer): boolean {
+  try {
+    const gl = renderer.getContext();
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    const rendererName = String(
+      (debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) ?? ""
+    );
+    return /SwiftShader|llvmpipe|Software|Basic Render/i.test(rendererName);
+  } catch {
+    return false;
+  }
+}
+
 
 
 

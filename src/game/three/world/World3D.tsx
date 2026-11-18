@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { World3DEnvironment, type LandmarkTrigger, type TimeOfDay } from "./World3DEnvironment";
 import { World3DPlayer } from "./World3DPlayer";
-import { getEquirectEnvTexture } from "./World3DTextures";
+import { getEquirectEnvTexture, isSoftwareWebGLRenderer } from "./World3DTextures";
 import { type Locale, worldCopy } from "@/data/i18n";
 import { playUiClick, playStoneGrind, playGearTick, playChimeResonance, playLockedChime, playTypewriterBlip } from "@/game/audio";
 import { gameState } from "@/game/state";
@@ -856,31 +856,37 @@ export const World3D: React.FC<World3DProps> = ({
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: typeof navigator === "undefined" || !navigator.webdriver,
       powerPreference: "high-performance"
     });
     rendererRef.current = renderer;
+    const isSoftwareWebGL = isSoftwareWebGLRenderer(renderer);
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(isSoftwareWebGL ? 1 : Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = !isSoftwareWebGL;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
 
-    // Pre-bake PMREM IBL environment maps for Dawn, Dusk & Night (zero frame allocations)
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    const envMaps: Record<TimeOfDay, THREE.WebGLRenderTarget> = {
-      dawn: pmrem.fromEquirectangular(getEquirectEnvTexture("dawn")),
-      dusk: pmrem.fromEquirectangular(getEquirectEnvTexture("dusk")),
-      night: pmrem.fromEquirectangular(getEquirectEnvTexture("night"))
-    };
-    pmrem.dispose();
-    envMapsRef.current = envMaps;
-    scene.environment = envMaps[timeOfDay].texture;
+    // Pre-bake PMREM IBL environment maps for Dawn, Dusk & Night on hardware GPUs (zero frame allocations)
+    if (!isSoftwareWebGL) {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      const envMaps: Record<TimeOfDay, THREE.WebGLRenderTarget> = {
+        dawn: pmrem.fromEquirectangular(getEquirectEnvTexture("dawn")),
+        dusk: pmrem.fromEquirectangular(getEquirectEnvTexture("dusk")),
+        night: pmrem.fromEquirectangular(getEquirectEnvTexture("night"))
+      };
+      pmrem.dispose();
+      envMapsRef.current = envMaps;
+      scene.environment = envMaps[timeOfDay].texture;
+    }
 
     // Environment & Player
     const env = new World3DEnvironment();
+    if (isSoftwareWebGL) {
+      env.enableSoftwareRenderFastPath();
+    }
     envRef.current = env;
     env.setProgressionState(
       Array.from(acquiredRelicIds),
@@ -1059,6 +1065,7 @@ export const World3D: React.FC<World3DProps> = ({
 
     // Main Animation Loop
     const clock = new THREE.Clock();
+    let lastRenderElapsed = -1;
     const animate = () => {
       const delta = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
@@ -1169,7 +1176,10 @@ export const World3D: React.FC<World3DProps> = ({
         waypointArrowRef.current.style.transform = `rotate(${relativeDeg}deg)`;
       }
 
-      renderer.render(scene, camera);
+      if (!isSoftwareWebGL || lastRenderElapsed < 0 || time - lastRenderElapsed >= 0.08) {
+        lastRenderElapsed = time;
+        renderer.render(scene, camera);
+      }
       animFrameRef.current = requestAnimationFrame(animate);
     };
 

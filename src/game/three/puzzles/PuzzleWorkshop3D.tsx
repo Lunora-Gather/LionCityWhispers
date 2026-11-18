@@ -4,7 +4,7 @@ import { X, RotateCw, RotateCcw, Check, Sparkles, Box, ShieldCheck, RefreshCw } 
 import { createMegalithWorkshop, MegalithWorkshopHandle } from "./MegalithWorkshop3D";
 import { createCryptexWorkshop, CryptexWorkshopHandle } from "./CryptexPuzzle3D";
 import { createAstrolabeWorkshop, AstrolabeWorkshopHandle } from "./AstrolabeBox3D";
-import { getEquirectEnvTexture, getMuseumBackdropTexture } from "../world/World3DTextures";
+import { getEquirectEnvTexture, getMuseumBackdropTexture, isSoftwareWebGLRenderer } from "../world/World3DTextures";
 import { playStoneGrind, playGearTick, playSnap, playKintsugiAwaken, playUiClick, playSuccess, playMiss } from "@/game/audio";
 
 export type Puzzle3DType = "jigsaw" | "runes" | "lock";
@@ -56,17 +56,14 @@ export function PuzzleWorkshop3D({
   }, []);
 
   const triggerSnapShake = () => {
-    setSnapShake(false);
     if (shakeTimerRef.current !== null) {
       window.clearTimeout(shakeTimerRef.current);
     }
-    window.requestAnimationFrame(() => {
-      setSnapShake(true);
-      shakeTimerRef.current = window.setTimeout(() => {
-        setSnapShake(false);
-        shakeTimerRef.current = null;
-      }, 360);
-    });
+    setSnapShake(true);
+    shakeTimerRef.current = window.setTimeout(() => {
+      setSnapShake(false);
+      shakeTimerRef.current = null;
+    }, 800);
   };
 
   const titles: Record<Puzzle3DType, { title: string; subtitle: string; tip: string; clue: string }> = {
@@ -114,11 +111,12 @@ export function PuzzleWorkshop3D({
       alpha: true,
       powerPreference: "high-performance"
     });
+    const isSoftwareWebGL = isSoftwareWebGLRenderer(renderer);
     const initWidth = Math.max(canvas.parentElement?.clientWidth || canvas.clientWidth || 840, 320);
     const initHeight = Math.max(canvas.parentElement?.clientHeight || canvas.clientHeight || 420, 260);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(isSoftwareWebGL ? 1 : Math.min(window.devicePixelRatio, 2));
     renderer.setSize(initWidth, initHeight, false);
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !isSoftwareWebGL;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
@@ -126,11 +124,14 @@ export function PuzzleWorkshop3D({
     const scene = new THREE.Scene();
     scene.background = getMuseumBackdropTexture(false);
 
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    const studioEnvRT = pmrem.fromEquirectangular(getEquirectEnvTexture("studio"));
-    pmrem.dispose();
-    scene.environment = studioEnvRT.texture;
+    let studioEnvRT: THREE.WebGLRenderTarget | null = null;
+    if (!isSoftwareWebGL) {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      studioEnvRT = pmrem.fromEquirectangular(getEquirectEnvTexture("studio"));
+      pmrem.dispose();
+      scene.environment = studioEnvRT.texture;
+    }
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -304,6 +305,7 @@ export function PuzzleWorkshop3D({
     // Animation Loop
     let animationFrameId: number;
     let clock = new THREE.Clock();
+    let lastSoftwareRenderMs = -1000;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -324,7 +326,10 @@ export function PuzzleWorkshop3D({
       cryptexRef.current?.update(elapsedTime, delta);
       astrolabeRef.current?.update(elapsedTime, delta);
 
-      renderer.render(scene, camera);
+      if (!isSoftwareWebGL || elapsedTime - lastSoftwareRenderMs >= 80) {
+        lastSoftwareRenderMs = elapsedTime;
+        renderer.render(scene, camera);
+      }
     };
 
     animate();
@@ -339,7 +344,7 @@ export function PuzzleWorkshop3D({
       megalithRef.current?.dispose();
       cryptexRef.current?.dispose();
       astrolabeRef.current?.dispose();
-      studioEnvRT.dispose();
+      studioEnvRT?.dispose();
       renderer.dispose();
     };
   }, [puzzleType]);
