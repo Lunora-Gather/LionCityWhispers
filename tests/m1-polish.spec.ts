@@ -149,21 +149,15 @@ test.describe("M1-Polish Behavioral Verification", () => {
     await page.evaluate(() => {
       const canvas = document.querySelector("canvas.world-3d-canvas");
       if (!canvas) return;
-      const touchStart = new Touch({
-        identifier: 1,
-        target: canvas,
-        clientX: 200,
-        clientY: 250
-      });
-      canvas.dispatchEvent(new TouchEvent("touchstart", { touches: [touchStart], targetTouches: [touchStart], changedTouches: [touchStart], bubbles: true }));
-      const touchMove = new Touch({
-        identifier: 1,
-        target: canvas,
-        clientX: 280,
-        clientY: 250
-      });
-      canvas.dispatchEvent(new TouchEvent("touchmove", { touches: [touchMove], targetTouches: [touchMove], changedTouches: [touchMove], bubbles: true, cancelable: true }));
-      canvas.dispatchEvent(new TouchEvent("touchend", { touches: [], targetTouches: [], changedTouches: [touchMove], bubbles: true }));
+      // Exercise the canvas handlers with the same single-finger coordinates
+      // on engines that expose different Touch constructors.
+      for (const [type, clientX] of [["touchstart", 200], ["touchmove", 280], ["touchend", 280]] as const) {
+        const touch = { identifier: 1, target: canvas, clientX, clientY: 250 };
+        const touches = type === "touchend" ? [] : [touch];
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.assign(event, { touches, targetTouches: touches, changedTouches: [touch] });
+        canvas.dispatchEvent(event);
+      }
     });
     const azimuthAfter = await page.evaluate(() => (window as any).__lcwWorld3D.camState.azimuth);
     expect(Math.abs(azimuthAfter - azimuthBefore)).toBeGreaterThan(0.1);

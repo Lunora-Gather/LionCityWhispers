@@ -1,3 +1,4 @@
+import chart from "../src/data/rhythm.json";
 import { expect, test } from "@playwright/test";
 import {
   clickGame,
@@ -67,18 +68,24 @@ test("plays through the full prototype loop", async ({ page }) => {
   await expectScene(page, "河岸");
   await waitForGameSettled(page);
 
-  await clickUntilScene(page, 1092, 282, "仪式");
-  await page.evaluate(() => {
-    // Cover the full easy-mode song (2300ms lead-in + 20200ms chart) plus CI
-    // scheduling slack; extra hits after finish() are ignored.
-    for (let time = 900; time <= 25200; time += 120) {
-      for (let lane = 0; lane < 4; lane += 1) {
+  // Start the chart on the scene transition. Each scheduled press targets
+  // one note, just as a player would, without flooding the shared audio device.
+  await page.evaluate((notes) => {
+    function start(event: Event) {
+      const state = (event as CustomEvent).detail;
+      if (state.scene !== "仪式") return;
+      window.removeEventListener("lcw:state", start);
+      const travel = state.easyMode ? 3300 : 2500;
+      const lead = Math.max(600, travel - notes[0].time + 200);
+      for (const note of notes) {
         window.setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: lane }));
-        }, time);
+          window.dispatchEvent(new CustomEvent("lcw:rhythm-hit", { detail: note.lane }));
+        }, lead + note.time);
       }
     }
-  });
+    window.addEventListener("lcw:state", start);
+  }, chart.notes);
+  await clickUntilScene(page, 1092, 282, "仪式");
   await expect(page.getByLabel("背包").getByText("灵界清音")).toBeVisible({
     timeout: 30000
   });

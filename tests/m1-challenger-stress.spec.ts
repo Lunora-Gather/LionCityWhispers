@@ -236,7 +236,29 @@ test.describe("Milestone 1 Empirical Challenger: Waypoint Math, Zero Allocations
     expect(destAfter?.z).toBeCloseTo(-8, 1);
 
     // C. Click on ground canvas and verify destination changes to click point
-    await worldContainer.locator("canvas.world-3d-canvas").click({ position: { x: 450, y: 380 } });
+    await expect.poll(() => page.evaluate(() => {
+      const { player } = (window as any).__lcwWorld3D;
+      return Math.hypot(player.position.x + 6, player.position.z + 8);
+    }), { timeout: 15000 }).toBeLessThan(0.5);
+    // Project a point on the walkable ground through the current camera.
+    const ground = await page.evaluate(() => {
+      const { player, camera } = (window as any).__lcwWorld3D;
+      const canvas = document.querySelector("canvas.world-3d-canvas")!;
+      const rect = canvas.getBoundingClientRect();
+      // Sample the top of the north bank around the landmark. The camera
+      // eases into place and HUD controls can cover part of the projection.
+      for (const dx of [-2, 2, -3, 3]) {
+        for (const dz of [-2, 2, 0]) {
+          const point = player.position.clone().set(-6 + dx, 1, -8 + dz).project(camera);
+          if (Math.abs(point.x) > 0.75 || Math.abs(point.y) > 0.75 || Math.abs(point.z) > 1) continue;
+          const x = (1 + point.x) * rect.width / 2;
+          const y = (1 - point.y) * rect.height / 2;
+          if (document.elementFromPoint(rect.left + x, rect.top + y) === canvas) return { x, y };
+        }
+      }
+      throw new Error("No visible walkable point around the waypoint");
+    });
+    await worldContainer.locator("canvas.world-3d-canvas").click({ position: ground, timeout: 5000 });
     await page.waitForTimeout(100);
 
     const destGround = await page.evaluate(() => {

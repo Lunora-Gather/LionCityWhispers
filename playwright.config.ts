@@ -2,9 +2,13 @@ import { defineConfig, devices } from "@playwright/test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+const testPort = Number(process.env.PLAYWRIGHT_PORT || 4319);
+const baseURL = `http://127.0.0.1:${testPort}`;
 const isCi = Boolean(process.env.CI);
 // `.next` also exists after `next dev`; only BUILD_ID proves a production build.
 const hasBuild = existsSync(join(process.cwd(), ".next", "BUILD_ID"));
+
+const useSafari = process.platform === "darwin" && !process.env.CI;
 
 export default defineConfig({
   testDir: "./tests",
@@ -21,21 +25,21 @@ export default defineConfig({
     timeout: 15000
   },
   use: {
-    baseURL: "http://127.0.0.1:3019",
+    baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure"
   },
   webServer: {
-    command: (isCi || hasBuild) ? "npm run start" : "npm run dev",
-    url: "http://127.0.0.1:3019",
+    command: `next ${isCi || hasBuild ? "start" : "dev"} -H 127.0.0.1 -p ${testPort}`,
+    url: baseURL,
     reuseExistingServer: !isCi,
     timeout: 120000
   },
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
+      name: useSafari ? "webkit" : "chromium",
+      use: { ...devices[useSafari ? "Desktop Safari" : "Desktop Chrome"] }
     }
   ]
 });
