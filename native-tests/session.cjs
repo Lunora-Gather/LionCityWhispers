@@ -1,4 +1,5 @@
 const { Builder, Key } = require("selenium-webdriver");
+const { Pointer } = require("selenium-webdriver/lib/input");
 const safari = require("selenium-webdriver/safari.js");
 const { writeFile } = require("node:fs/promises");
 const { readFileSync } = require("node:fs");
@@ -35,6 +36,7 @@ async function launchSafari(game, { viewport, mobile }) {
     throw error;
   }
   let lastPointer = {x: 0, y: 0};
+  const finger = new Pointer("ios-finger", Pointer.Type.TOUCH);
   const keyboard = {
     down: key => driver.actions().keyDown(toWebDriverKey(key)).perform(),
     up: key => driver.actions().keyUp(toWebDriverKey(key)).perform(),
@@ -117,7 +119,23 @@ async function launchSafari(game, { viewport, mobile }) {
       async click() {
         const node = await first();
         await driver.executeScript(el => el.scrollIntoView({block:"center", behavior:"instant"}), node);
-        await node.click();
+        if (!mobile) {
+          await node.click();
+          return;
+        }
+        const point = await driver.wait(() => driver.executeScript(el => {
+          const rect = el.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          if (!el.contains(document.elementFromPoint(x, y))) return null;
+          return {
+            x: Math.round(x - (visualViewport?.offsetLeft ?? 0)),
+            y: Math.round(y - (visualViewport?.offsetTop ?? 0))
+          };
+        }, node), 5000, "The iOS tap target must be unobstructed");
+        await driver.actions().insert(
+          finger, finger.move({...point, duration: 0}), finger.press(), finger.release()
+        ).perform();
       },
       async check() {
         const node = await first();
