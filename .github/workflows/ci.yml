@@ -17,12 +17,17 @@ concurrency:
 
 jobs:
   browser:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         browser: [webkit, chromium]
         shard: [1, 2]
+        include:
+          - browser: webkit
+            os: macos-latest
+          - browser: chromium
+            os: ubuntu-24.04
     defaults:
       run:
         shell: bash
@@ -49,7 +54,9 @@ jobs:
         id: playwright-cache
         uses: actions/cache@v4
         with:
-          path: ~/.cache/ms-playwright
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
           key: playwright-${{ matrix.browser }}-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright browser
@@ -57,11 +64,17 @@ jobs:
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        if: runner.os == 'Linux' && steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps ${{ matrix.browser }}
 
       - name: Run Playwright regression tests
-        run: xvfb-run --auto-servernum npm run test:ci -- --headed --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/2 --workers=1 2>&1 | tee playwright.log
+        run: |
+          args=(--project=${{ matrix.browser }} --shard=${{ matrix.shard }}/2 --workers=1)
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            npm run test:ci -- "${args[@]}" 2>&1 | tee playwright.log
+          else
+            xvfb-run --auto-servernum npm run test:ci -- --headed "${args[@]}" 2>&1 | tee playwright.log
+          fi
 
       - name: Upload Playwright diagnostics
         if: failure()
