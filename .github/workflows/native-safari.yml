@@ -1,6 +1,10 @@
 name: Native Safari
 
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -61,6 +65,7 @@ jobs:
           xcrun simctl bootstatus "$udid" -b
           echo "SAFARI_IOS_UDID=$udid" >> "$GITHUB_ENV"
           open -a Simulator --args -CurrentDeviceUDID "$udid"
+          xcrun simctl launch "$udid" com.apple.mobilesafari
       - name: Switch the simulator to landscape
         if: matrix.suite == 'landscape'
         run: |

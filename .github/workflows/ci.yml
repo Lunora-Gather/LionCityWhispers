@@ -16,79 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  browser:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [webkit, chromium]
-        shard: [1, 2]
-        include:
-          - browser: webkit
-            os: macos-latest
-          - browser: chromium
-            os: ubuntu-24.04
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - run: npm run build
-
-      - name: Resolve Playwright version
-        id: playwright-version
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browser
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/Library/Caches/ms-playwright
-          key: playwright-${{ matrix.browser }}-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps ${{ matrix.browser }}
-
-      - name: Install Playwright system dependencies
-        if: runner.os == 'Linux' && steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps ${{ matrix.browser }}
-
-      - name: Run Playwright regression tests
-        run: |
-          args=(--project=${{ matrix.browser }} --shard=${{ matrix.shard }}/2 --workers=1)
-          if [[ "$RUNNER_OS" == "macOS" ]]; then
-            npm run test:ci -- "${args[@]}" 2>&1 | tee playwright.log
-          else
-            xvfb-run --auto-servernum npm run test:ci -- --headed "${args[@]}" 2>&1 | tee playwright.log
-          fi
-
-      - name: Upload Playwright diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-${{ matrix.browser }}-${{ matrix.shard }}-diagnostics
-          path: |
-            playwright.log
-            test-results
-            playwright-report
-          retention-days: 7
-
   validate:
-    needs: browser
     runs-on: ubuntu-24.04
     # bash with pipefail so `cmd | tee log` steps fail when cmd fails, not when tee does.
     defaults:

@@ -12,8 +12,8 @@
     "build": "next build",
     "build:pages": "node scripts/build-pages.mjs",
     "start": "next start -H 127.0.0.1 -p 3019",
-    "test": "playwright test",
-    "test:ci": "playwright test --reporter=line"
+    "test": "playwright test -c native.config.ts --grep-invert @ios-simulator",
+    "test:ci": "npm test -- --reporter=line"
   },
   "dependencies": {
     "lucide-react": "1.17.0",

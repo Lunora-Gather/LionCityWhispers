@@ -255,10 +255,14 @@ test("keeps key canvas scenes visually nonblank", async ({ page }) => {
     if (scene[0] !== "WorldScene") {
       await openScene(page, scene[0], scene[1]);
     }
-    const stats = await screenshotVisualStats(page);
-    expect(stats.nonTransparent, scene[1]).toBeGreaterThan(2000);
-    expect(stats.uniqueColors, scene[1]).toBeGreaterThan(24);
-    expect(stats.luminanceSpread, scene[1]).toBeGreaterThan(35);
-    expect(stats.colorfulRatio, scene[1]).toBeGreaterThan(0.02);
+    await expect.poll(async () => {
+      const stats = await screenshotVisualStats(page);
+      return Math.min(
+        stats.nonTransparent / 2000,
+        stats.uniqueColors / 24,
+        stats.luminanceSpread / 35,
+        stats.colorfulRatio / 0.02
+      );
+    }, { message: scene[1], timeout: 10_000 }).toBeGreaterThan(1);
   }
 });

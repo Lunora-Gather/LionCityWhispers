@@ -1,7 +1,8 @@
 const { Builder, Key } = require("selenium-webdriver");
 const { Pointer } = require("selenium-webdriver/lib/input");
 const safari = require("selenium-webdriver/safari.js");
-const { writeFile } = require("node:fs/promises");
+const { mkdir, writeFile } = require("node:fs/promises");
+const { dirname } = require("node:path");
 const { readFileSync } = require("node:fs");
 const { setTimeout: delay } = require("node:timers/promises");
 
@@ -19,22 +20,27 @@ function toWebDriverKey(key) {
 }
 
 async function launchSafari(game, { viewport, mobile }) {
-  const service = new safari.ServiceBuilder("/usr/bin/safaridriver").build();
-  let driver;
-  try {
-    const builder = new Builder().disableEnvironmentOverrides().usingServer(await service.start()).forBrowser("safari");
-    if (mobile) {
-      if (!process.env.SAFARI_IOS_UDID) throw new Error("SAFARI_IOS_UDID is required for the native iOS Safari cases");
-      builder.withCapabilities({
+  const device = mobile ? process.env.SAFARI_IOS_UDID : undefined;
+  if (mobile && !device) throw new Error("SAFARI_IOS_UDID is required for the native iOS Safari cases");
+  async function connect() {
+    const service = new safari.ServiceBuilder("/usr/bin/safaridriver").build();
+    try {
+      const builder = new Builder().disableEnvironmentOverrides().usingServer(await service.start()).forBrowser("safari");
+      if (device) builder.withCapabilities({
         browserName: "safari", platformName: "iOS",
-        "safari:useSimulator": true, "safari:deviceUDID": process.env.SAFARI_IOS_UDID
+        "safari:useSimulator": true, "safari:deviceUDID": device
       });
+      return { driver: await builder.build(), service };
+    } catch (error) {
+      await service.kill();
+      throw error;
     }
-    driver = await builder.build();
-  } catch (error) {
-    await service.kill();
-    throw error;
   }
+  const { driver, service } = await connect().catch(async error => {
+    if (!/session timed out while connecting|Server terminated early/i.test(error.message)) throw error;
+    await delay(1000);
+    return connect();
+  });
   let lastPointer = {x: 0, y: 0};
   const finger = new Pointer("ios-finger", Pointer.Type.TOUCH);
   const keyboard = {
@@ -210,7 +216,10 @@ async function launchSafari(game, { viewport, mobile }) {
     waitForTimeout: delay,
     async screenshot(options) {
       const image = Buffer.from(await driver.takeScreenshot(), "base64");
-      if (options?.path) await writeFile(options.path, image);
+      if (options?.path) {
+        await mkdir(dirname(options.path), { recursive: true });
+        await writeFile(options.path, image);
+      }
       return image;
     },
     async close() {try {await driver.quit();} finally {await service.kill();}}
