@@ -77,7 +77,7 @@ http://127.0.0.1:3019/?pwa=1
 
 ## 质量检查
 
-本地浏览器回归默认使用 WebKit，CI 在 macOS 上使用 WebKit，在 Ubuntu 上使用 Chromium，运行同一套用例。
+本地与 GitHub Actions 的浏览器回归使用系统 Safari。桌面需要 macOS 与 Safari 的远程自动化权限，移动端在 GitHub Actions 上使用 iPhone 模拟器。
 
 ```bash
 sudo safaridriver --enable # macOS 系统 Safari
