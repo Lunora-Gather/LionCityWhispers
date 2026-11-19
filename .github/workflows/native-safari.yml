@@ -1,0 +1,35 @@
+name: Native Safari
+
+on: [pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Native Safari desktop (${{ matrix.shard }}/3)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: sudo safaridriver --enable
+      - name: Run desktop regression
+        run: npx --no-install playwright test -c native.config.ts --grep-invert @ios-simulator --shard=${{ matrix.shard }}/3
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: native-safari-desktop-${{ matrix.shard }}
+          path: test-results/
+          if-no-files-found: ignore

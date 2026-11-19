@@ -31,6 +31,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "tests/**/*.ts",
+    "native-tests/**/*.ts",
     "scripts/**/*.ts",
     ".next/types/**/*.ts"
   ],
