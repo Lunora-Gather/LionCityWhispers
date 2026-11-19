@@ -57,6 +57,7 @@ test("uses the full stage in mobile landscape @ios-simulator @landscape", async 
       scrollWidth: document.documentElement.scrollWidth,
       canvasRatio: canvas ? canvas.width / canvas.height : 0,
       canvasHeight: canvas?.height ?? 0,
+      visibleHeight: Math.min(innerHeight, visualViewport?.height ?? innerHeight),
       objectiveBottom: objective?.bottom ?? 0,
       progressTop: progress?.top ?? 0,
       toolbarBottom: toolbar?.bottom ?? 0,
@@ -71,7 +72,9 @@ test("uses the full stage in mobile landscape @ios-simulator @landscape", async 
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.innerWidth + 1);
   expect(metrics.canvasRatio).toBeGreaterThan(1.7);
   expect(metrics.canvasRatio).toBeLessThan(1.9);
-  expect(metrics.canvasHeight).toBeGreaterThan(320);
+  // Preserve the 320px-of-390px stage budget after Safari's toolbar reduces
+  // the available landscape viewport on a real device.
+  expect(metrics.canvasHeight).toBeGreaterThan(metrics.visibleHeight * (320 / 390));
   expect(metrics.objectiveBottom).toBeLessThanOrEqual(metrics.progressTop - 1);
   expect(metrics.toolbarBottom).toBeLessThanOrEqual(metrics.inventoryTop - 1);
   if (metrics.routeVisible) {
