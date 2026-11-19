@@ -23,6 +23,7 @@ async function launchSafari(game, { viewport, mobile }) {
   try {
     const builder = new Builder().disableEnvironmentOverrides().usingServer(await service.start()).forBrowser("safari");
     if (mobile) {
+      if (!process.env.SAFARI_IOS_UDID) throw new Error("SAFARI_IOS_UDID is required for the native iOS Safari cases");
       builder.withCapabilities({
         browserName: "safari", platformName: "iOS",
         "safari:useSimulator": true, "safari:deviceUDID": process.env.SAFARI_IOS_UDID
@@ -96,6 +97,10 @@ async function launchSafari(game, { viewport, mobile }) {
       first: () => selector([...steps, {type: "first", value: "", flags: null}]),
       count: async () => (await all()).length,
       evaluate, isVisible,
+      async waitFor({state = "visible", timeout = 15000} = {}) {
+        if (!["visible", "hidden"].includes(state)) throw new Error("Unsupported Safari wait state: " + state);
+        await driver.wait(async () => await isVisible() === (state === "visible"), timeout, JSON.stringify(steps));
+      },
       inputValue: async () => (await first()).getProperty("value"),
       textContent: async () => (await all())[0]?.getProperty("textContent"),
       allTextContents: async () => Promise.all((await all()).map(el => el.getProperty("textContent"))),
@@ -162,6 +167,11 @@ async function launchSafari(game, { viewport, mobile }) {
     async goto(value) {
       await driver.get(new URL(value, game.origin).href);
       await preparePage();
+      if (mobile) {
+        await driver.wait(() => driver.executeScript(isLandscape =>
+          navigator.maxTouchPoints > 0 && matchMedia("(orientation: landscape)").matches === isLandscape,
+        viewport.width > viewport.height), 10000, "Expected touch support and the requested Simulator orientation");
+      }
     },
     async reload() {
       await driver.navigate().refresh();

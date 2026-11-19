@@ -33,3 +33,60 @@ jobs:
           name: native-safari-desktop-${{ matrix.shard }}
           path: test-results/
           if-no-files-found: ignore
+
+  ios:
+    name: Native iOS Safari (${{ matrix.orientation }})
+    runs-on: macos-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        orientation: [portrait, landscape]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: sudo safaridriver --enable
+      - name: Boot an available iPhone simulator
+        run: |
+          set -euo pipefail
+          udid="$(xcrun simctl list devices available -j | jq -er '[.devices | to_entries | sort_by(.key) | reverse | .[].value[] | select(.name | startswith("iPhone"))][0].udid')"
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          echo "SAFARI_IOS_UDID=$udid" >> "$GITHUB_ENV"
+          open -a Simulator --args -CurrentDeviceUDID "$udid"
+      - name: Switch the simulator to landscape
+        if: matrix.orientation == 'landscape'
+        run: |
+          osascript <<'APPLESCRIPT'
+          tell application "Simulator" to activate
+          tell application "System Events"
+            tell process "Simulator"
+              repeat until exists menu bar item "Device" of menu bar 1
+                delay 1
+              end repeat
+              click menu item "Rotate Left" of menu "Device" of menu bar item "Device" of menu bar 1
+            end tell
+          end tell
+          APPLESCRIPT
+      - name: Run iOS Safari scenarios in the requested orientation
+        env:
+          ORIENTATION: ${{ matrix.orientation }}
+        run: |
+          if [[ "$ORIENTATION" == landscape ]]; then
+            npx --no-install playwright test -c native.config.ts --grep @landscape
+          else
+            npx --no-install playwright test -c native.config.ts --grep @ios-simulator --grep-invert @landscape
+          fi
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: native-safari-ios-${{ matrix.orientation }}
+          path: test-results/
+          if-no-files-found: ignore

@@ -26,7 +26,11 @@ async function serveGame() {
       `);
       return;
     }
-    const proxy = request(new URL(incoming.url, upstream), {
+    const path = new URL(incoming.url, "http://127.0.0.1");
+    const proxy = request({
+      hostname: "127.0.0.1",
+      port: upstream.port,
+      path: path.pathname + path.search,
       method: incoming.method,
       headers: {...incoming.headers, host: upstream.host, "accept-encoding": "identity"}
     }, upstreamResponse => {

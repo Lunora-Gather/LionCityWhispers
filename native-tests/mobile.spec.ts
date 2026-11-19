@@ -35,7 +35,7 @@ test("keeps mobile controls usable without horizontal overflow @ios-simulator", 
   await expect(page.locator(".rhythm-controls button")).toHaveCount(4);
 });
 
-test("uses the full stage in mobile landscape @ios-simulator", async ({ nativeBrowser }) => {
+test("uses the full stage in mobile landscape @ios-simulator @landscape", async ({ nativeBrowser }) => {
   const page = await nativeBrowser.newPage({
     viewport: { width: 780, height: 390 },
     isMobile: true,
