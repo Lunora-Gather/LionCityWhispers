@@ -79,7 +79,7 @@ export const test = runner.extend<{game: Game, nativeBrowser: Pick<PlaywrightBro
       } finally { await page.close(); }
     }
   },
-  nativeBrowser: async ({game}, use) => {
+  nativeBrowser: async ({game}, use, info) => {
     const pages = new Set<Awaited<ReturnType<typeof launchSafari>>>();
     const browser = {
       async newPage({viewport = {width: 1280, height: 800}, isMobile = false} = {}) {
@@ -92,8 +92,28 @@ export const test = runner.extend<{game: Game, nativeBrowser: Pick<PlaywrightBro
         return page;
       }
     };
-    try {await use(browser as unknown as PlaywrightBrowser);} finally {
-      for (const page of pages) await page.close();
+    try {
+      await use(browser as unknown as PlaywrightBrowser);
+    } finally {
+      for (const page of pages) {
+        try {
+          if (info.status !== info.expectedStatus) {
+            await info.attach("native-safari-state", {
+              body: JSON.stringify(await page.evaluate(() => ({
+                url: location.href,
+                title: document.title,
+                userAgent: navigator.userAgent,
+                errors: (window as Window & {lcwTestErrors?: unknown}).lcwTestErrors,
+                webgl2: Boolean(document.createElement("canvas").getContext("webgl2"))
+              }))),
+              contentType: "application/json"
+            }).catch(() => {});
+            await info.attach("native-safari", {body: await page.screenshot(), contentType: "image/png"}).catch(() => {});
+          }
+        } finally {
+          await page.close();
+        }
+      }
     }
   }
 });

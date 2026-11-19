@@ -70,7 +70,7 @@ async function launchSafari(game, { viewport, mobile }) {
                 const name = typeof search === "string" && !options.exact
                   ? new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
                   : search;
-                return TestingLibraryDom.queryAllByRole(root, role, {...options, name});
+                return TestingLibraryDom.queryAllByRole(root, role, name == null ? options : {...options, name});
               }
             }
           });
@@ -122,9 +122,13 @@ async function launchSafari(game, { viewport, mobile }) {
       async check() {
         const node = await first();
         if (await node.isSelected()) return;
-        await driver.executeScript(el => el.focus(), node);
-        await keyboard.press("Space");
-        await driver.wait(() => node.isSelected(), 5000);
+        await driver.executeScript(el => el.scrollIntoView({block:"center",behavior:"instant"}), node);
+        await node.click();
+        if (!await node.isSelected()) {
+          await driver.executeScript(el => el.focus(), node);
+          await node.sendKeys(Key.SPACE);
+        }
+        await driver.wait(() => node.isSelected(), 5000, "Checkbox did not become checked");
       },
       fill: value => evaluate((el, nextValue) => {
         Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, nextValue);
@@ -142,7 +146,7 @@ async function launchSafari(game, { viewport, mobile }) {
     return {
       locator: css => add("css", css),
       getByLabel: (name, options) => add("label", name, options),
-      getByText: (name, options) => add("text", name, options),
+      getByText: (name, options = {}) => add("text", name, {exact: false, ...options}),
       getByTitle: (name, options) => add("title", name, options),
       getByPlaceholder: (name, options) => add("placeholder", name, options),
       getByRole: (role, {name, ...options} = {}) => add("role", name, options, role)
