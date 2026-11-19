@@ -1,0 +1,97 @@
+name: Native Safari
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Native Safari desktop (${{ matrix.shard }}/3)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: sudo safaridriver --enable
+      - name: Run desktop regression
+        run: npx --no-install playwright test -c native.config.ts --grep-invert @ios-simulator --shard=${{ matrix.shard }}/3
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: native-safari-desktop-${{ matrix.shard }}
+          path: test-results/
+          if-no-files-found: ignore
+
+  ios:
+    name: Native iOS Safari (${{ matrix.suite }})
+    runs-on: macos-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [portrait, landscape, touch3d]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: sudo safaridriver --enable
+      - name: Boot an available iPhone simulator
+        run: |
+          set -euo pipefail
+          udid="$(xcrun simctl list devices available -j | jq -er '[.devices | to_entries | sort_by(.key) | reverse | .[].value[] | select(.name | startswith("iPhone"))][0].udid')"
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          echo "SAFARI_IOS_UDID=$udid" >> "$GITHUB_ENV"
+          open -a Simulator --args -CurrentDeviceUDID "$udid"
+          xcrun simctl launch "$udid" com.apple.mobilesafari
+      - name: Switch the simulator to landscape
+        if: matrix.suite == 'landscape'
+        run: |
+          osascript <<'APPLESCRIPT'
+          tell application "Simulator" to activate
+          tell application "System Events"
+            tell process "Simulator"
+              repeat until exists menu bar item "Device" of menu bar 1
+                delay 1
+              end repeat
+              click menu item "Rotate Left" of menu "Device" of menu bar item "Device" of menu bar 1
+            end tell
+          end tell
+          APPLESCRIPT
+      - name: Run iOS Safari scenarios in the requested orientation
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: |
+          case "$SUITE" in
+            landscape) npx --no-install playwright test -c native.config.ts --grep @landscape ;;
+            touch3d) npx --no-install playwright test -c native.config.ts --grep @touch3d ;;
+            portrait) npx --no-install playwright test -c native.config.ts --grep @ios-simulator --grep-invert '@landscape|@touch3d' ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: native-safari-ios-${{ matrix.suite }}
+          path: test-results/
+          if-no-files-found: ignore
