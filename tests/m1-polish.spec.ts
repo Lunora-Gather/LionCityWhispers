@@ -124,15 +124,16 @@ test.describe("M1-Polish Behavioral Verification", () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent("lcw:virtual-move", { detail: { x: 1, y: 0 } }));
     });
-    await page.waitForTimeout(280);
-    await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent("lcw:virtual-move", { detail: { x: 0, y: 0 } }));
-    });
-    const movedPos = await page.evaluate(() => {
-      const p = (window as any).__lcwWorld3D.player.position;
-      return { x: p.x, z: p.z };
-    });
-    expect(Math.hypot(movedPos.x - startPos.x, movedPos.z - startPos.z)).toBeGreaterThan(0.2);
+    try {
+      await expect.poll(() => page.evaluate((start) => {
+        const p = (window as any).__lcwWorld3D.player.position;
+        return Math.hypot(p.x - start.x, p.z - start.z);
+      }, startPos)).toBeGreaterThan(0.2);
+    } finally {
+      await page.evaluate(() => {
+        window.dispatchEvent(new CustomEvent("lcw:virtual-move", { detail: { x: 0, y: 0 } }));
+      });
+    }
 
     // Touch action button triggers NPC dialogue when near Curator Lin (-16, 1.0, -7)
     await page.evaluate(() => {
@@ -251,8 +252,7 @@ test.describe("M1-Polish Behavioral Verification", () => {
     const megalithDialog = page.getByRole("dialog", { name: "古石重铸 · 3D工坊" });
     await expect(megalithDialog).toBeVisible();
     const snapBtn = megalithDialog.locator(".workshop-snap-btn");
-    await snapBtn.click();
-    await expect(snapBtn).toHaveClass(/workshop-shake/);
+    await expectShakeAfterClick(snapBtn);
 
     await megalithDialog.getByRole("button", { name: "关闭工坊" }).click();
 
@@ -263,7 +263,22 @@ test.describe("M1-Polish Behavioral Verification", () => {
     const astrolabeDialog = page.getByRole("dialog", { name: "浑天秘匣 · 3D工坊" });
     await expect(astrolabeDialog).toBeVisible();
     const alignBtn = astrolabeDialog.locator(".workshop-snap-btn");
-    await alignBtn.click();
-    await expect(alignBtn).toHaveClass(/workshop-shake/);
+    await expectShakeAfterClick(alignBtn);
   });
 });
+
+async function expectShakeAfterClick(button: import("@playwright/test").Locator) {
+  // The class is transient. Observe it from the moment the real click occurs.
+  const shake = button.evaluate(element => new Promise<boolean>(resolve => {
+    const observer = new MutationObserver(() => {
+      if (!element.classList.contains("workshop-shake")) return;
+      observer.disconnect();
+      clearTimeout(timeout);
+      resolve(true);
+    });
+    const timeout = setTimeout(() => { observer.disconnect(); resolve(false); }, 10000);
+    observer.observe(element, { attributes: true, attributeFilter: ["class"] });
+  }));
+  await button.click();
+  expect(await shake).toBe(true);
+}

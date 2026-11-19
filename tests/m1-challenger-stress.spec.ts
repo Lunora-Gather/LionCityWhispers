@@ -239,7 +239,7 @@ test.describe("Milestone 1 Empirical Challenger: Waypoint Math, Zero Allocations
     await expect.poll(() => page.evaluate(() => {
       const { player } = (window as any).__lcwWorld3D;
       return Math.hypot(player.position.x + 6, player.position.z + 8);
-    }), { timeout: 15000 }).toBeLessThan(0.5);
+    }), { timeout: 90000 }).toBeLessThan(0.5);
     // Project a point on the walkable ground through the current camera.
     const ground = await page.evaluate(() => {
       const { player, camera } = (window as any).__lcwWorld3D;

@@ -3,7 +3,9 @@ import { clickUntilScene } from "./helpers";
 
 test.describe("Save Management", () => {
   test.beforeEach(async ({ browserName, context }) => {
-    await context.grantPermissions(browserName === "webkit" ? ["clipboard-read"] : ["clipboard-read", "clipboard-write"]);
+    if (browserName === "chromium") {
+      await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    }
   });
 
   test("exports save, resets progress, and imports save to restore progress", async ({ page }) => {
@@ -26,13 +28,6 @@ test.describe("Save Management", () => {
     await page.getByRole("button", { name: "导出存档" }).click();
     await expect(page.locator(".toast-notification")).toContainText("存档代码已复制");
 
-    // Read the save code from clipboard
-    const saveCode = await page.evaluate(async () => {
-      return await navigator.clipboard.readText();
-    });
-    expect(saveCode).toBeTruthy();
-    expect(saveCode.length).toBeGreaterThan(50);
-
     // Close settings and reset game
     await page.getByRole("button", { name: "关闭设置" }).click();
     await page.getByRole("button", { name: "重新开始" }).click();
@@ -47,7 +42,10 @@ test.describe("Save Management", () => {
     await expect(page.getByRole("dialog", { name: "导入存档" })).toBeVisible();
 
     // Paste save code and confirm
-    await page.fill('textarea[placeholder="Paste save code here..."]', saveCode);
+    const input = page.getByPlaceholder("Paste save code here...");
+    await input.focus();
+    await input.press("ControlOrMeta+v");
+    await expect.poll(async () => (await input.inputValue()).length).toBeGreaterThan(50);
     await page.getByRole("button", { name: "确认" }).click();
 
     // Verify import success toast and progress restoration
