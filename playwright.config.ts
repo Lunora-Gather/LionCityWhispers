@@ -8,8 +8,6 @@ const isCi = Boolean(process.env.CI);
 // `.next` also exists after `next dev`; only BUILD_ID proves a production build.
 const hasBuild = existsSync(join(process.cwd(), ".next", "BUILD_ID"));
 
-const useSafari = process.platform === "darwin" && !process.env.CI;
-
 export default defineConfig({
   testDir: "./tests",
   timeout: 150000,
@@ -37,9 +35,7 @@ export default defineConfig({
     timeout: 120000
   },
   projects: [
-    {
-      name: useSafari ? "webkit" : "chromium",
-      use: { ...devices[useSafari ? "Desktop Safari" : "Desktop Chrome"] }
-    }
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    ...(process.env.CI ? [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }] : [])
   ]
 });

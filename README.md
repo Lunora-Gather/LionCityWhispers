@@ -77,7 +77,10 @@ http://127.0.0.1:3019/?pwa=1
 
 ## 质量检查
 
+本地浏览器回归默认使用 WebKit，CI 使用 WebKit 和 Chromium 跑同一套用例。
+
 ```bash
+npx playwright install webkit
 npm run check
 ```
 
