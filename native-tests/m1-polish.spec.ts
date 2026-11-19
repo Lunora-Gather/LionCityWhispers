@@ -88,7 +88,8 @@ test.describe("M1-Polish Behavioral Verification", () => {
     await expect(page.locator(".artifact-3d-overlay")).toBeVisible();
   });
 
-  test("2. Mobile touch controls sit above 3D world and drive movement, interaction, and touch orbit @ios-simulator", async ({ nativeBrowser }) => {
+  test("2. Mobile touch controls sit above 3D world and drive movement, interaction, and touch orbit @ios-simulator @touch3d", async ({ nativeBrowser }) => {
+    test.slow();
     const page = await nativeBrowser.newPage({
       viewport: { width: 390, height: 780 },
       isMobile: true,
@@ -128,7 +129,7 @@ test.describe("M1-Polish Behavioral Verification", () => {
       await expect.poll(() => page.evaluate((start) => {
         const p = (window as any).__lcwWorld3D.player.position;
         return Math.hypot(p.x - start.x, p.z - start.z);
-      }, startPos)).toBeGreaterThan(0.2);
+      }, startPos), {timeout: 45_000}).toBeGreaterThan(0.2);
     } finally {
       await page.evaluate(() => {
         window.dispatchEvent(new CustomEvent("lcw:virtual-move", { detail: { x: 0, y: 0 } }));

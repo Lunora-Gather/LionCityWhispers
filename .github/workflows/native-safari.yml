@@ -35,13 +35,13 @@ jobs:
           if-no-files-found: ignore
 
   ios:
-    name: Native iOS Safari (${{ matrix.orientation }})
+    name: Native iOS Safari (${{ matrix.suite }})
     runs-on: macos-latest
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        orientation: [portrait, landscape]
+        suite: [portrait, landscape, touch3d]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -62,7 +62,7 @@ jobs:
           echo "SAFARI_IOS_UDID=$udid" >> "$GITHUB_ENV"
           open -a Simulator --args -CurrentDeviceUDID "$udid"
       - name: Switch the simulator to landscape
-        if: matrix.orientation == 'landscape'
+        if: matrix.suite == 'landscape'
         run: |
           osascript <<'APPLESCRIPT'
           tell application "Simulator" to activate
@@ -77,16 +77,16 @@ jobs:
           APPLESCRIPT
       - name: Run iOS Safari scenarios in the requested orientation
         env:
-          ORIENTATION: ${{ matrix.orientation }}
+          SUITE: ${{ matrix.suite }}
         run: |
-          if [[ "$ORIENTATION" == landscape ]]; then
-            npx --no-install playwright test -c native.config.ts --grep @landscape
-          else
-            npx --no-install playwright test -c native.config.ts --grep @ios-simulator --grep-invert @landscape
-          fi
+          case "$SUITE" in
+            landscape) npx --no-install playwright test -c native.config.ts --grep @landscape ;;
+            touch3d) npx --no-install playwright test -c native.config.ts --grep @touch3d ;;
+            portrait) npx --no-install playwright test -c native.config.ts --grep @ios-simulator --grep-invert '@landscape|@touch3d' ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: native-safari-ios-${{ matrix.orientation }}
+          name: native-safari-ios-${{ matrix.suite }}
           path: test-results/
           if-no-files-found: ignore
