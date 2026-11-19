@@ -54,6 +54,7 @@ test("uses the full stage in mobile landscape @ios-simulator @landscape", async 
     const dialogue = document.querySelector(".dialogue-bar")?.getBoundingClientRect();
     return {
       innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
       scrollWidth: document.documentElement.scrollWidth,
       canvasRatio: canvas ? canvas.width / canvas.height : 0,
       canvasHeight: canvas?.height ?? 0,
@@ -75,7 +76,7 @@ test("uses the full stage in mobile landscape @ios-simulator @landscape", async 
   // Preserve the 320px-of-390px stage budget after Safari's toolbar reduces
   // the available landscape viewport on a real device.
   expect(metrics.canvasHeight).toBeGreaterThan(metrics.visibleHeight * (320 / 390));
-  expect(metrics.objectiveBottom).toBeLessThanOrEqual(metrics.progressTop - 1);
+  expect(metrics.objectiveBottom, JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.progressTop - 1);
   expect(metrics.toolbarBottom).toBeLessThanOrEqual(metrics.inventoryTop - 1);
   if (metrics.routeVisible) {
     expect(metrics.routeBottom).toBeLessThanOrEqual(metrics.touchControlsTop - 1);
